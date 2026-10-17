@@ -1,0 +1,2165 @@
+/* 생성 파일 — scripts/icampus-dark-sheets.mjs로 만든다. 직접 고치지 않는다. 입력 시트 4개(오류 0), 입력 규칙 3994개, 출력 규칙 490개, 크기 106.8KB(머리말 제외) */
+/* 변환 규칙은 dark/transform.js. 우선순위는 dark.css가 항상 이기도록 접두의 :not(#id)를 2개(dark.css는 3개)로 둔다. */
+/* canvas.skku.edu/dist/brandable_css/responsive_layout_normal_contrast/bundles/common-08dc185d29.css — 규칙 487 */
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-selectable-helper {
+  border: 1px dotted var(--icd-line-strong);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-dialog .ui-dialog-titlebar.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-dialog .ui-datepicker .ui-widget-header.ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-dialog .ui-widget-header.ui-datepicker-header {
+  background: var(--icd-surface);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-datepicker-time,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-dialog .ui-dialog-buttonpane,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-dialog .ui-datepicker .ui-datepicker-time,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-dialog .ui-datepicker-time {
+  background-color: var(--icd-raised);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-tabs-active {
+  background: var(--icd-bg);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-tabs-active a {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-panel {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-state-active.ui-state-hover {
+  border: 1px solid var(--icd-line);
+  color: rgb(192, 192, 192);
+  background: var(--icd-brand-soft);
+  background: linear-gradient(to bottom, var(--icd-brand-soft), var(--icd-brand-soft));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-progressbar .ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-datepicker .ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-progressbar .ui-state-hover.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-datepicker .ui-state-hover.ui-widget-header {
+  border: 1px solid var(--icd-line);
+  color: rgb(192, 192, 192);
+  background: var(--icd-raised);
+  background: linear-gradient(to bottom, var(--icd-raised), var(--icd-raised));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker-header.ui-widget-header {
+  background: var(--icd-bg);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker.ui-widget-content {
+  border-color: var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-datepicker-header .ui-datepicker-prev.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-datepicker-header .ui-datepicker-next.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker td span.ui-state-default.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker td a.ui-state-default.ui-state-hover {
+  border-color: var(--icd-line);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .ui-datepicker-time {
+  background-color: var(--icd-raised);
+  border-top-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget.ui-tooltip {
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content {
+  border: 1px solid var(--icd-control-line);
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header a {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-default,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-default {
+  border: 1px solid var(--icd-line);
+  color: rgb(192, 192, 192);
+  background-image: linear-gradient(to bottom, var(--icd-surface), var(--icd-raised));
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-highlight,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content .ui-state-highlight,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-highlight {
+  background: rgb(31, 24, 0);
+  color: rgb(182, 182, 182);
+  background-image: linear-gradient(to bottom, rgb(28, 20, 0), rgb(31, 24, 0));
+  box-shadow: inset 0 1px 0 var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-highlight a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content .ui-state-highlight a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-highlight a {
+  color: rgb(182, 182, 182);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-default a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-default a:link,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-default a:visited {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-focus {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content .ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content .ui-state-focus {
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-hover a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-hover a:hover {
+  color: rgb(193, 193, 193);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-progressbar .ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-widget-header .ui-widget-header {
+  color: var(--icd-on-accent);
+  background: rgb(1, 107, 153);
+  background-image: linear-gradient(to bottom, rgb(6, 70, 96), rgb(15, 101, 173));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-content .ui-state-error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget-header .ui-state-error {
+  background: rgb(177, 40, 37);
+  color: var(--icd-on-accent);
+  background-image: linear-gradient(to bottom, rgb(178, 36, 42), rgb(177, 40, 37));
+  border-color: #c43c35 #c43c35 rgb(242, 138, 127);
+  box-shadow: inset 0 1px 0 var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-warning .ui-dialog-titlebar,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-warning .ui-datepicker .ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .dialog-warning .ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-success .ui-dialog-titlebar,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-success .ui-datepicker .ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .dialog-success .ui-datepicker-header {
+  box-shadow: inset 0 1px 0 var(--icd-line);
+  color: rgb(248, 121, 106);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-success .ui-dialog-titlebar,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-success .ui-datepicker .ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .dialog-success .ui-datepicker-header {
+  background-image: linear-gradient(to bottom, rgb(0, 121, 18), rgb(22, 120, 26));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-warning .ui-dialog-titlebar,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dialog-warning .ui-datepicker .ui-datepicker-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-datepicker .dialog-warning .ui-datepicker-header {
+  background-image: linear-gradient(to bottom, rgb(88, 56, 4), rgb(93, 53, 4));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-menu .ui-menu-input-group {
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-menu-carat,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-menu-carat span {
+  border-color: var(--icd-line) transparent;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-kyle-menu {
+  border: 1px solid var(--icd-line);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-kyle-menu a {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-kyle-menu hr {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) legend {
+  color: rgb(192, 192, 192);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) legend small {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"] {
+  background-color: var(--icd-raised);
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input {
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select {
+  border: 1px solid var(--icd-control-line);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-textarea {
+  color: rgb(159, 159, 159);
+  background-color: var(--icd-surface);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) input::-webkit-input-placeholder,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea::-webkit-input-placeholder {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) select[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) select[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea[readonly] {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning>label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .help-block,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .help-inline,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .checkbox,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .radio,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning select,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning textarea {
+  color: rgb(193, 153, 84);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning select:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning textarea:focus {
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.075),0 0 6px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .input-prepend .add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.warning .input-append .add-on {
+  color: rgb(201, 161, 92);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error>label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .help-block,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .help-inline,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .checkbox,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .radio,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error select,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error textarea {
+  color: rgb(241, 125, 119);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error select:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error textarea:focus {
+  border-color: rgb(229, 131, 125);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .input-prepend .add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.error .input-append .add-on {
+  color: rgb(250, 133, 127);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success>label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .help-block,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .help-inline,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .checkbox,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .radio,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success select,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success textarea {
+  color: rgb(111, 174, 111);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success select:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success textarea:focus {
+  border-color: rgb(138, 186, 137);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .input-prepend .add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.success .input-append .add-on {
+  color: rgb(114, 177, 114);
+  background-color: rgb(14, 26, 9);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info>label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .help-block,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .help-inline,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .checkbox,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .radio,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info select,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info textarea {
+  color: rgb(92, 168, 207);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .input-prepend .add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .control-group.info .input-append .add-on {
+  color: rgb(100, 176, 215);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type]:required:invalid,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea:required:invalid,
+html[data-icd='on']:not(#icd-a):not(#icd-b) select:required:invalid {
+  color: rgb(241, 125, 119);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .form-actions {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .input-append .add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .input-prepend .add-on {
+  background-color: var(--icd-raised);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .input-append .active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .input-prepend .active {
+  background-color: rgb(5, 33, 7);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table td {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table tbody+tbody {
+  border-top: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-bordered {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-bordered th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-bordered td {
+  border-left: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-striped tbody tr:nth-child(odd) td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-striped tbody tr:nth-child(odd) th {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr:hover td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr:hover th {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table tbody tr.success td {
+  background-color: rgb(14, 26, 9);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table tbody tr.error td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table tbody tr.warning td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table tbody tr.info td {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.success:hover td {
+  background-color: rgb(11, 29, 3);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.error:hover td {
+  background-color: rgb(39, 18, 19);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.warning:hover td {
+  background-color: rgb(27, 21, 0);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.info:hover td {
+  background-color: rgb(1, 27, 38);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .caret {
+  border-top: 4px solid var(--icd-line-strong);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu {
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu .divider {
+  background-color: var(--icd-raised);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu li>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu .active>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu .active>a:hover {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu .disabled>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-menu .disabled>a:hover {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-submenu>a:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dropdown-submenu:hover>a:after {
+  border-left-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .close {
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .nav>li>a:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>li>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>li>span {
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>li>a:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.active>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.active>span {
+  background-color: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.active>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.active>span,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.disabled>span,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.disabled>a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pagination ul>.disabled>a:hover {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover {
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover-title {
+  background-color: var(--icd-raised);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover.top .arrow {
+  border-top-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover.right .arrow {
+  border-right-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover.bottom .arrow {
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .popover.left .arrow {
+  border-left-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .thumbnail {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .thumbnail .caption {
+  color: rgb(146, 161, 172);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .thumbnail {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .thumbnail .caption {
+  color: rgb(146, 161, 172);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge {
+  background-color: rgb(29, 41, 50);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-important,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-important {
+  background-color: rgb(166, 56, 56);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-warning {
+  background-color: rgb(93, 53, 4);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-warning[href],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-warning[href] {
+  background-color: rgb(139, 85, 20);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-success {
+  background-color: rgb(54, 115, 56);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-success[href],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-success[href] {
+  background-color: rgb(28, 56, 28);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-info,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-info {
+  background-color: rgb(24, 108, 144);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .label-info[href],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .badge-info[href] {
+  background-color: rgb(2, 50, 70);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .progress {
+  background-color: var(--icd-raised);
+  background-image: linear-gradient(to bottom, var(--icd-raised), var(--icd-surface));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .progress .bar {
+  color: var(--icd-on-accent);
+  background-color: rgb(2, 106, 157);
+  background-image: linear-gradient(to bottom, rgb(21, 106, 152), rgb(23, 106, 154));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .progress-striped .bar {
+  background-color: rgb(21, 106, 152);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button {
+  background: var(--icd-raised);
+  color: rgb(174, 190, 203);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button.ui-state-focus {
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button:hover {
+  background: var(--icd-hover);
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button.ui-state-hover {
+  background: var(--icd-raised);
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn:hover.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button:hover.ui-state-hover {
+  background: var(--icd-hover);
+  color: rgb(174, 190, 203);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-hover.ui-button {
+  background: var(--icd-raised);
+  color: rgb(174, 190, 203);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .btn.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .active.ui-button,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--active.ui-button,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button.ui-state-active:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button.ui-state-active.ui-state-hover {
+  background: rgb(42, 44, 47);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn.ui-state-focus.ui-state-active:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .btn.ui-state-focus.ui-widget-header:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button.ui-state-focus.ui-state-active:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .Button.ui-state-focus.ui-widget-header:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .ui-state-focus.ui-widget-header.ui-button,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-state-focus.ui-state-active.ui-button {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-button:active {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-primary:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--primary:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning {
+  background: rgb(166, 60, 10);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning:hover.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning:hover.ui-state-hover {
+  background: rgb(167, 58, 15);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .btn-warning.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-warning:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .Button--warning.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--warning:active {
+  background: rgb(167, 58, 15);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger {
+  background: rgb(185, 17, 18);
+  color: var(--icd-on-accent);
+  border-color: rgb(254, 121, 108);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger:hover {
+  background: rgb(187, 9, 15);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger:hover.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger:hover.ui-state-hover {
+  background: rgb(187, 9, 15);
+  color: var(--icd-on-accent);
+  border-color: rgb(254, 121, 108);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .btn-danger.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-danger:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .Button--danger.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--danger:active {
+  background: rgb(187, 9, 15);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success {
+  background: rgb(20, 120, 25);
+  color: var(--icd-on-accent);
+  border-color: rgb(115, 195, 114);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success:hover {
+  background: rgb(22, 120, 27);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success:hover.ui-state-hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success:hover.ui-state-hover {
+  background: rgb(22, 120, 27);
+  color: var(--icd-on-accent);
+  border-color: rgb(115, 195, 114);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .btn-success.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-success:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success.Button--active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success.ui-button.ui-state-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-progressbar .Button--success.ui-button.ui-widget-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--success:active {
+  background: rgb(22, 120, 27);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-info:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--secondary:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-link:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--link:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--link--has-divider {
+  border-bottom: 1px solid var(--icd-line);
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Button--icon-action-rev:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) code,
+html[data-icd='on']:not(#icd-a):not(#icd-b) pre {
+  background-color: var(--icd-raised);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) code {
+  color: rgb(248, 121, 106);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) pre {
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) a.admin {
+  color: rgb(248, 121, 102);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .tooltip .tooltip_text {
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #breadcrumbs {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .al-options {
+  background-color: var(--icd-surface);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .al-options .ui-menu-item a.disabled.ui-state-focus {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .al-options .ui-menu-carat span {
+  border-color: var(--icd-line) transparent;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .border {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .list-view>ul+ul {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .list-view a.active {
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .list-view a.active .nav-badge {
+  background: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .page-action-list a {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .page-action-list a:active {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .header-bar {
+  border-bottom: 1px solid var(--icd-line);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .header-bar.pinned {
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .header-bar.sticky {
+  background: var(--icd-surface);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .standalone-icon:before {
+  color: rgb(168, 168, 168);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new-and-total-badge .total-items {
+  background-color: var(--icd-raised);
+  color: rgb(167, 167, 167);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ReactModal__Content.ReactModal__Content--canvas .ReactModal__Header {
+  background: var(--icd-surface);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ReactModal__Content.ReactModal__Content--canvas .ReactModal__Body {
+  background: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ReactModal__Content.ReactModal__Content--canvas .ReactModal__Footer {
+  background: var(--icd-raised);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .form-dialog .form-controls {
+  background-color: var(--icd-raised);
+  border-top: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .avatar {
+  border: 2px solid var(--icd-line);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group {
+  border: 1px solid var(--icd-line);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-header .name {
+  color: rgb(172, 181, 189);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-list .ig-row {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-list .ig-row:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-list .ig-row:focus {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-list .ig-row.ig-published:not(.student-view):before {
+  background-color: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-list .ig-row.ig-row-empty {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-published:not(.student-view) .ig-type-icon {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ig-text {
+  color: rgb(172, 181, 189);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-container {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .ig-header {
+  background-color: var(--icd-raised);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .ig-row {
+  background: var(--icd-surface);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .ig-list li:last-child .ig-row.ig-row-empty,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .ig-list li:last-of-type .ig-row.ig-row-empty,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .last_visible .ig-row.ig-row-empty {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .item-group-expandable {
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .item-group-expandable li:not(:last-child) .ig-sublist,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .item-group-expandable li:not(:last-of-type) .ig-sublist {
+  box-shadow: inset 0 1px 0 var(--icd-line), inset 0 -1px 0 var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .item-group-expandable .ig-sublist {
+  background-color: var(--icd-raised);
+  box-shadow: inset 0 1px 0 var(--icd-line);
+  border-top: 1px solid var(--icd-line);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .item-group-condensed .item-group-expandable .ig-sublist ul li .ig-row {
+  border-bottom: 1px dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-published,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-published:hover {
+  background: rgb(20, 120, 25);
+  border: 1px solid rgb(115, 195, 114);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-published:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-published.disabled,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-published.disabled:hover {
+  border: 1px solid rgb(110, 184, 102);
+  background: rgb(38, 118, 29);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish {
+  color: var(--icd-on-accent);
+  background-color: rgb(180, 33, 36);
+  background-image: linear-gradient(to bottom, rgb(178, 36, 42), #a4100c);
+  border-color: rgb(251, 122, 106) rgb(251, 122, 106) rgb(255, 169, 156);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish:active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish.active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish.disabled,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish:focus {
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .btn-unpublish:focus {
+  box-shadow: inset 0 0 0 2px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .publish-icon,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .publish-icon.publish-icon-unpublish {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .publish-icon.publish-icon-published,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .published-status.published {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .published-status.unpublished {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .published-status.hiddenState,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .published-status.restricted {
+  color: rgb(249, 122, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .lock-icon,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .lock-icon.lock-icon-unlocked,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .lock-icon.disabled {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .post-to-sis-status.enabled {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .post-to-sis-status.disabled {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pill {
+  box-shadow: 0 1px 0 var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .alert {
+  background-color: var(--icd-raised);
+  color: rgb(250, 135, 97);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .alert-success {
+  background-color: var(--icd-raised);
+  color: rgb(77, 189, 78);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .alert-danger,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .alert-error {
+  background-color: var(--icd-raised);
+  color: rgb(249, 134, 120);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .alert-info {
+  background-color: var(--icd-raised);
+  color: rgb(79, 174, 246);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-info,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-error {
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-success .ic-flash__icon {
+  background-color: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-warning .ic-flash__icon {
+  background-color: rgb(166, 60, 10);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-flash-error .ic-flash__icon {
+  background-color: rgb(185, 17, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-alert-masquerade-student-view {
+  background: rgb(167, 16, 142);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-alert-masquerade-student-view:after {
+  background: rgb(167, 16, 142);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-notification.ic-notification--success .ic-notification__icon {
+  background: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-notification.ic-notification--alert .ic-notification__icon {
+  background: rgb(166, 60, 10);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-notification.ic-notification--danger .ic-notification__icon {
+  background: rgb(185, 17, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-notification__content {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Super-toggle--on-off .ic-Super-toggle__switch::after {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Super-toggle--on-off .ic-Super-toggle__input:checked~.ic-Super-toggle__container .ic-Super-toggle__switch {
+  background: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Super-toggle--ui-switch .ic-Super-toggle__switch::after {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__Container {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__Container.with-border {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__Container.with-arrow:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__Container.with-arrow:before {
+  border-right-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .right>.ColorPicker__Container:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .right>.ColorPicker__Container:before {
+  border-left-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorBlock {
+  border: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorBlock-line {
+  stroke: rgb(253, 117, 100);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorBlock.with-dark-check i[class*=icon-],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorBlock.with-dark-check i[class^=icon-] {
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorBlock.with-box-shadow:focus {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25),inset 0 0 0 1px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorPreview {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorPreview i[class*=icon-],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ColorPicker__ColorPreview i[class^=icon-] {
+  color: rgb(249, 122, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input {
+  background: var(--icd-raised);
+  border-color: var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input[readonly],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input[disabled],
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input[readonly] {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error select.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error textarea.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="text"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="password"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="datetime"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="datetime-local"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="date"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="month"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="time"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="week"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="number"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="email"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="url"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="search"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="tel"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error input[type="color"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input.ic-Input--has-error:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-error .uneditable-input.ic-Input:focus {
+  outline-color: rgb(238, 6, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning select.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning textarea.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="text"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="password"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="datetime"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="datetime-local"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="date"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="month"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="time"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="week"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="number"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="email"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="url"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="search"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="tel"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning input[type="color"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input.ic-Input--has-warning:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-warning .uneditable-input.ic-Input:focus {
+  outline-color: rgb(252, 94, 19);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success select.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) textarea.ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success textarea.ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="text"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="text"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="password"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="password"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="datetime"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="datetime-local"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="datetime-local"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="date"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="date"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="month"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="month"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="time"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="time"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="week"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="week"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="number"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="number"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="email"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="email"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="url"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="url"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="search"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="search"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="tel"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="tel"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) input[type="color"].ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success input[type="color"].ic-Input:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .uneditable-input.ic-Input.ic-Input--has-success:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control--has-success .uneditable-input.ic-Input:focus {
+  outline-color: rgb(0, 172, 24);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input {
+  background-color: var(--icd-raised);
+}
+@supports (-ms-accelerator:true) {
+  html[data-icd='on']:not(#icd-a):not(#icd-b) select.ic-Input {
+    background-color: var(--icd-raised);
+  }
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--error .ic-Form-message__Layout {
+  background: rgb(185, 17, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--error .ic-Form-message__Layout:before {
+  background: rgb(187, 9, 15);
+  border-right: 1px solid rgb(252, 111, 97);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--success .ic-Form-message__Layout {
+  background: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--success .ic-Form-message__Layout:before {
+  background: rgb(22, 120, 27);
+  border-right: 1px solid rgb(98, 188, 97);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--warning .ic-Form-message__Layout {
+  background: rgb(166, 60, 10);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-message.ic-Form-message--warning .ic-Form-message__Layout:before {
+  background: rgb(167, 58, 15);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-error .ic-Label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-error .ic-Input-group__add-on {
+  color: rgb(248, 121, 106);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-warning .ic-Label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-warning .ic-Input-group__add-on {
+  color: rgb(249, 122, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-success .ic-Label,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--has-success .ic-Input-group__add-on {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-actions {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Legend {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Radio .ic-Label:before {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Radio input[type="radio"]:checked~.ic-Label:before {
+  box-shadow: inset 0 0 0 3px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Radio input[type="radio"]:focus~.ic-Label:before {
+  box-shadow: inset 0 0 0 2px var(--ic-brand-primary-lightened-15),inset 0 0 0 4px var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Radio.ic-Radio--icon-only .ic-Label {
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Radio.ic-Radio--icon-only .ic-Label:hover {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--checkbox .ic-Label:before {
+  background: url("/dist/images/forms/ic-checkbox-bg-0a15011a47.svg") no-repeat center bottom var(--icd-raised);
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Form-control.ic-Form-control--checkbox input[type="checkbox"]:checked:focus~.ic-Label:before {
+  outline-color: var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Input-group .ic-Input-group__add-on,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Input-group .ic-Label {
+  background: var(--icd-raised);
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Action-header.ic-Action-header--before-item-groups {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-badge.ic-badge--neutral {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-badge.ic-badge--success {
+  background: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-badge.ic-badge--alert {
+  background: rgb(166, 60, 10);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-badge.ic-badge--danger {
+  background: rgb(185, 17, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) body {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) body.embedded h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) body.embedded .h2 {
+  border: 1px solid var(--icd-line);
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) body.embedded #modal-box {
+  background: var(--icd-surface) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #skip_navigation_link {
+  border: 1px dashed var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-footer {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-nav-toggle-and-crumbs {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-header__menu-list-item.ic-app-header__menu-list-item--active .ic-app-header__menu-list-link {
+  background: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-header__menu-list-item.ic-app-header__menu-list-item--active .ic-avatar {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-header__menu-list-link:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-app-header__menu-list-link:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #___reactour .reactour__helper {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side hr {
+  border: dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .h2 {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .right-side-list li a>i {
+  color: rgb(165, 165, 165);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .right-side-list li em,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .right-side-list li p {
+  color: rgb(159, 159, 159);
+}
+@media print {
+  html[data-icd='on']:not(#icd-a):not(#icd-b),
+  html[data-icd='on']:not(#icd-a):not(#icd-b) body {
+    color: rgb(255, 255, 255) !important;
+  }
+  html[data-icd='on']:not(#icd-a):not(#icd-b) #breadcrumbs {
+    box-shadow: 0 0 0 var(--icd-line);
+  }
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .module-sequence-footer .module-sequence-footer-content {
+  background: var(--icd-surface);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .text-warning {
+  color: rgb(249, 122, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) a.text-warning:hover {
+  color: rgb(252, 120, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .text-error {
+  color: rgb(248, 121, 106);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) a.text-error:hover {
+  color: rgb(251, 119, 105);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .text-success {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) a.text-success:hover {
+  color: rgb(86, 184, 86);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .page-header {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-dialog-content .form-actions {
+  box-shadow: inset 0 1px 0 var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table>thead {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-striped,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-striped>thead {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-striped>tbody>tr td {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr:hover td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr:hover th {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.table-hover-row td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .table-hover tbody tr.table-hover-row th {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) hr {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) abbr[title],
+html[data-icd='on']:not(#icd-a):not(#icd-b) abbr[data-original-title] {
+  border-bottom: 1px dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) blockquote {
+  border-left: 5px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) blockquote.pull-right {
+  border-right: 5px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-widget.ui-tooltip.popover {
+  color: rgb(146, 161, 172);
+  background-color: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tooltip.popover:after {
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tooltip.popover.bottom:after {
+  border-color: var(--icd-line) transparent transparent transparent;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tooltip.popover.horizontal:after {
+  border-color: transparent var(--icd-line) transparent transparent;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tooltip.popover.right.horizontal:after {
+  border-color: transparent transparent transparent var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dotted-separator {
+  border-bottom: 1px dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.none_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.none_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.none_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.none_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.none_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.none_score {
+  background-color: rgb(24, 89, 208);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.acceptable_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.acceptable_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.acceptable_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.acceptable_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.acceptable_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.acceptable_score {
+  background-color: rgb(15, 120, 24);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.warning_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.warning_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.warning_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.warning_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.warning_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.warning_score {
+  background-color: rgb(111, 100, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.problem_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.problem_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.problem_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.problem_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.problem_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.problem_score {
+  background-color: rgb(151, 76, 3);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.failure_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.failure_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.failure_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.failure_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.failure_score,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.failure_score {
+  background-color: rgb(169, 53, 54);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score.submission_pending,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:link.submission_pending,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:visited.submission_pending,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:active.submission_pending,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:hover.submission_pending,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.submission_error,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .turnitin_similarity_score:focus.submission_pending {
+  background-color: rgb(37, 40, 43);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #instructure_ajax_error_box {
+  background-color: var(--icd-surface);
+  border: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .user_content iframe[data-media-id] {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder-content {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder .h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder-content h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .reminder-content .h2 {
+  background-color: var(--icd-raised);
+  color: rgb(135, 176, 254);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #floating_reminders {
+  background-color: rgb(73, 64, 3);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side h4.item_list_header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .h4.item_list_header {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side table.notifications {
+  border-top: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side table.notifications tr {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side table.notifications tr td {
+  border-color: var(--icd-line);
+  border-bottom: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side table.courses td {
+  background-color: var(--icd-raised);
+  color: rgb(167, 167, 167);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side table.courses td a {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .events_list li.event i.icon-check,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .events_list li.todo i.icon-check,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .to-do-list li.event i.icon-check,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .to-do-list li.todo i.icon-check {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .events_list .event-details:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .events_list .todo-details:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .to-do-list .event-details:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .to-do-list .todo-details:after {
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, var(--icd-bg) 80%);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .events_list .todo-details:after,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .to-do-list .todo-details:after {
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, var(--icd-bg) 50%);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .details {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .details .header {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #right-side .details .preview {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) table.summary thead th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) table.summary caption {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) table.summary td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) table.summary tbody th {
+  border-bottom: 1px solid var(--icd-line);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .error_message,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .formError {
+  color: rgb(248, 121, 106);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .loading_image {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .error_box .error_text {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .datetime_suggest {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box h3,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .h3 {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content {
+  background-color: var(--icd-raised);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_details {
+  border: 1px solid var(--icd-line);
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_options_list .option {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_options_list .option:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_options_list .option.selected {
+  background-color: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_options_list .option a[class*=icon-]:before,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box .wizard_content .wizard_options_list .option a[class^=icon-]:before {
+  color: rgb(168, 168, 168);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box.wizard-box--course h3 {
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #wizard_box.wizard-box--course .wizard_content .wizard_details {
+  color: rgb(229, 231, 233);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #content_tags_dialog h3,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #content_tags_dialog .h3 {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #content_tags_dialog .tags>.tag {
+  border: 1px solid var(--icd-line);
+  background-color: rgb(12, 23, 47);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #content_tags_dialog .tags>.tag.uneditable {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #keyboard_navigation ul.navigation_list li .keycode,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .keyboard_navigation ul.navigation_list li .keycode {
+  color: rgb(135, 176, 254);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message {
+  color: rgb(255, 255, 255);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.header {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .links,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .links a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .original_post_date {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .statistics td.name,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .statistics td.stats {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .statistics td.stats .answer .answer_bar {
+  border: 1px solid var(--icd-line);
+  background: rgb(25, 27, 30);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .statistics td.stats .answer.correct_answer .answer_bar {
+  background: rgb(44, 73, 32);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .attachments_list a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message div.content .extras {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message.pinned_notification {
+  border: 1px solid var(--icd-line);
+  background: rgb(22, 21, 0);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_message.conversation .submission li {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message {
+  color: rgb(255, 255, 255);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div li,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.header a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div li a {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.content {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.content .less_important {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.content a.textarea {
+  border: 1px solid var(--icd-line);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.content textarea {
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.behavior_content,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .communication_sub_message div.behavior_content a {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new_activity_message a.textarea {
+  border: 1px solid var(--icd-line);
+  color: rgb(159, 159, 159);
+  background-color: var(--icd-surface);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new_activity_message .message_type img {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new_activity_message .message_type img:hover {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new_activity_message .message_type img.selected {
+  border-color: var(--icd-line);
+  background-color: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .new_activity_message form textarea {
+  border: 1px solid var(--icd-control-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .module_legend {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .module_legend .header {
+  border-bottom: 1px solid var(--icd-line);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #instructure_dropdown_list .option.ui-state-default.minimal {
+  background: var(--icd-surface);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #module_prerequisites_list,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #module_prerequisites_list li.module li.requirement.locked_requirement a {
+  color: rgb(146, 161, 172);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #change_calendar_version_link_holder a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dashboard-toggle a {
+  background-image: linear-gradient(to bottom, rgb(7, 70, 96), rgb(0, 106, 160));
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #change_calendar_version_link_holder a:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .dashboard-toggle a:hover {
+  border-color: rgb(108, 172, 234);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #fixed_bottom .fixed_warning {
+  background-color: rgb(37, 15, 16);
+  border-color: var(--icd-line-strong);
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .nav-icon {
+  background: var(--icd-bg);
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .unread-grade {
+  background-color: rgb(0, 107, 153);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table tr.ic-Table__row--bg-neutral,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table tr.ic-Table__row--bg-success,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table tr.ic-Table__row--bg-alert,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table tr.ic-Table__row--bg-danger {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table th.ic-Table--header-row,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table tbody th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table td {
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--striped tbody tr:nth-child(odd) {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--hover-row tbody tr:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--hover-row tbody tr.ic-Table__row--bg-neutral:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--hover-row tbody tr.ic-Table__row--bg-success:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--hover-row tbody tr.ic-Table__row--bg-alert:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Table.ic-Table--hover-row tbody tr.ic-Table__row--bg-danger:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-panel {
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav {
+  border-bottom-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-state-hover {
+  background: var(--icd-bg);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li:hover {
+  background: var(--icd-hover);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-state-focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-state-focus.ui-tabs-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-tabs-active,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-tabs-active.ui-state-hover {
+  border-color: var(--icd-line);
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ui-tabs .ui-tabs-nav li.ui-tabs-active:hover {
+  border-color: var(--icd-line);
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .assignment_group {
+  background: var(--icd-raised);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header {
+  color: rgb(154, 169, 180);
+  background-color: var(--icd-raised);
+  background-image: linear-gradient(to bottom, var(--icd-raised), var(--icd-raised));
+  border-color: var(--icd-line) var(--icd-line) var(--icd-line);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header:active {
+  color: rgb(166, 181, 192);
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header.active {
+  color: rgb(175, 189, 201);
+  background-color: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header.disabled,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header[disabled] {
+  color: rgb(154, 169, 180);
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .group_header:focus {
+  color: rgb(166, 181, 192);
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .data,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups .cell {
+  border-bottom: 1px solid var(--icd-line);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment.group_assignment_graded a {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment.group_assignment_graded a.grade {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment.group_assignment_ungraded .assignment_due {
+  color: rgb(163, 164, 66);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment.group_assignment_overdue .assignment_due {
+  color: rgb(248, 121, 104);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #assignments_for_student .group_assignment:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group {
+  border: 1px solid var(--icd-line);
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group div.header {
+  border-bottom: 1px solid var(--icd-line);
+  background-color: var(--icd-raised);
+  color: rgb(167, 167, 167);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group .group_assignment {
+  color: rgb(179, 179, 179);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group .group_assignment:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group .group_assignment.group_assignment_graded a {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group .group_assignment.group_assignment_overdue .assignment_due {
+  color: rgb(248, 121, 104);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #groups_for_student .assignment_group .group_assignment div.data.assignment_title .context_name {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #group_weight_table th,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #group_weight_table tr.group_weight td {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #submit_from_external_tool_form #external_tool_submission_details.not_selected {
+  color: rgb(160, 160, 142);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #submit_from_external_tool_form .tools .tool:hover {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__Link--has-icon .icon-rubric,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__Link--has-icon .icon-check,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__Link--has-icon .icon-warning,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__List .icon-rubric,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__List .icon-check,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .Submission__List .icon-warning {
+  color: rgb(159, 180, 195);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .group_list .group .group_name {
+  border-top: 1px dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .student-groups {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .student-groups.show-body .student-group-header {
+  background-color: var(--icd-raised);
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .student-groups .student-group-title h2 a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .student-groups .student-group-students {
+  color: rgb(168, 168, 168);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .active-selection.ui-menu-item .ui-corner-all.ui-state-focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .active-selection.ui-menu-item .ui-corner-all:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .active-selection.ui-menu-item .ui-corner-all:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .active-selection.ui-menu-item:first-of-type .ui-corner-all.ui-state-focus {
+  background: rgb(29, 41, 50);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #media_record_option_holder .record_option {
+  border: 2px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #media_record_option_holder .record_option:hover {
+  border: 2px solid var(--icd-line);
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #media_record_option_holder .record_option.selected_option {
+  border: 2px solid var(--icd-line);
+  background: rgb(25, 27, 30);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #audio_record_holder_holder #audio_record_holder_message,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #audio_record_holder_holder #video_record_holder_message,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #video_record_holder_holder #audio_record_holder_message,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #video_record_holder_holder #video_record_holder_message {
+  background-color: rgb(42, 44, 48);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) div#audio_upload,
+html[data-icd='on']:not(#icd-a):not(#icd-b) div#video_upload {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #audio_record_holder,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #video_record_holder {
+  background: var(--icd-surface) url(/dist/images/ajax-loader-medium-444-ed8f74efc3.gif) no-repeat 10px 10px;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #audio_record,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #video_record,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter {
+  border: 0px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter .audio_level {
+  background-color: rgb(31, 75, 28);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter .level_6,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter .level_7,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter .level_8 {
+  background-color: rgb(67, 67, 0);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .volume_meter .level_9 {
+  background-color: rgb(182, 29, 20);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .media_comment_thumbnail,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .media_comment_thumbnail_play_button {
+  background-color: rgb(24, 104, 161);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module .icon-minimize {
+  color: rgb(249, 122, 75);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module .icon-check {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module div.footer {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module .prerequisites .criterion {
+  border: 1px solid var(--icd-line);
+  background-color: var(--icd-raised);
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item {
+  border-bottom: 1px dotted var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item .type_icon i,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item .completion_requirement {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item.context_module_item_hover {
+  background-color: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item td.points_possible_display,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_item td.due_date_display {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .context_module_placeholder {
+  border: 1px dashed var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .collaboration {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .collaboration .collaboration-header h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .collaboration .collaboration-header .h2 {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .collaborator-list>ul>li {
+  border-bottom: 1px solid var(--icd-line);
+  border-top: 1px solid var(--icd-line);
+  color: rgb(146, 161, 172);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .collaborator-list>ul>li:hover {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper li {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper li:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper li:hover a,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper li a:focus {
+  color: rgb(248, 121, 102);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper .remove-button a {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .members-list-wrapper .member-instructions {
+  border: 2px dashed var(--icd-line);
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages .sticky-toolbar .sticky {
+  background: var(--icd-bg);
+  border-color: var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages .header-bar-outer-container.page-changed .header-bar-container .page-changed-alert {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table thead {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr.clickable:hover {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr td:first-child {
+  border-left: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr td:last-child {
+  border-right: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr:first-child td {
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody tr:last-child td {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody td {
+  color: rgb(159, 159, 159);
+  border-top: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody td .wiki-page-link {
+  color: rgb(173, 173, 173);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody td .wiki-page-link.published,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table tbody td .icon-publish {
+  color: rgb(33, 184, 42);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .table .no-pages .no-pages-cell {
+  border: 1px dashed var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .loading {
+  color: rgb(156, 159, 163);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.index .index-content .loading.loading-more {
+  border: 1px dashed var(--icd-line);
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .header-row a.sort-field:hover i {
+  color: var(--icd-link-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .header-row a.sort-field-active i {
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show .course-title,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show .page-title {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show.revisions .show-revisions {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show.revisions .show-revisions .revision-history .close-button {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show.revisions .revision .revision-content .revision-details {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show.revisions .revision .revision-actions {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .pages.show.revisions .revision.selected {
+  background: var(--icd-brand-soft);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #last_edited_by {
+  border: solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #last_edited_by h3,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #last_edited_by .h3 {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container thead th {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container td,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container th {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container .rubric_title {
+  background-color: var(--icd-raised);
+  border-top: 1px solid var(--icd-line);
+  border-left: 1px solid var(--icd-line);
+  border-right: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container table.ratings td {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container td.criterion_description.completed {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container td.rating.selected {
+  background-color: rgb(48, 72, 29);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container.assessing td.rating:hover {
+  background-color: rgb(46, 72, 38);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container.editing table.ratings td {
+  border-left: 1px dashed var(--icd-line);
+  border-right: 1px dashed var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container.editing table.ratings td.add_right {
+  border-right-color: var(--icd-line-strong);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_container.editing table.ratings td.add_left {
+  border-left-color: var(--icd-line-strong);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .rubric_summary .rating {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #rubric_holder .hide_rubric_link {
+  color: rgb(192, 192, 192);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini-cal-header,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar {
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar .day {
+  color: rgb(179, 179, 179);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar .day.has_event,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar .day.today {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar .day.other_month {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .mini_calendar .day.drop_target {
+  background-color: rgb(30, 32, 35);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #help-dialog #help-dialog-options li a {
+  border-bottom: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #help-dialog #help-dialog-options li a:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #help-dialog #help-dialog-options li a:hover {
+  background-color: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) #help-dialog small {
+  color: rgb(168, 168, 168);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link .ic-Expand-link__trigger:hover .ic-Expand-link__icon,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link .ic-Expand-link__trigger:focus .ic-Expand-link__icon,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--from-right .ic-Expand-link__trigger:hover .ic-Expand-link__icon,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--from-right .ic-Expand-link__trigger:focus .ic-Expand-link__icon {
+  background: rgba(255, 255, 255, 0.15);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Success .ic-Expand-link__trigger .ic-Expand-link__layout {
+  background: rgba(20, 120, 25, 0.8);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Success .ic-Expand-link__trigger:hover .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Success .ic-Expand-link__trigger:focus .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Success.ic-Expand-link--from-right .ic-Expand-link__trigger:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Success.ic-Expand-link--from-right .ic-Expand-link__trigger:focus {
+  background: rgb(20, 120, 25);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Danger .ic-Expand-link__trigger .ic-Expand-link__layout {
+  background: rgba(185, 17, 18, 0.8);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Danger .ic-Expand-link__trigger:hover .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Danger .ic-Expand-link__trigger:focus .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Danger.ic-Expand-link--from-right .ic-Expand-link__trigger:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Danger.ic-Expand-link--from-right .ic-Expand-link__trigger:focus {
+  background: rgb(185, 17, 18);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Light .ic-Expand-link__trigger .ic-Expand-link__layout {
+  color: rgb(174, 190, 203);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Light .ic-Expand-link__trigger:hover .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Light .ic-Expand-link__trigger:focus .ic-Expand-link__layout,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Light.ic-Expand-link--from-right .ic-Expand-link__trigger:hover,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Expand-link.ic-Expand-link--Light.ic-Expand-link--from-right .ic-Expand-link__trigger:focus {
+  background: var(--icd-hover);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .FlickrImage__display {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ImageSearch__attribution a:focus,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ImageSearch__attribution a:hover {
+  outline: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-input-box {
+  background: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-input-box.disabled {
+  background-color: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-placeholder,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-clear i:before {
+  color: rgb(159, 159, 159);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-token {
+  background: var(--icd-raised);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-token:hover {
+  background: rgb(13, 25, 52);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result-wrapper:before,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result-wrapper:after {
+  border-bottom: 10px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result-container {
+  background: var(--icd-surface);
+  border: 1px solid var(--icd-line);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result.selected,
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result:hover {
+  background: rgb(24, 104, 161);
+  color: var(--icd-on-accent);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ac-result-list .back {
+  color: rgb(192, 192, 192);
+}
+
+/* canvas.skku.edu/dist/brandable_css/responsive_layout_normal_contrast/bundles/login-172cde0ffb.css — 규칙 3 */
+html[data-icd='on']:not(#icd-a):not(#icd-b) #unauthorized_holder #unauthorized_message h2,
+html[data-icd='on']:not(#icd-a):not(#icd-b) #unauthorized_holder #unauthorized_message .h2 {
+  color: rgb(255, 255, 255);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Login-confirmation__content {
+  background: var(--icd-bg);
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) .ic-Login__sso-divider {
+  border-top: 1px solid var(--icd-line);
+}
