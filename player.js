@@ -1,0 +1,384 @@
+// Runs only on LCMS pages. The playlist is controlled by the extension worker
+// while the official iCampus lecture stays in the user's existing tab.
+// Intro skip runs on every lecture. 2x, autoplay, mute and dialog clicks run
+// only for the playlist; a lecture opened by title click or by hand keeps the
+// school player's own speed.
+(() => {
+  const PLAYER_VERSION = '1.5.18';
+  if (window.__icampusCheckPlayer) return;
+  window.__icampusCheckPlayer = true;
+
+  const speedSources = new WeakMap();
+  const speedAttempts = new WeakMap();
+  let playlistKey = null;
+  let completionSent = false;
+  let lastProgressSent = 0;
+  let lastDialogClick = 0;
+  let readyRequested = false;
+  let lastReadyAt = 0;
+  let rateTimer = null;
+  const trackedVideos = new WeakSet();
+  const trackedIntros = new WeakSet();
+  const continuedIntroSources = new Set();
+  const recoveringVideos = new WeakSet();
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'icampus-playlist-probe') {
+      sendResponse({ ok: true });
+      if (!playlistKey) { readyRequested = false; ready(true); }
+      return;
+    }
+    if (message?.type !== 'icampus-playlist-stop' || !playlistKey) return;
+    playlistKey = null;
+    completionSent = true;
+    try { video()?.pause(); } catch { /* The frame may already be navigating. */ }
+  });
+
+  function video() {
+    const candidates = [...document.querySelectorAll('video')].filter(element => sourceOf(element));
+    const visible = candidates.filter(element => element.getClientRects().length > 0);
+    const lectures = candidates.filter(element => Number.isFinite(element.duration) && element.duration >= 10);
+    // The official player hides its loaded main video behind the start screen.
+    // An invisible video with a real source must still be eligible to start.
+    return visible.find(element => lectures.includes(element) && element.readyState > 0) ||
+      lectures.find(element => element.readyState > 0) ||
+      visible.find(element => element.readyState > 0) || visible[0] ||
+      candidates.find(element => element.readyState > 0) || candidates[0] || null;
+  }
+
+  function sourceOf(element) {
+    return element?.currentSrc || element?.src || '';
+  }
+
+  function sendState(state) {
+    if (!playlistKey) return;
+    chrome.runtime.sendMessage({ type: 'icampus-player-state', key: playlistKey, state }).catch(() => {});
+  }
+
+  function acceptPlayerDialog() {
+    if (!playlistKey || Date.now() - lastDialogClick < 750) return false;
+    const dialog = [...document.querySelectorAll('#confirm-dialog, .confirm-dialog, [role="dialog"]')]
+      .find(candidate => {
+        const style = getComputedStyle(candidate);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (candidate.id === 'confirm-dialog' || candidate.classList.contains('confirm-dialog')) return true;
+        return /보시겠습니까|이어|이전|확인|계속|재생|학습|종료/.test(candidate.textContent || '');
+      });
+    const buttons = dialog ? [...dialog.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]')]
+      .filter(button => !button.disabled && getComputedStyle(button).display !== 'none' &&
+        getComputedStyle(button).visibility !== 'hidden') : [];
+    const label = button => [button.textContent, button.value, button.title,
+      button.getAttribute('aria-label')].filter(Boolean).join(' ').trim();
+    const confirm = dialog?.querySelector('.confirm-ok-btn') || buttons.find(button =>
+      /확인|예|이어|계속|재생|시작|OK/i.test(label(button)) &&
+      !/취소|아니오|처음|닫기/.test(label(button)));
+    if (!dialog || !confirm) return false;
+    const dialogStyle = getComputedStyle(dialog);
+    const confirmStyle = getComputedStyle(confirm);
+    if (dialogStyle.display === 'none' || dialogStyle.visibility === 'hidden' ||
+        confirmStyle.display === 'none' || confirmStyle.visibility === 'hidden') return false;
+    lastDialogClick = Date.now();
+    confirm.click();
+    setTimeout(() => {
+      const element = video();
+      if (playlistKey && element) ensurePlayback(element);
+    }, 150);
+    return true;
+  }
+
+  function isIntro(element) {
+    const source = sourceOf(element);
+    return source.includes('/settings/viewer/uniplayer/intro') ||
+      source.includes('/viewer/uniplayer/preloader.');
+  }
+
+  function continueIntro(element) {
+    if (!playlistKey || !isIntro(element)) return false;
+    const source = sourceOf(element);
+    if (!source || continuedIntroSources.has(source)) return false;
+    continuedIntroSources.add(source);
+    setTimeout(() => {
+      if (!playlistKey || !isIntro(element) || sourceOf(element) !== source) return;
+      const front = document.querySelector('#front-screen');
+      const playButton = front?.querySelector('.vc-front-screen-play-btn');
+      if (playButton) playButton.click();
+      ensurePlayback(element);
+    }, 100);
+    return true;
+  }
+
+  // Jump to the intro's end instead of waiting it out (icampus-premium's
+  // approach). The player then moves on to the lecture by itself.
+  function skipIntro(element) {
+    if (!isIntro(element)) return;
+    const source = sourceOf(element);
+    setTimeout(() => {
+      if (!isIntro(element) || sourceOf(element) !== source) return;
+      const end = element.duration;
+      if (!Number.isFinite(end) || end <= 0 || element.currentTime >= end - .05) return;
+      try { element.currentTime = end; } catch { /* Not seekable yet; a later event retries. */ }
+    }, 100);
+  }
+
+  for (const type of ['loadedmetadata', 'durationchange', 'playing']) {
+    document.addEventListener(type, event => {
+      if (event.target instanceof HTMLVideoElement) skipIntro(event.target);
+    }, true);
+  }
+
+  function watchIntro(element) {
+    if (!element || trackedIntros.has(element)) return;
+    trackedIntros.add(element);
+    element.addEventListener('ended', () => continueIntro(element));
+  }
+
+  function rateButton() {
+    return [...document.querySelectorAll('.vc-pctrl-playback-rate-btn, .vc-pctrl-playback-rate-setbox button, .vc-pctrl-playback-rate-setbox [role="menuitem"]')].find(button => {
+      const label = [button.textContent, button.title, button.getAttribute('aria-label'), button.dataset.rate]
+        .filter(Boolean).join(' ').trim();
+      return /(?:^|[^\d])2(?:\.0)?\s*(?:x|×|배속|배)?(?:$|[^\d])/i.test(label);
+    });
+  }
+
+  function applyTwoX(element) {
+    if (!element || isIntro(element)) return false;
+    const source = sourceOf(element);
+    if (!source) return false;
+    if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) {
+      speedSources.set(element, source);
+      return true;
+    }
+    if (speedSources.get(element) === source) return false;
+    const lastAttempt = speedAttempts.get(element);
+    if (lastAttempt?.source === source && Date.now() - lastAttempt.time < 1000) return false;
+    const button = rateButton();
+    speedAttempts.set(element, { source, time: Date.now() });
+    if (button) button.click();
+    else {
+      const toggle = document.querySelector('.vc-pctrl-playback-rate-toggle-btn');
+      if (!toggle) return false;
+      toggle.click();
+      setTimeout(() => {
+        const option = rateButton();
+        if (option) option.click();
+      }, 100);
+    }
+    setTimeout(() => {
+      if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) {
+        speedSources.set(element, source);
+        sendState('speed-2x');
+      }
+    }, 600);
+    return true;
+  }
+
+  function sendProgress(element, force = false) {
+    if (!playlistKey || isIntro(element) || element !== video()) return;
+    if (!force && Date.now() - lastProgressSent < 4000) return;
+    lastProgressSent = Date.now();
+    chrome.runtime.sendMessage({
+      type: 'icampus-player-progress', key: playlistKey,
+      currentTime: Number.isFinite(element.currentTime) ? element.currentTime : 0,
+      duration: Number.isFinite(element.duration) ? element.duration : 0,
+      rate: element.playbackRate, paused: element.paused
+    }).catch(() => {});
+  }
+
+  function watchProgress(element) {
+    for (const event of ['play', 'pause', 'timeupdate', 'ratechange', 'loadedmetadata']) {
+      element.addEventListener(event, () => sendProgress(element, event !== 'timeupdate'));
+    }
+    sendProgress(element, true);
+  }
+
+  function handleMedia(event) {
+    if (!(event.target instanceof HTMLVideoElement) || event.target !== video()) return;
+    if (isIntro(event.target)) watchIntro(event.target);
+    if (!readyRequested) ready();
+    if (playlistKey) {
+      if (isIntro(event.target)) ensurePlayback(event.target);
+      else attachVideo(event.target);
+    }
+  }
+
+  document.addEventListener('loadedmetadata', handleMedia, true);
+  document.addEventListener('durationchange', handleMedia, true);
+
+  function completionVisible() {
+    const button = document.querySelector('.player-restart-btn');
+    if (!button) return false;
+    const style = getComputedStyle(button);
+    return style.display !== 'none' && style.visibility !== 'hidden' && button.getClientRects().length > 0;
+  }
+
+  function watchCompletion(element) {
+    element.addEventListener('ended', () => {
+      if (!playlistKey || completionSent) return;
+      if (!Number.isFinite(element.duration) || element.duration < 10 ||
+          element.currentTime < element.duration - 1) return;
+      let checks = 0;
+      const timer = setInterval(() => {
+        if (!playlistKey) { clearInterval(timer); return; }
+        acceptPlayerDialog();
+        if (completionVisible()) {
+          clearInterval(timer);
+          completionSent = true;
+          // This frame's playlist job is done. A replay here is the user's own,
+          // so drop the key before any later video gets 2x or autoplay.
+          const key = playlistKey;
+          playlistKey = null;
+          chrome.runtime.sendMessage({ type: 'icampus-player-ended', key }).catch(() => {});
+        } else if (++checks >= 30) {
+          clearInterval(timer);
+          sendState('ended-unconfirmed');
+        }
+      }, 500);
+    });
+  }
+
+  async function ensurePlayback(element) {
+    if (recoveringVideos.has(element)) return;
+    recoveringVideos.add(element);
+    try {
+      for (let attempt = 0; attempt < 4 && playlistKey && element.isConnected; attempt++) {
+        if (!element.paused) { sendProgress(element, true); return; }
+        element.muted = true;
+        const front = document.querySelector('#front-screen');
+        const playButton = front?.querySelector('.vc-front-screen-play-btn');
+        if (playButton && getComputedStyle(front).display !== 'none') playButton.click();
+        try {
+          await Promise.race([
+            Promise.resolve(element.play()).catch(() => {}),
+            new Promise(resolve => setTimeout(resolve, 1200))
+          ]);
+        } catch { /* Retry after the school's player finishes loading. */ }
+        if (!element.paused) { sendProgress(element, true); return; }
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+      if (playlistKey && element.paused) sendState('autoplay-blocked');
+    } finally {
+      recoveringVideos.delete(element);
+    }
+  }
+
+  function attachVideo(element) {
+    if (!trackedVideos.has(element)) {
+      trackedVideos.add(element);
+      watchCompletion(element);
+      watchProgress(element);
+    }
+    element.muted = true;
+    keepTwoX();
+    ensurePlayback(element);
+  }
+
+  async function startPlaylist(response) {
+    if (!response?.start || !response.key || response.rate > 2) return;
+    playlistKey = response.key;
+    acceptPlayerDialog();
+    const element = video();
+    if (!element) return;
+    element.muted = true;
+    if (isIntro(element)) {
+      const onMainVideo = event => {
+        if (!(event.target instanceof HTMLVideoElement) || isIntro(event.target)) return;
+        document.removeEventListener('loadedmetadata', onMainVideo, true);
+        event.target.muted = true;
+        attachVideo(event.target);
+      };
+      document.addEventListener('loadedmetadata', onMainVideo, true);
+      watchIntro(element);
+      ensurePlayback(element);
+    } else {
+      attachVideo(element);
+    }
+  }
+
+  function ready(force = false) {
+    const element = video();
+    if (!element) return false;
+    if (readyRequested) return true;
+    // A lecture opened outside the playlist gets a null answer; do not ask
+    // again on every player mutation.
+    if (!force && Date.now() - lastReadyAt < 1000) return true;
+    lastReadyAt = Date.now();
+    readyRequested = true;
+    chrome.runtime.sendMessage({ type: 'icampus-player-ready', playerVersion: PLAYER_VERSION })
+      .then(response => {
+        if (!response?.start) { readyRequested = false; return; }
+        startPlaylist(response);
+      }).catch(() => { readyRequested = false; });
+    return true;
+  }
+
+  if (!ready()) {
+    const observer = new MutationObserver(() => {
+      ready();
+      if (playlistKey) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] });
+    setTimeout(() => observer.disconnect(), 60000);
+  }
+
+  // Retry the handshake when a frame loaded before the playlist worker was ready.
+  let connectionChecks = 0;
+  const connectionTimer = setInterval(() => {
+    if (playlistKey || ++connectionChecks >= 60) { clearInterval(connectionTimer); return; }
+    ready();
+  }, 1000);
+
+  // Keep muted lecture playback alive when Whale backgrounds the Canvas tab.
+  setInterval(() => {
+    if (!playlistKey) return;
+    acceptPlayerDialog();
+    const element = video();
+    if (!element) return;
+    if (isIntro(element)) {
+      if (element.paused && Number.isFinite(element.duration) &&
+          element.currentTime >= element.duration - .25) continueIntro(element);
+      else if (element.paused) ensurePlayback(element);
+      return;
+    }
+    if (element.paused && (!Number.isFinite(element.duration) ||
+        element.currentTime < element.duration - 1)) ensurePlayback(element);
+    else sendProgress(element);
+  }, 5000);
+
+  const dialogObserver = new MutationObserver(() => acceptPlayerDialog());
+  dialogObserver.observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true,
+    attributeFilter: ['style', 'class', 'aria-hidden']
+  });
+
+  // 2x is a playlist feature only. The school sometimes creates its rate menu
+  // after the video element, so retry briefly once the playlist owns the video.
+  function keepTwoX() {
+    if (rateTimer || !playlistKey) return;
+    let retries = 0;
+    const stop = () => { clearInterval(rateTimer); rateTimer = null; };
+    rateTimer = setInterval(() => {
+      if (!playlistKey) { stop(); return; }
+      const element = video();
+      if (element && !isIntro(element)) {
+        if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) {
+          stop();
+          sendState('speed-2x');
+          return;
+        }
+        applyTwoX(element);
+      }
+      if (++retries >= 8) {
+        stop();
+        if (element && !isIntro(element)) {
+          // Native media speed is a fallback if the school's menu changed.
+          // Never set a rate above the school's stated 2x ceiling.
+          try { element.playbackRate = 2; } catch { /* Restricted player. */ }
+          if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) sendState('speed-2x');
+          else sendState('speed-unavailable');
+        }
+      }
+    }, 500);
+    const element = video();
+    if (element) applyTwoX(element);
+  }
+})();
