@@ -380,7 +380,7 @@ async function requestPlaylistStart(message) {
       setTimeout(() => chrome.runtime.reload(), 600);
       throw new Error('재생 연결을 다시 설정합니다. 잠시 후 확장을 다시 열어 재생해 주세요.');
     }
-    throw new Error('재생 기능이 시작되지 않았습니다. 웨일 확장 관리에서 아캠체크 플러스의 오류 내용을 확인해 주세요.');
+    throw new Error('재생 기능이 시작되지 않았습니다. 웨일 확장 관리에서 아캠 플러스의 오류 내용을 확인해 주세요.');
   }
 }
 
