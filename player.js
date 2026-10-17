@@ -3,10 +3,19 @@
 // Intro skip runs on every lecture. 2x, autoplay, mute and dialog clicks run
 // only for the playlist; a lecture opened by title click or by hand keeps the
 // school player's own speed.
-(() => {
+(async () => {
   const PLAYER_VERSION = '1.5.18';
   if (window.__icampusCheckPlayer) return;
   window.__icampusCheckPlayer = true;
+  let examBlocked = true;
+  const checkExam = async () => {
+    try {
+      const status = await chrome.runtime.sendMessage({ type: 'exam-status' });
+      if (typeof status?.guard !== 'boolean') throw new Error('시험 상태를 확인하지 못함');
+      examBlocked = status.guard && (status.manual || status.examTabs > 0);
+    } catch { examBlocked = true; }
+  };
+  await checkExam();
 
   const speedSources = new WeakMap();
   const speedAttempts = new WeakMap();
@@ -23,6 +32,16 @@
   const recoveringVideos = new WeakSet();
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'icampus-exam-blocked') {
+      examBlocked = message.blocked === true;
+      if (examBlocked) {
+        playlistKey = null;
+        readyRequested = false;
+      }
+      else ready(true);
+      return;
+    }
+    if (examBlocked) return;
     if (message?.type === 'icampus-playlist-probe') {
       sendResponse({ ok: true });
       if (!playlistKey) { readyRequested = false; ready(true); }
@@ -56,6 +75,7 @@
   }
 
   function acceptPlayerDialog() {
+    if (examBlocked) return false;
     if (!playlistKey || Date.now() - lastDialogClick < 750) return false;
     const dialog = [...document.querySelectorAll('#confirm-dialog, .confirm-dialog, [role="dialog"]')]
       .find(candidate => {
@@ -93,12 +113,13 @@
   }
 
   function continueIntro(element) {
+    if (examBlocked) return false;
     if (!playlistKey || !isIntro(element)) return false;
     const source = sourceOf(element);
     if (!source || continuedIntroSources.has(source)) return false;
     continuedIntroSources.add(source);
     setTimeout(() => {
-      if (!playlistKey || !isIntro(element) || sourceOf(element) !== source) return;
+      if (examBlocked || !playlistKey || !isIntro(element) || sourceOf(element) !== source) return;
       const front = document.querySelector('#front-screen');
       const playButton = front?.querySelector('.vc-front-screen-play-btn');
       if (playButton) playButton.click();
@@ -110,10 +131,11 @@
   // Jump to the intro's end instead of waiting it out (icampus-premium's
   // approach). The player then moves on to the lecture by itself.
   function skipIntro(element) {
+    if (examBlocked) return;
     if (!isIntro(element)) return;
     const source = sourceOf(element);
     setTimeout(() => {
-      if (!isIntro(element) || sourceOf(element) !== source) return;
+      if (examBlocked || !isIntro(element) || sourceOf(element) !== source) return;
       const end = element.duration;
       if (!Number.isFinite(end) || end <= 0 || element.currentTime >= end - .05) return;
       try { element.currentTime = end; } catch { /* Not seekable yet; a later event retries. */ }
@@ -141,6 +163,7 @@
   }
 
   function applyTwoX(element) {
+    if (examBlocked) return false;
     if (!element || isIntro(element)) return false;
     const source = sourceOf(element);
     if (!source) return false;
@@ -159,11 +182,13 @@
       if (!toggle) return false;
       toggle.click();
       setTimeout(() => {
+        if (examBlocked) return;
         const option = rateButton();
         if (option) option.click();
       }, 100);
     }
     setTimeout(() => {
+      if (examBlocked) return;
       if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) {
         speedSources.set(element, source);
         sendState('speed-2x');
@@ -173,6 +198,7 @@
   }
 
   function sendProgress(element, force = false) {
+    if (examBlocked) return;
     if (!playlistKey || isIntro(element) || element !== video()) return;
     if (!force && Date.now() - lastProgressSent < 4000) return;
     lastProgressSent = Date.now();
@@ -192,6 +218,7 @@
   }
 
   function handleMedia(event) {
+    if (examBlocked) return;
     if (!(event.target instanceof HTMLVideoElement) || event.target !== video()) return;
     if (isIntro(event.target)) watchIntro(event.target);
     if (!readyRequested) ready();
@@ -237,10 +264,11 @@
   }
 
   async function ensurePlayback(element) {
+    if (examBlocked) return;
     if (recoveringVideos.has(element)) return;
     recoveringVideos.add(element);
     try {
-      for (let attempt = 0; attempt < 4 && playlistKey && element.isConnected; attempt++) {
+      for (let attempt = 0; attempt < 4 && !examBlocked && playlistKey && element.isConnected; attempt++) {
         if (!element.paused) { sendProgress(element, true); return; }
         element.muted = true;
         const front = document.querySelector('#front-screen');
@@ -273,6 +301,7 @@
   }
 
   async function startPlaylist(response) {
+    if (examBlocked) return;
     if (!response?.start || !response.key || response.rate > 2) return;
     playlistKey = response.key;
     acceptPlayerDialog();
@@ -295,6 +324,7 @@
   }
 
   function ready(force = false) {
+    if (examBlocked) return false;
     const element = video();
     if (!element) return false;
     if (readyRequested) return true;
@@ -305,7 +335,7 @@
     readyRequested = true;
     chrome.runtime.sendMessage({ type: 'icampus-player-ready', playerVersion: PLAYER_VERSION })
       .then(response => {
-        if (!response?.start) { readyRequested = false; return; }
+        if (examBlocked || !response?.start) { readyRequested = false; return; }
         startPlaylist(response);
       }).catch(() => { readyRequested = false; });
     return true;
@@ -329,7 +359,7 @@
 
   // Keep muted lecture playback alive when Whale backgrounds the Canvas tab.
   setInterval(() => {
-    if (!playlistKey) return;
+    if (examBlocked || !playlistKey) return;
     acceptPlayerDialog();
     const element = video();
     if (!element) return;
@@ -353,11 +383,11 @@
   // 2x is a playlist feature only. The school sometimes creates its rate menu
   // after the video element, so retry briefly once the playlist owns the video.
   function keepTwoX() {
-    if (rateTimer || !playlistKey) return;
+    if (examBlocked || rateTimer || !playlistKey) return;
     let retries = 0;
     const stop = () => { clearInterval(rateTimer); rateTimer = null; };
     rateTimer = setInterval(() => {
-      if (!playlistKey) { stop(); return; }
+      if (examBlocked || !playlistKey) { stop(); return; }
       const element = video();
       if (element && !isIntro(element)) {
         if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) {

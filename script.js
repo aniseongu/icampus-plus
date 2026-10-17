@@ -6,10 +6,58 @@ let activeTab = null;
 let loading = false;
 // 화면 모드는 팝업과 아이캠퍼스 페이지(dark/boot.js)가 같이 쓴다: 'auto'(브라우저 설정) | 'light' | 'dark'
 let screenMode = 'auto';
+let examStatus = null;
+let examNoticeShown = false;
+let examKeepIds = new Set();
+let examKeepSaving = false;
 const colorMedia = matchMedia('(prefers-color-scheme: dark)');
 let lastResult = null;
 let selectingLectures = false;
 const selectedLectureKeys = new Set();
+
+async function examBlocksPopup() {
+  if (ExamMode.EXAM_URL.test(activeTab?.url || '')) return true;
+  const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
+  return saved.examGuard !== false &&
+    (saved.examModeManual === true || (examStatus?.examTabs || 0) > 0);
+}
+
+function showExamNotice() {
+  examNoticeShown = true;
+  lastResult = null;
+  document.querySelector('#completed').hidden = true;
+  document.querySelector('#playlist-status').hidden = true;
+  document.querySelector('#lecture').replaceChildren();
+  document.querySelector('#sync-status').replaceChildren();
+  document.querySelector('#refresh-button').disabled = true;
+  const notice = element('div', 'empty-message');
+  notice.append(
+    element('h2', '', '시험 중이에요'),
+    element('p', '', '시험이 끝날 때까지 아캠 플러스의 모든 기능을 멈췄어요. ' +
+      (examStatus?.disabledCount > 0
+        ? `다른 확장 ${examStatus.disabledCount}개도 잠시 꺼 두었어요.`
+        : '다른 확장도 잠시 꺼 두었어요.'))
+  );
+  const protections = examProtectionText();
+  if (protections) notice.append(element('p', '', protections));
+  const blocked = examBlockedText();
+  if (blocked) notice.append(element('p', '', blocked.trim()));
+  document.querySelector('#assignment').replaceChildren(notice);
+}
+
+function examProtectionText() {
+  if (!examStatus) return '';
+  const notes = [];
+  if (examStatus.notificationsBlocked) notes.push('사이트 알림을 막았어요.');
+  if (examStatus.fullscreen) notes.push('시험 화면을 누르면 전체화면이 돼요.');
+  return notes.join(' ');
+}
+
+function examBlockedText() {
+  return examStatus?.blockedCount > 0
+    ? ` 실수로 새 탭이나 창을 여는 동작을 ${examStatus.blockedCount}번 막았어요.`
+    : '';
+}
 
 function darkMode() {
   return screenMode === 'dark' || (screenMode === 'auto' && colorMedia.matches);
@@ -29,6 +77,161 @@ function setScreenMode(mode) {
   screenMode = mode;
   applyTheme();
   chrome.storage.local.set({ screenMode: mode }).catch(() => {});
+}
+
+async function renderExamKeepList() {
+  const list = document.querySelector('#exam-keep-list');
+  if (!examStatus?.hasManagementPermission) return;
+  list.replaceChildren(element('p', 'setting-help', '확장 목록을 불러오는 중이에요'));
+  try {
+    const [extensions, saved] = await Promise.all([
+      chrome.management.getAll(), chrome.storage.local.get('examKeepIds')
+    ]);
+    examKeepIds = new Set(Array.isArray(saved.examKeepIds)
+      ? saved.examKeepIds.filter(id => typeof id === 'string') : []);
+    const choices = extensions.filter(item => item.type === 'extension' &&
+      item.id !== chrome.runtime.id && item.mayDisable !== false);
+    choices.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    if (!choices.length) {
+      list.replaceChildren(element('p', 'setting-help', '다른 확장이 없어요'));
+      return;
+    }
+    const rows = choices.map(item => {
+      const row = element('label', 'exam-keep-option');
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.checked = examKeepIds.has(item.id);
+      check.disabled = !examStatus.guard || examKeepSaving;
+      check.addEventListener('change', async () => {
+        if (!examStatus.guard) return;
+        const before = new Set(examKeepIds);
+        if (check.checked) examKeepIds.add(item.id);
+        else examKeepIds.delete(item.id);
+        examKeepSaving = true;
+        for (const input of list.querySelectorAll('input')) input.disabled = true;
+        try {
+          await chrome.storage.local.set({ examKeepIds: [...examKeepIds] });
+        } catch {
+          examKeepIds = before;
+          check.checked = before.has(item.id);
+          document.querySelector('#exam-status').textContent = '선택을 저장하지 못했어요. 다시 골라 주세요';
+        } finally {
+          examKeepSaving = false;
+          for (const input of list.querySelectorAll('input')) input.disabled = !examStatus.guard;
+        }
+      });
+      row.append(check, document.createTextNode(item.name));
+      return row;
+    });
+    list.replaceChildren(...rows);
+  } catch {
+    list.replaceChildren(element('p', 'setting-help', '확장 목록을 불러오지 못했어요. 다시 열어 주세요'));
+  }
+}
+
+async function refreshExamStatus() {
+  try {
+    const status = await chrome.runtime.sendMessage({ type: 'exam-status' });
+    if (status?.error) throw new Error(status.error);
+    examStatus = status;
+    for (const option of document.querySelectorAll('#exam-guard [data-guard]')) {
+      option.setAttribute('aria-checked', String((option.dataset.guard === 'true') === status.guard));
+    }
+    for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
+      option.setAttribute('aria-checked', String((option.dataset.fullscreen === 'true') === status.fullscreen));
+      option.disabled = !status.guard;
+    }
+    const fullscreenGroup = document.querySelector('#exam-fullscreen-group');
+    fullscreenGroup.setAttribute('aria-disabled', String(!status.guard));
+    const keep = document.querySelector('#exam-keep');
+    keep.hidden = !status.hasManagementPermission;
+    keep.inert = !status.guard;
+    keep.setAttribute('aria-disabled', String(!status.guard));
+    if (!status.guard || !status.hasManagementPermission) keep.open = false;
+    for (const input of keep.querySelectorAll('input')) input.disabled = !status.guard || examKeepSaving;
+    const label = document.querySelector('#exam-status');
+    const action = document.querySelector('#exam-action');
+    const active = status.manual || status.examTabs > 0 ||
+      ExamMode.EXAM_URL.test(activeTab?.url || '');
+    const banner = document.querySelector('#exam-banner');
+    const bannerText = document.querySelector('#exam-banner-text');
+    const bannerAction = document.querySelector('#exam-banner-action');
+    const examActive = status.guard && active;
+    banner.hidden = !examActive && status.pendingRestore === 0 &&
+      !status.notificationsBlocked && !status.notificationRestorePending;
+    if (examActive) {
+      bannerText.textContent = '시험 중이에요. ' + examProtectionText() + examBlockedText() +
+        (status.manual ? '' : ' 시험 화면을 벗어나면 자동으로 끝나요.');
+      bannerAction.hidden = !status.manual;
+      bannerAction.textContent = '시험 끝내기';
+    } else {
+      bannerText.textContent = status.pendingRestore > 0
+        ? `확장 ${status.pendingRestore}개를 다시 켜지 못했어요`
+        : '사이트 알림을 다시 허용하지 못했어요';
+      bannerAction.hidden = false;
+      bannerAction.textContent = '다시 켜기';
+    }
+    document.querySelector('#exam-controls').hidden = !status.guard;
+    action.hidden = false;
+    if (!status.hasPermission) {
+      label.textContent = !status.hasManagementPermission && !status.hasContentSettingsPermission
+        ? '다른 확장과 사이트 알림을 막으려면 권한이 필요해요'
+        : !status.hasManagementPermission
+          ? '다른 확장을 끄려면 권한이 필요해요'
+          : '사이트 알림을 막으려면 권한이 필요해요';
+      action.textContent = '허용하기';
+    } else {
+      label.textContent = (active
+        ? status.disableFailures > 0
+          ? `시험 중이에요. 확장 ${status.disableFailures}개를 끄지 못했어요`
+          : status.disabledCount > 0
+            ? `시험 중이에요. 확장 ${status.disabledCount}개를 꺼 두었어요`
+            : '시험 중이에요'
+        : '대기 중이에요') + (active ? examBlockedText() : '');
+      action.textContent = status.manual ? '끝내기' : '지금 시작';
+      if (!status.manual && status.disableFailures > 0) action.textContent = '다시 시도';
+      action.hidden = status.manual || (active && status.disableFailures === 0);
+    }
+    if (await examBlocksPopup()) showExamNotice();
+  } catch {
+    document.querySelector('#exam-status').textContent = '상태를 확인하지 못했어요. 다시 열어 주세요';
+  }
+}
+
+async function refreshExamPresentation() {
+  await refreshExamStatus();
+  if (examNoticeShown && !await examBlocksPopup() && activeTab) {
+    examNoticeShown = false;
+    await load();
+  }
+}
+
+async function handleExamAction() {
+  const button = document.querySelector('#exam-action');
+  if (button.disabled || !examStatus) return;
+  button.disabled = true;
+  try {
+    if (!examStatus.hasPermission) {
+      await chrome.permissions.request({ permissions: ['management', 'contentSettings'] });
+      if (examStatus.examTabs || examStatus.manual) await ExamMode.enterExamMode('manual');
+      else if (examStatus.pendingRestore || examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
+        await ExamMode.exitExamMode();
+      }
+    } else if (examStatus.manual) {
+      await chrome.storage.local.set({ examModeManual: false });
+      if (!examStatus.examTabs) await ExamMode.exitExamMode();
+    } else if (examStatus.examTabs && examStatus.disableFailures > 0) {
+      await ExamMode.enterExamMode('manual');
+    } else {
+      await chrome.storage.local.set({ examModeManual: true });
+      await ExamMode.enterExamMode('manual');
+    }
+  } catch {
+    document.querySelector('#exam-status').textContent = '확장 상태를 바꾸지 못했어요. 다시 눌러 주세요';
+  } finally {
+    button.disabled = false;
+    await refreshExamPresentation();
+  }
 }
 
 function element(tag, className, textValue) {
@@ -299,6 +502,7 @@ function renderPlaylistStatus(state) {
 }
 
 async function refreshPlaylistStatus() {
+  if (await examBlocksPopup()) return;
   try {
     const saved = await chrome.storage.session.get('icampusPlaylistState');
     renderPlaylistStatus(saved.icampusPlaylistState);
@@ -343,6 +547,7 @@ function render(result) {
 
 async function load() {
   if (!activeTab || loading) return;
+  if (await examBlocksPopup()) { showExamNotice(); return; }
   loading = true;
   showLoading();
   const button = document.querySelector('#refresh-button');
@@ -385,6 +590,7 @@ async function requestPlaylistStart(message) {
 }
 
 async function startPlaylist() {
+  if (await examBlocksPopup()) { showExamNotice(); return; }
   if (!activeTab || !lastResult) return;
   const button = document.querySelector('#playlist-start');
   if (!button || !selectedLectureKeys.size) return;
@@ -411,10 +617,56 @@ async function startPlaylist() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  document.querySelector('#exam-keep').addEventListener('toggle', event => {
+    const keep = event.currentTarget;
+    keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '고르기';
+    if (keep.open) renderExamKeepList().catch(() => {});
+  });
+  for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
+    option.addEventListener('click', async () => {
+      await chrome.storage.local.set({ examFullscreen: option.dataset.fullscreen === 'true' });
+      await refreshExamStatus();
+    });
+  }
+  for (const option of document.querySelectorAll('#exam-guard [data-guard]')) {
+    option.addEventListener('click', async () => {
+      const guard = option.dataset.guard === 'true';
+      await chrome.storage.local.set({ examGuard: guard });
+      if (!guard) {
+        await chrome.storage.local.set({ examModeManual: false });
+        await ExamMode.exitExamMode();
+      } else if (examStatus?.examTabs) {
+        await ExamMode.enterExamMode('manual');
+      }
+      await refreshExamStatus();
+    });
+  }
+  document.querySelector('#exam-action').addEventListener('click', handleExamAction);
+  document.querySelector('#exam-banner-action').addEventListener('click', async () => {
+    const button = document.querySelector('#exam-banner-action');
+    if (button.disabled || !examStatus) return;
+    button.disabled = true;
+    try {
+      if (examStatus.manual) {
+        await chrome.storage.local.set({ examModeManual: false });
+        if (!examStatus.examTabs) await ExamMode.exitExamMode();
+      } else if (examStatus.pendingRestore > 0 || examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
+        await ExamMode.exitExamMode();
+      }
+      await refreshExamPresentation();
+    } finally { button.disabled = false; }
+  });
+  await refreshExamStatus();
   await refreshPlaylistStatus();
   chrome.storage.onChanged?.addListener((changes, area) => {
     if (area === 'session' && changes.icampusPlaylistState) {
-      renderPlaylistStatus(changes.icampusPlaylistState.newValue);
+      if (!examNoticeShown) renderPlaylistStatus(changes.icampusPlaylistState.newValue);
+    }
+    if (area === 'session' && changes.examTabs) refreshExamPresentation().catch(() => {});
+    if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen ||
+        changes.examDisabledIds || changes.examRestorePending || changes.examNotificationsBlocked ||
+        changes.examBlockedCount)) {
+      refreshExamPresentation().catch(() => {});
     }
   });
   try {
@@ -444,6 +696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   colorMedia.addEventListener('change', applyTheme);
   applyTheme();
   document.querySelector('#refresh-button').addEventListener('click', () => {
+    if (examNoticeShown) return;
     const button = document.querySelector('#refresh-button');
     button.style.animation = 'spin 1s ease-in-out';
     setTimeout(() => { button.style.animation = ''; }, 1000);
@@ -453,6 +706,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     activeTab = tabs[0];
   } catch { /* A tab can disappear as the popup opens. */ }
+  if (await examBlocksPopup()) {
+    await refreshExamStatus();
+    showExamNotice();
+    return;
+  }
   try {
     if (!activeTab || new URL(activeTab.url).origin !== CANVAS_ORIGIN) throw new Error();
   } catch {

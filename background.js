@@ -1,3 +1,4 @@
+importScripts('exam.js');
 // Keep the playlist in the existing iCampus tab. The worker may be suspended
 // between videos, so chrome.storage.session is the source of truth.
 const STATE_KEY = 'icampusPlaylistState';
@@ -8,6 +9,105 @@ const DIRECT_KEY = 'icampusDirectTabs';
 const DIRECT_TTL_MS = 2 * 60 * 1000;
 const advanceLocks = new Set();
 let messageQueue = Promise.resolve();
+const EXAM_TABS_KEY = 'examTabs';
+let examQueue = Promise.resolve();
+
+function queueExam(task) {
+  const next = examQueue.then(task);
+  examQueue = next.catch(() => {});
+  return next;
+}
+
+async function examTabs() {
+  const saved = await chrome.storage.session.get(EXAM_TABS_KEY);
+  return Array.isArray(saved[EXAM_TABS_KEY]) ? saved[EXAM_TABS_KEY] : [];
+}
+
+async function updateExamTab(tabId, url) {
+  const before = await examTabs();
+  const after = before.filter(id => id !== tabId);
+  if (ExamMode.EXAM_URL.test(url || '')) after.push(tabId);
+  if (after.length === before.length && after.every(id => before.includes(id))) return;
+  await chrome.storage.session.set({ [EXAM_TABS_KEY]: after });
+  await notifyExamState();
+  const { examGuard, examModeManual } = await chrome.storage.local.get(['examGuard', 'examModeManual']);
+  if (!before.length && after.length && examGuard !== false) await ExamMode.enterExamMode('auto');
+  if (before.length && !after.length && examModeManual !== true) await ExamMode.exitExamMode();
+}
+
+async function reconcileExamTabs() {
+  const tabs = await chrome.tabs.query({});
+  const found = tabs.filter(tab => ExamMode.EXAM_URL.test(tab.url || '')).map(tab => tab.id);
+  const before = await examTabs();
+  await chrome.storage.session.set({ [EXAM_TABS_KEY]: found });
+  await notifyExamState();
+  const { examGuard, examModeManual, examDisabledIds, examNotificationsBlocked } = await chrome.storage.local.get([
+    'examGuard', 'examModeManual', 'examDisabledIds', 'examNotificationsBlocked'
+  ]);
+  if (found.length && examGuard !== false && !before.length) await ExamMode.enterExamMode('auto');
+  if (!found.length && examModeManual !== true &&
+      ((Array.isArray(examDisabledIds) && examDisabledIds.length) || examNotificationsBlocked === true)) {
+    await ExamMode.exitExamMode();
+  }
+}
+
+async function examStatus() {
+  const [tabs, saved, hasManagementPermission, hasContentSettingsPermission] = await Promise.all([
+    examTabs(),
+    chrome.storage.local.get(['examGuard', 'examModeManual', 'examDisabledIds', 'examRestorePending', 'examDisableFailures', 'examNotificationsBlocked', 'examFullscreen', 'examBlockedCount']),
+    chrome.permissions.contains({ permissions: ['management'] }),
+    chrome.permissions.contains({ permissions: ['contentSettings'] })
+  ]);
+  const count = Array.isArray(saved.examDisabledIds) ? saved.examDisabledIds.length : 0;
+  return {
+    guard: saved.examGuard !== false,
+    manual: saved.examModeManual === true,
+    examTabs: tabs.length,
+    disabledCount: saved.examRestorePending ? 0 : count,
+    pendingRestore: saved.examRestorePending ? count : 0,
+    disableFailures: saved.examDisableFailures || 0,
+    blockedCount: saved.examBlockedCount || 0,
+    notificationsBlocked: saved.examNotificationsBlocked === true && hasContentSettingsPermission,
+    notificationRestorePending: saved.examNotificationsBlocked === true && !hasContentSettingsPermission,
+    fullscreen: saved.examFullscreen !== false,
+    hasManagementPermission,
+    hasContentSettingsPermission,
+    hasPermission: hasManagementPermission && hasContentSettingsPermission
+  };
+}
+
+async function examIsActive() {
+  const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
+  return saved.examGuard !== false &&
+    (saved.examModeManual === true || (await examTabs()).length > 0);
+}
+
+async function notifyExamState() {
+  const [tabs, saved] = await Promise.all([
+    chrome.tabs.query({}),
+    chrome.storage.local.get(['examGuard', 'examModeManual'])
+  ]);
+  const blocked = saved.examGuard !== false &&
+    (saved.examModeManual === true || (await examTabs()).length > 0);
+  for (const tab of tabs) {
+    chrome.tabs.sendMessage(tab.id, { type: 'icampus-exam-blocked', blocked }).catch(() => {});
+  }
+}
+
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.url === undefined && change.status !== 'complete') return;
+  queueExam(() => updateExamTab(tabId, change.url || tab.url)).catch(() => {});
+});
+chrome.tabs.onRemoved.addListener(tabId => {
+  queueExam(() => updateExamTab(tabId, null)).catch(() => {});
+});
+chrome.runtime.onStartup.addListener(() => { queueExam(reconcileExamTabs).catch(() => {}); });
+chrome.runtime.onInstalled.addListener(() => { queueExam(reconcileExamTabs).catch(() => {}); });
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && (changes.examGuard || changes.examModeManual)) {
+    queueExam(notifyExamState).catch(() => {});
+  }
+});
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason !== 'install' && reason !== 'update') return;
@@ -26,7 +126,7 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 // 다크 모드가 켜져 있는데 그 탭만 밝게 남지 않도록 manifest와 같은 순서로 CSS와 스크립트를 넣는다. 이미 들어간 프레임(ICDColor가 있는 프레임)은 건너뛴다.
 // 권한은 기존 scripting과 canvas.skku.edu 호스트 권한만 쓴다. 로그인 화면(/xn-sso/)은 manifest와 같이 제외한다.
 const DARK_CSS = ['dark/sheets.css', 'dark/instui.css', 'dark/dark.css', 'dark/adapt.css'];
-const DARK_JS = ['dark/color.js', 'dark/transform.js', 'dark/boot.js', 'dark/styles.js', 'dark/adapt.js'];
+const DARK_JS = ['dark/color.js', 'dark/transform.js', 'dark/boot.js', 'dark/exam-guard.js', 'dark/styles.js', 'dark/adapt.js'];
 
 async function injectDarkIntoOpenTabs() {
   const tabs = await chrome.tabs.query({ url: 'https://canvas.skku.edu/*' });
@@ -69,6 +169,7 @@ function validSender(sender, state) {
 }
 
 async function startPlaylist(message) {
+  if (await examIsActive()) throw new Error('시험 중에는 재생목록을 시작할 수 없어요.');
   const tab = await chrome.tabs.get(message.tabId);
   if (new URL(tab.url).origin !== 'https://canvas.skku.edu') throw new Error('아이캠퍼스 탭에서 시작해 주세요.');
   const queue = Array.isArray(message.queue) ? message.queue.filter(item =>
@@ -89,6 +190,7 @@ async function startPlaylist(message) {
 }
 
 async function openLecture(message) {
+  if (await examIsActive()) throw new Error('시험 중에는 강의를 열 수 없어요.');
   const url = canvasUrl(message.url);
   if (!url) throw new Error('아이캠퍼스 주소가 아닙니다.');
   const options = { url, active: message.active !== false };
@@ -116,6 +218,7 @@ async function takeDirectTab(tabId) {
 }
 
 async function handlePlayerMessage(message, sender) {
+  if (await examIsActive()) return null;
   const state = await getState();
   if (!validSender(sender, state) || !['opening', 'connecting', 'playing', 'paused', 'blocked', 'ended-unconfirmed'].includes(state.status)) return null;
   const current = state.queue[state.index];
@@ -180,10 +283,29 @@ async function stopPlaylist() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
     'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
-    'icampus-player-ended'].includes(message.type)) return;
+    'icampus-player-ended', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type)) return;
   // Only extension pages (the popup) may start a playlist or open a lecture.
-  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture'].includes(message.type) &&
+  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
+       'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
       !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
+  if (message.type === 'exam-status' && !sender.url?.startsWith(chrome.runtime.getURL('')) &&
+      !['https://lcms.skku.edu', 'https://kingoinfo.skku.edu'].some(origin => sender.url?.startsWith(origin + '/'))) return;
+  if (message.type.startsWith('exam-')) {
+    const task = queueExam(async () => {
+      if (message.type === 'exam-start') {
+        await chrome.storage.local.set({ examModeManual: true });
+        await ExamMode.enterExamMode('manual');
+      } else if (message.type === 'exam-stop') {
+        await chrome.storage.local.set({ examModeManual: false });
+        if (!(await examTabs()).length) await ExamMode.exitExamMode();
+      } else if (message.type === 'exam-restore') {
+        await ExamMode.exitExamMode();
+      }
+      return examStatus();
+    });
+    task.then(sendResponse, error => sendResponse({ error: error.message }));
+    return true;
+  }
   const task = messageQueue.then(() => message.type === 'icampus-playlist-start' ? startPlaylist(message)
     : message.type === 'icampus-playlist-stop' ? stopPlaylist()
     : message.type === 'icampus-open-lecture' ? openLecture(message)
@@ -206,6 +328,7 @@ async function autoLaunchCanvasTool(waitMs = 0) {
   // Some Canvas module items show an LTI launch button instead of loading
   // the lecture immediately. Submit only the official lecture launch form.
   const launch = () => {
+    if (!document.documentElement.hasAttribute('data-icd')) return false;
     const form = document.querySelector('form#tool_form');
     const button = document.querySelector('.load_tool_button');
     if (!form || !button || !button.getClientRects().length) return false;
@@ -237,6 +360,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   // Run outside the queue so a short wait for the button never delays player messages.
   task.then(async kind => {
     if (!kind) return;
+    if (await examIsActive()) return;
     try {
       await chrome.scripting.executeScript({
         target: { tabId }, func: autoLaunchCanvasTool, args: [kind === 'direct' ? 5000 : 0]
