@@ -6,8 +6,8 @@
 
 성균관대학교 아이캠퍼스의 남은 강의와 과제를 한곳에서 보고, 아이캠퍼스를 어두운 화면으로 쓸 수 있게 해 주는 브라우저 확장 프로그램
 
-![version](https://img.shields.io/badge/version-1.7.7-004483)
-![manifest](https://img.shields.io/badge/Manifest-V3-004483)
+![version](https://img.shields.io/badge/version-1.7.8-124532)
+![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Whale%20%7C%20Chrome-Chromium%20150-555555)
 
 </div>
@@ -127,10 +127,14 @@ git clone https://github.com/aniseongu/icampus-plus.git
 | [아캠 매니저 (iCampus Manager)](https://github.com/again7536/icampus-manager) | [again7536](https://github.com/again7536) | 재생목록에서 강의를 고르고 다음 강의로 넘어가는 방식 |
 | [Material UI List](https://mui.com/material-ui/react-list/) | MUI | 재생목록의 체크 상태와 선택 개수 표시 |
 
+### 아이콘
+
+삼성학술정보관 정면 사진 [Samsung Library-Front.jpg](https://commons.wikimedia.org/wiki/File:Samsung_Library-Front.jpg)(Srobidx, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/))에서 지붕 윤곽을 따서 만들었습니다. 색은 성균관대 상징색인 진녹색(Pantone 3435C, `#124532`)입니다. 아이콘 파일(`icons/`)은 원본 사진의 라이선스에 따라 CC BY-SA 4.0으로 배포합니다.
+
 ## 문의
 
 버그나 제안은 [Issues](https://github.com/aniseongu/icampus-plus/issues)에 남겨 주세요. 어떤 화면에서 무엇이 이상했는지 적어 주시면 고치기 쉽습니다.
 
 ## 라이선스
 
-원본 아캠체크 저장소에 라이선스가 명시되어 있지 않아, 이 저장소에도 별도 라이선스를 붙이지 않았습니다. 원본 코드의 권리는 원작자에게 있습니다.
+원본 아캠체크 저장소에 라이선스가 명시되어 있지 않아, 이 저장소에도 별도 라이선스를 붙이지 않았습니다. 원본 코드의 권리는 원작자에게 있습니다. 아이콘은 위에 적은 대로 CC BY-SA 4.0입니다.
