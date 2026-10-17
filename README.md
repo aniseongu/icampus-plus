@@ -68,6 +68,20 @@ git clone https://github.com/aniseongu/icampus-plus.git
 
 계정 비밀번호, 토큰, 학번을 파일이나 외부 서버로 보내지 않습니다. 모든 요청은 로그인된 아이캠퍼스 탭 안에서만 일어나고, 팝업을 열지 않은 동안에는 조회를 하지 않습니다.
 
+## 기술 스택
+
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
+![Chrome Extension](https://img.shields.io/badge/Chrome%20Extension-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)
+
+- 프레임워크와 빌드 과정 없이 순수 JavaScript, HTML, CSS로 작성했습니다. 받은 폴더를 그대로 불러오면 됩니다.
+- Chrome 확장 API: `chrome.storage`, `chrome.tabs`, `chrome.scripting`, `chrome.runtime`
+- 아이캠퍼스 데이터는 Canvas REST API와 LearningX API를 로그인된 탭 안에서 호출해 가져옵니다.
+- 다크 모드 색 변환은 OKLCH 색 공간에서 색상은 유지하고 밝기만 조정해, 글자 대비 4.5:1 이상을 맞춥니다.
+- 글꼴: [Pretendard](https://github.com/orioncactus/pretendard) (팝업, CDN)
+- 코드 정리: [Prettier](https://prettier.io/)
+
 ## 폴더 구조
 
 ```text
