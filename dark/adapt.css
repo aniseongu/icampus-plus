@@ -1,0 +1,30 @@
+/* 인라인 style과 HTML 색 속성을 이겨야 하므로 이 보정 규칙에만 !important를 쓴다. */
+/* 인라인 보정 값은 --icd-inline-* 이름을 쓴다. 전역 토큰(--icd-bg 등)과 이름이 겹치면 그 요소 아래의 다크 규칙이 엉뚱한 색을 받는다 */
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-c]:not(.icd-hidden-text) {
+  color: var(--icd-inline-c) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-bg] {
+  background-color: var(--icd-inline-bg) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-bd] {
+  border-top-color: var(--icd-inline-bd-top) !important;
+  border-right-color: var(--icd-inline-bd-right) !important;
+  border-bottom-color: var(--icd-inline-bd-bottom) !important;
+  border-left-color: var(--icd-inline-bd-left) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-hidden-small] {
+  font-size: 12px !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-hidden-faint] {
+  opacity: 1 !important;
+}
+/* 안전망(adapt.js)이 CSS 규칙을 놓친 밝은 상자를 실행 중에 찾았을 때만 붙는 속성이다. 규칙의 구체성이나 인라인 style을 이겨야 하므로 !important를 쓴다. */
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-auto-bg] {
+  background-color: var(--icd-auto-bg) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-auto-c] {
+  color: var(--icd-auto-c) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-auto-line] {
+  border-color: var(--icd-line) !important;
+}

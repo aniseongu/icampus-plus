@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="ko">
   <head>
+    <meta name="color-scheme" content="only light dark" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>iCampus Checker</title>
+    <title>아캠체크 플러스</title>
     <!-- utils.js 스크립트 추가 -->
     <script src="utils.js" defer></script>
     <script src="script.js" defer></script>
@@ -19,6 +20,7 @@
 
       /* ===== 2. 색상 변수 (라이트 모드) ===== */
       :root {
+        color-scheme: only light;
         /* 기본 색상 */
         --primary-color: #004483;
         --primary-light: rgba(0, 68, 131, 0.06);
@@ -49,6 +51,7 @@
 
       /* ===== 3. 다크 모드 변수 ===== */
       .dark-mode {
+        color-scheme: only dark;
         /* 기본 색상 */
         --primary-color: #4dabff;
         --primary-light: rgba(77, 171, 255, 0.2);
@@ -89,6 +92,12 @@
           background-color 0.3s,
           color 0.3s;
       }
+      html {
+        background: #fff;
+      }
+      html:has(body.dark-mode) {
+        background: #121212;
+      }
 
       .container {
         margin-bottom: 20px;
@@ -101,7 +110,6 @@
         margin-bottom: 15px;
         padding: 0 10px;
       }
-
       h1 {
         flex-grow: 1;
         text-align: center;
@@ -138,7 +146,6 @@
       #theme-toggle::after {
         content: "🌙";
       }
-
       .dark-mode #theme-toggle::after {
         content: "☀️";
       }
@@ -171,6 +178,100 @@
         align-items: center;
         gap: 8px;
       }
+      /* 재생목록 도구줄: 원본 표와 같은 모서리(8px)·그림자·굵기를 쓴다 */
+      .playlist-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin: 10px 0 0;
+        min-height: 36px;
+      }
+      .playlist-toolbar-label {
+        margin-right: auto;
+        padding-left: 15px;
+        color: var(--primary-color);
+        font-weight: bold;
+      }
+      .playlist-action {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-color);
+        color: var(--primary-color);
+        padding: 8px 12px;
+        font: inherit;
+        font-weight: bold;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px var(--shadow-color);
+        transition:
+          background-color 0.3s,
+          transform 0.2s;
+      }
+      .playlist-action:hover:not(:disabled) {
+        background-color: var(--primary-light);
+        transform: scale(1.05);
+      }
+      .playlist-action:active:not(:disabled) {
+        transform: scale(0.95);
+      }
+      .playlist-primary {
+        border-color: var(--table-header);
+        background: var(--table-header);
+        color: var(--table-header-text);
+      }
+      .playlist-primary:hover:not(:disabled) {
+        background-color: var(--primary-hover);
+      }
+      .playlist-secondary {
+        color: var(--text-color);
+      }
+      .playlist-action:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      /* 선택 모드: 체크박스와 행 클릭은 선택, 제목은 원본처럼 링크 */
+      .lecture-choice {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      /* 선택 모드에서도 원본 .title 처럼 말줄임 */
+      .lecture-choice .title-link {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .lecture-choice .title-link:hover {
+        text-decoration: underline;
+      }
+      .lecture-choice input {
+        accent-color: var(--primary-color);
+        flex: none;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+      table tbody tr.selectable-lecture {
+        cursor: pointer;
+      }
+      /* 줄무늬(--even-row)와 구분되도록 hover 색을 쓴다 */
+      table.lecture tbody tr.selected-lecture {
+        background: var(--table-hover);
+      }
+      .title:has(.lecture-choice):hover {
+        text-decoration: none;
+      }
+      #playlist-status[hidden] {
+        display: none;
+      }
+      .playlist-status-table td {
+        text-align: left;
+        overflow-wrap: anywhere;
+      }
+      .playlist-status-table .playlist-state {
+        color: var(--text-light);
+      }
 
       table .colum1 {
         width: 130px;
@@ -179,8 +280,12 @@
         width: 160px;
       }
       table .colum4 {
-        width: 80px;
+        width: 100px;
         text-align: center;
+      }
+
+      table tbody td:last-child {
+        white-space: nowrap;
       }
 
       table thead th {
@@ -246,8 +351,53 @@
         font-weight: bold;
       }
 
+      .dark-mode .badge {
+        color: #171717;
+      }
+
       /* ===== 7. 상태 표시 스타일 ===== */
       .error-message,
+      /* 화면 설정: 왼쪽 라벨 · 오른쪽 선택 버튼 한 줄. 선택된 버튼은 원본 주 버튼(.playlist-primary) 색 */
+      .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 15px;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+      }
+      .setting-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .setting-label {
+        font-weight: bold;
+        color: var(--text-color);
+      }
+      .setting-help,
+      .setting-note {
+        font-size: 0.85rem;
+        color: var(--text-light);
+      }
+      .setting-note {
+        padding: 10px 15px 0;
+        word-break: keep-all;
+      }
+      .mode-choice {
+        display: flex;
+        gap: 6px;
+      }
+      .mode-choice .playlist-action {
+        min-width: 64px;
+        box-shadow: none;
+      }
+      .mode-choice .playlist-action[aria-checked="true"] {
+        border-color: var(--table-header);
+        background: var(--table-header);
+        color: var(--table-header-text);
+      }
       .empty-message {
         border-radius: 8px;
         margin: 15px 0;
@@ -262,30 +412,77 @@
 
       .error-message {
         background-color: var(--error-bg);
-        color: #fff;
+        color: var(--urgent-color);
         font-weight: bold;
-        border-left: 4px solid var(--accent-color);
+        /* 원본의 왼쪽 4px 강조선은 제거 (docs/DESIGN.md 금지 목록: 한쪽만 굵은 테두리) */
       }
 
+      /* 일부 조회 실패 안내: .error-message 상자와 같은 모양 (사방 같은 1px 테두리 + 배경색) */
+      #sync-status:empty {
+        display: none;
+      }
+      #sync-status {
+        margin: 0 0 15px;
+      }
+      #sync-status details {
+        border-radius: 8px;
+        padding: 12px 15px;
+        background-color: var(--error-bg);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px var(--shadow-color);
+      }
+      #sync-status summary {
+        cursor: pointer;
+        color: var(--urgent-color);
+        font-weight: bold;
+      }
+      #sync-status p {
+        margin-top: 8px;
+        color: var(--text-light);
+        overflow-wrap: anywhere;
+      }
+      .title:focus-visible,
+      .title-link:focus-visible,
+      .lecture-choice input:focus-visible,
+      .playlist-action:focus-visible,
+      .btn:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+      }
+      /* 완료한 항목: 원본 표 캡션(굵은 제목 + 배지)과 같은 모양의 접기 제목 */
+      .completed-panel {
+        margin: 10px 0 20px;
+      }
+      .completed-panel[hidden] {
+        display: none;
+      }
+      .completed-panel summary {
+        cursor: pointer;
+        padding: 10px 15px;
+        font-size: 1.4em;
+        font-weight: bold;
+        color: var(--primary-color);
+      }
       .empty-message {
         background-color: var(--empty-bg);
         color: var(--text-light);
         font-style: italic;
       }
 
-      .urgent {
-        color: var(--urgent-color) !important;
+      /* 남은시간 칸 강조. !important 대신 구체성(table td.*)으로 다른 td 규칙을 이긴다 */
+      table td.urgent {
+        color: var(--urgent-color);
         font-weight: bold;
         animation: pulse 1.5s infinite;
       }
 
-      .soon {
-        color: var(--soon-color) !important;
+      table td.soon {
+        color: var(--soon-color);
         font-weight: bold;
       }
 
-      .warning {
-        color: var(--warning-color) !important;
+      table td.warning {
+        color: var(--warning-color);
         font-weight: 600;
       }
 
@@ -306,6 +503,8 @@
         100% {
           opacity: 1;
         }
+      }
+
       }
 
       /* ===== 9. 유틸리티 클래스 ===== */
@@ -405,22 +604,51 @@
         text-decoration: underline;
         color: var(--primary-hover);
       }
+      /* ===== 움직임 끔 (기본) =====
+         사용자 지시(2026-10-10): 애니메이션 효과는 기본으로 끈다 (docs/DESIGN.md §1 움직임).
+         원본의 pulse, spin, 전환, hover 확대를 모두 끈다. !important 를 쓰지 않으려고 각 요소를 직접 지정하고,
+         같은 구체성의 기본 규칙보다 뒤(맨 끝)에 둔다. 새 전환이나 애니메이션을 추가하면 이 목록에도 넣는다. */
+      body,
+      .btn,
+      .playlist-action,
+      table tbody tr,
+      .title,
+      .error-message,
+      .empty-message,
+      .tooltip,
+      .footer,
+      .footer a {
+        transition: none;
+      }
+      table td.urgent,
+      .spinner {
+        animation: none;
+      }
+      .btn:hover,
+      .btn:active,
+      .playlist-action:hover:not(:disabled),
+      .playlist-action:active:not(:disabled) {
+        transform: none;
+      }
     </style>
   </head>
   <body>
     <div class="header">
       <button id="theme-toggle" class="btn" aria-label="테마 변경">
         <span class="tooltip-container">
-          <span class="tooltip">다크모드 전환</span>
+          <span class="tooltip">어둡게 보기</span>
         </span>
       </button>
-      <h1>아캠체크</h1>
+      <h1>아캠체크 플러스</h1>
       <button id="refresh-button" class="btn" aria-label="새로고침">
         <span class="tooltip-container">
           <span class="tooltip">새로고침</span>
         </span>
       </button>
     </div>
+
+    <div id="sync-status" role="status"></div>
+    <div id="playlist-status" aria-live="polite" hidden></div>
 
     <div class="container" id="lecture"></div>
     <div class="container" id="assignment">
@@ -433,6 +661,31 @@
         </div>
       </div>
     </div>
+
+    <details id="completed" class="completed-panel" hidden>
+      <summary>
+        완료한 항목 <span id="completed-count" class="badge">0</span>
+      </summary>
+      <div id="completed-items"></div>
+    </details>
+
+    <details id="settings" class="completed-panel">
+      <summary>화면 설정</summary>
+      <div class="setting-row">
+        <div class="setting-text">
+          <span id="screen-mode-label" class="setting-label">화면 모드</span>
+          <span class="setting-help">자동은 브라우저 설정을 따라요</span>
+        </div>
+        <div id="screen-mode" class="mode-choice" role="radiogroup" aria-labelledby="screen-mode-label">
+          <button type="button" class="playlist-action" role="radio" aria-checked="true" data-mode="auto">자동</button>
+          <button type="button" class="playlist-action" role="radio" aria-checked="false" data-mode="light">밝게</button>
+          <button type="button" class="playlist-action" role="radio" aria-checked="false" data-mode="dark">어둡게</button>
+        </div>
+      </div>
+      <p class="setting-note">
+        아이캠퍼스 페이지와 이 창에 같이 적용돼요. 웨일의 웹 콘텐츠 다크 모드는 아이캠퍼스에서 꺼 두면 색이 더 정확해요.
+      </p>
+    </details>
 
     <!-- 크레딧 푸터 -->
     <footer class="footer">

@@ -1,0 +1,1927 @@
+/*
+ * iCampus Dark — 아이캠퍼스(Canvas + LearningX) 다크 테마
+ *
+ * 모든 규칙은 html[data-icd='on'] 아래에만 둔다(boot.js가 정한다). 꺼져 있으면 페이지는 원래 모습 그대로다.
+ * 이 확장의 기능 자체가 남의 페이지 스타일을 덮어쓰는 것이라 !important를 쓰는 곳이 있다(docs/DESIGN.md §2-1 예외).
+ * !important는 Canvas가 인라인 style이나 더 구체적인 선택자로 색을 박아 둔 곳에만 쓰고, 그 자리에 이유를 단다.
+ * 색은 아래 변수로만 쓴다. 아이캠퍼스의 남색(#003669) 계열을 아주 약하게 섞은 중립색이다.
+ */
+
+/* 1. 색 변수 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  --icd-bg: #000000;
+  --icd-surface: #111316;
+  --icd-raised: #1a1d22;
+  --icd-hover: #24282e;
+  --icd-line: #2b3038;
+  --icd-line-strong: #3e4550;
+  /* 입력창과 버튼 테두리는 표면 대비 3:1 이상이어야 한다(WCAG 1.4.11) */
+  --icd-control-line: #6b7684;
+  --icd-text: #e2e5e9;
+  --icd-text-2: #b3bac2;
+  --icd-text-3: #8f98a2;
+  --icd-link: #7fb5ef;
+  --icd-link-hover: #a6ccf5;
+  --icd-brand: #003669;
+  --icd-brand-soft: #13304f;
+  --icd-primary: #2a6bb0;
+  --icd-primary-hover: #3274ba;
+  --icd-on-accent: #f7f9fc;
+  --icd-danger: #ff8277;
+  --icd-success: #5fcf86;
+  --icd-warning: #e6b84f;
+  --icd-selection: #2f5687;
+
+  /* 분류 색(마이페이지 타임라인 막대·범례). 라이트 원색의 색상을 지키고 명도만 L≈0.48로 옮겼다. 위 글자는 --icd-on-accent(5:1 이상) */
+  --icd-cat-movie: #0b60a1;
+  --icd-cat-resource: #106c64;
+  --icd-cat-task: #6542b3;
+  --icd-cat-expired: #4f6169;
+
+  /* 표: 머리글은 한 단계 밝은 면, 줄은 얇고 약하게, 지그재그는 길고 반복되는 목록에만 쓴다 */
+  --icd-table-header-bg: var(--icd-raised);
+  --icd-table-header-text: var(--icd-text-2);
+  --icd-table-row-bg: var(--icd-surface);
+  --icd-table-row-zebra: #181b1f;
+  --icd-table-row-hover: var(--icd-hover);
+  --icd-table-row-selected: var(--icd-brand-soft);
+  --icd-table-line: #30363f;
+  --icd-table-line-head: var(--icd-line-strong);
+  --icd-table-line-col: var(--icd-line);
+  --icd-table-today-bg: var(--icd-brand-soft);
+  --icd-table-today-ring: var(--icd-primary);
+  --icd-table-dim-bg: var(--icd-bg);
+
+  /* Canvas 브랜드 변수: 이 값을 쓰는 곳은 이것만으로 바뀐다 */
+  --ic-brand-font-color-dark: var(--icd-text);
+  --ic-brand-font-color-dark-lightened-15: var(--icd-text-2);
+  --ic-brand-font-color-dark-lightened-30: var(--icd-text-3);
+  --ic-link-color: var(--icd-link);
+  --ic-link-color-darkened-10: var(--icd-link-hover);
+  --ic-link-color-lightened-10: var(--icd-link-hover);
+  --ic-brand-button--secondary-bgd: var(--icd-raised);
+  --ic-brand-button--secondary-text: var(--icd-text);
+  --ic-brand-button--secondary-bgd-darkened-5: var(--icd-hover);
+  --ic-brand-button--secondary-bgd-darkened-15: var(--icd-hover);
+  --ic-brand-button--primary-bgd: var(--icd-primary);
+  --ic-brand-global-nav-menu-item__text-color--active: var(--icd-link);
+  --ic-brand-global-nav-ic-icon-svg-fill--active: var(--icd-link);
+
+  color-scheme: dark;
+  background-color: var(--icd-bg);
+  scrollbar-color: var(--icd-line-strong) var(--icd-bg);
+  accent-color: var(--icd-primary);
+}
+
+/* 2. 문서 기본 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & body {
+    background-color: var(--icd-bg);
+    color: var(--icd-text);
+  }
+
+  & ::selection {
+    background-color: var(--icd-selection);
+    color: var(--icd-text);
+  }
+
+  & :is(h1, h2, h3, h4, h5, h6, p, li, dt, dd, label, legend, th, td, caption) {
+    color: inherit;
+  }
+
+  & a:not(.btn):not(.Button):not([class*='css-']) {
+    color: var(--icd-link);
+  }
+
+  & hr {
+    border-color: var(--icd-line);
+  }
+
+  & :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='range']) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-control-line);
+  }
+
+  & ::placeholder {
+    color: var(--icd-text-3);
+  }
+}
+
+/* 3. 전역 레이아웃: 왼쪽 전역 메뉴, 머리줄, 과목 메뉴 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .ic-app-header__menu-list-item--active .ic-app-header__menu-list-link {
+    background-color: var(--icd-bg);
+  }
+
+  & .profile-tray svg[name='IconX'],
+  & .profile-tray svg[name='IconX'] path {
+    color: var(--icd-text-2);
+    fill: var(--icd-text-2);
+  }
+
+  & .ic-app-nav-toggle-and-crumbs {
+    border-bottom-color: var(--icd-line);
+  }
+
+  & #skip_navigation_link {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+}
+
+/* 4. 대시보드 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .ic-notification__content {
+    background-color: var(--icd-bg);
+  }
+  & .ic-Dashboard-header__layout {
+    background-color: var(--icd-bg);
+  }
+
+  /* 오른쪽 목록의 긴 글 끝을 흐리는 흰색 그라데이션(Canvas 기능): 바탕색으로 흐리게 한다 */
+  & .event-details::after {
+    background-image: linear-gradient(to right, transparent 0%, var(--icd-bg) 80%);
+  }
+
+  & .ic-DashboardCard,
+  & .ic-DashboardCard__header_content {
+    background-color: var(--icd-surface);
+  }
+
+  & .ic-DashboardCard {
+    box-shadow: 0 0 0 1px var(--icd-line);
+  }
+
+  & :is(.ic-DashboardCard__header-subtitle, .ic-DashboardCard__header-term) {
+    color: var(--icd-text-2);
+  }
+
+  & .event-details,
+  & .event-details :is(p, strong) {
+    color: var(--icd-text-2);
+  }
+}
+
+/* 5. 숨은 글씨: adapt.js가 흰 바탕 흰 글씨, 0~3px 글씨 등에 붙이는 표시 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) .icd-hidden-text {
+  /* 인라인 color를 이겨야 한다 */
+  color: var(--icd-danger) !important;
+  /* 숨겨 둔 글씨임을 한눈에 알 수 있게 굵게(사용자 요청 2026-10-12). 인라인 font-weight를 이겨야 한다 */
+  font-weight: 700 !important;
+  background-color: rgb(255 130 119 / 0.12);
+  outline: 1px dashed var(--icd-danger);
+  outline-offset: 1px;
+}
+
+/* 6. 공통 부품: 구식 .btn 버튼, 버튼 묶음, 표 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & :is(.btn, .Button, .ui-button):not(.btn-primary):not(.Button--primary):not(.btn-danger):not(.Button--danger):not(.btn-link):not(.Button--link) {
+    background: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-line-strong);
+    text-shadow: none;
+  }
+
+  & :is(.btn, .Button, .ui-button):is(:hover, :focus-visible):not(.btn-primary):not(.Button--primary):not(.btn-link):not(.Button--link) {
+    background: var(--icd-hover);
+  }
+
+  & :is(.btn-link, .Button--link) {
+    background: transparent;
+    border-color: transparent;
+    color: var(--icd-link);
+  }
+
+  & :is(.btn-link, .Button--link):is(:hover, :focus-visible) {
+    color: var(--icd-link-hover);
+  }
+
+  & :is(.btn, .Button).active,
+  & .btn-group .btn.active {
+    background: var(--icd-brand-soft);
+    color: var(--icd-text);
+    box-shadow: none;
+  }
+
+  & :is(.btn-primary, .Button--primary) {
+    background: var(--icd-primary);
+    color: var(--icd-on-accent);
+    border-color: var(--icd-primary);
+  }
+
+  & :is(.btn-primary, .Button--primary):is(:hover, :focus-visible, :active) {
+    background: var(--icd-primary-hover);
+    border-color: var(--icd-primary-hover);
+  }
+
+  /* 전역 메뉴 트레이(계정, 도움말 등): InstUI 글자색 변수가 instui.css에 없는 라벨 */
+  & #nav-tray-portal label span {
+    color: var(--icd-text);
+  }
+
+  & .accessibility-warning {
+    background: var(--icd-raised);
+    color: var(--icd-text);
+  }
+
+  & :is(table.ic-Table, table.table) :is(th, td) {
+    border-color: var(--icd-table-line);
+  }
+
+  & :is(table.ic-Table, table.table) > thead > tr > :is(th, td) {
+    background-color: var(--icd-table-header-bg);
+    color: var(--icd-table-header-text);
+    font-weight: 700;
+    border-bottom-color: var(--icd-table-line-head);
+  }
+
+  & :is(table.ic-Table, table.table) > :is(thead, tbody) > tr > :is(th, td) {
+    background-color: transparent;
+  }
+}
+
+/* 7. 캘린더 (FullCalendar 3, 오른쪽 미니 캘린더와 캘린더 목록 포함) */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .header-bar,
+  & .calendar_header .header-bar,
+  & .sticky-toolbar {
+    background: var(--icd-bg);
+    border-color: var(--icd-line);
+  }
+
+  & .navigation_title,
+  & .navigation_title_text,
+  & .fc-toolbar h2 {
+    color: var(--icd-text);
+  }
+
+  & :is(.fc-body, .fc-scroller, .fc-row, .fc-day-number, .fc-content-skeleton, #minical, #context-list-holder) {
+    background-color: transparent;
+  }
+
+  & .fc-unthemed :is(td, th, thead, tbody, .fc-row, .fc-divider, .fc-popover) {
+    border-color: var(--icd-table-line);
+  }
+
+  & .fc-unthemed :is(.fc-day-number, .fc-day-header) {
+    color: var(--icd-text-2);
+  }
+
+  /* 오늘 칸: 네 변 모두 같은 1px 링. 한쪽만 굵은 선은 쓰지 않는다 */
+  & .fc-unthemed :is(.fc-today, .fc-day-number.fc-today) {
+    background-color: var(--icd-table-today-bg);
+    box-shadow: inset 0 0 0 1px var(--icd-table-today-ring);
+  }
+
+  & .fc-unthemed .fc-other-month {
+    background-color: var(--icd-table-dim-bg);
+  }
+
+  & .fc-event {
+    background-color: var(--icd-raised);
+  }
+
+  /* Canvas의 동적 .group_course_N 규칙에서 읽은 과목색을 일정과 범례에 같이 쓴다. */
+  & a.fc-event[data-icd-category]:not(.btn):not(.Button):not([class*='css-']) {
+    background-color: var(--icd-category-bg);
+    border: 1px solid var(--icd-category-line);
+    color: var(--icd-category-fg);
+  }
+
+  & #context-list .context-list-toggle-box[data-icd-category][aria-checked='true'] {
+    background-color: var(--icd-category-bg);
+    border: 1px solid var(--icd-category-line);
+    color: var(--icd-category-fg);
+  }
+
+  & #context-list .context-list-toggle-box[data-icd-category][aria-checked='false'] {
+    border: 1px solid var(--icd-category-line);
+    color: var(--icd-category-fg);
+  }
+
+  & .fc-event :is(.fc-title, .fc-time, .fc-content) {
+    color: inherit;
+  }
+
+  /* 마이페이지 타임라인: 막대와 범례를 같은 색으로. 지난 일정의 흐림(opacity .5)은 LearningX 규칙 그대로 둔다 */
+  & .xndb-v2-todo-timeline-item :is(.fc-event-main, .fc-event-title) {
+    color: var(--icd-on-accent);
+  }
+
+  & :is(.fc-event.xndb-v2-todo-timeline-item, .xndb-v2-todo-timeline-header-info-colorbox).dashboard_movie {
+    background-color: var(--icd-cat-movie);
+  }
+
+  & :is(.fc-event.xndb-v2-todo-timeline-item, .xndb-v2-todo-timeline-header-info-colorbox).dashboard_resource {
+    background-color: var(--icd-cat-resource);
+  }
+
+  & :is(.fc-event.xndb-v2-todo-timeline-item, .xndb-v2-todo-timeline-header-info-colorbox):is(.dashboard_assignment, .dashboard_discussion, .dashboard_quiz) {
+    background-color: var(--icd-cat-task);
+  }
+
+  & .fc-event.xndb-v2-todo-timeline-item.expired {
+    background-color: var(--icd-cat-expired);
+  }
+
+  & .fc-popover {
+    background: var(--icd-raised);
+  }
+
+  & #context-list li > label,
+  & .context_list_context label {
+    color: var(--icd-text);
+  }
+
+  & #minical :is(.fc-day-number, td) {
+    color: var(--icd-text-2);
+  }
+
+  & :is(.mini-cal-header, table.mini_calendar) {
+    border-color: var(--icd-line);
+  }
+
+  & .mini_calendar .mini_calendar_day {
+    background-color: transparent;
+  }
+
+  & .mini_calendar .mini_calendar_day.today {
+    background-color: var(--icd-brand-soft);
+  }
+}
+
+/* 8. 과목 메뉴(#left-side), 이동 경로 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  /* 과목 메뉴는 라이트에서 테두리 없이 바탕과 같은 흰 영역이었다 */
+  & #left-side {
+    background-color: transparent;
+  }
+
+  & nav#breadcrumbs {
+    background-color: transparent;
+  }
+
+  & #section-tabs a {
+    color: var(--icd-link);
+  }
+
+  & #section-tabs-header-subtitle {
+    color: var(--icd-text-2);
+  }
+
+  & #section-tabs a:hover,
+  & #section-tabs a:focus {
+    background-color: var(--icd-hover);
+    color: var(--icd-link-hover);
+  }
+
+  & #section-tabs a.active,
+  & #section-tabs a.active:hover,
+  & #section-tabs a.active:focus {
+    background-color: var(--icd-brand-soft);
+    color: var(--icd-text);
+  }
+}
+
+/* 9. 공통 부품 2: 탭(ui-tabs), 알약, 도구줄, 알림 막대, 아바타 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & :is(.btn, .Button, .ui-button):not(.btn-primary):not(.Button--primary):not(.btn-danger):not(.Button--danger):not(.btn-link):not(.Button--link):active,
+  & :is(.btn, .Button, .ui-button):not(.btn-primary):not(.Button--primary):not(.btn-danger):not(.Button--danger):not(.btn-link):not(.Button--link):focus,
+  & :is(.btn, .Button, .ui-button):not(.btn-link):not(.Button--link).ui-state-hover,
+  & :is(.btn, .Button, .ui-button):not(.btn-link):not(.Button--link).ui-state-active {
+    background: var(--icd-hover);
+    color: var(--icd-text);
+  }
+
+  & .ui-widget-content,
+  & .ui-tabs .ui-tabs-panel {
+    background: var(--icd-bg);
+    color: var(--icd-text);
+    border-color: var(--icd-line);
+  }
+
+  & .ui-tabs .ui-tabs-nav {
+    border-color: var(--icd-line);
+  }
+
+  & .ui-tabs .ui-tabs-nav li,
+  & .ui-state-default {
+    background: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .ui-tabs .ui-tabs-nav li a,
+  & .ui-state-default a {
+    color: var(--icd-link);
+  }
+
+  & .ui-tabs .ui-tabs-nav li:hover,
+  & .ui-tabs .ui-tabs-nav li.ui-state-hover,
+  & .ui-tabs .ui-tabs-nav li.ui-state-focus,
+  & .ui-state-hover,
+  & .ui-state-focus {
+    background: var(--icd-hover);
+  }
+
+  & .ui-tabs .ui-tabs-nav li.ui-tabs-active,
+  & .ui-tabs .ui-tabs-nav li.ui-tabs-active:hover,
+  & .ui-tabs .ui-tabs-nav li.ui-state-focus.ui-tabs-active,
+  & .ui-state-active {
+    background: var(--icd-bg);
+  }
+
+  & .ui-tabs .ui-tabs-nav li.ui-tabs-active a,
+  & .ui-state-active a {
+    color: var(--icd-text);
+  }
+
+  & ul.pill > li,
+  & .pill {
+    background: var(--icd-raised);
+    color: var(--icd-text-2);
+    border-color: var(--icd-line);
+  }
+
+  /* 토론 관리줄·툴바는 라이트에서 바탕과 같은 흰 영역(테두리 없음)이라 다크에서도 바탕으로 둔다 */
+  & .toolbarView {
+    background: transparent;
+    color: var(--icd-text);
+  }
+
+  & .headerBar {
+    background: var(--icd-surface);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  /* 글꼴 아이콘 단독 버튼(토론 더보기 등): 라이트의 어두운 회색을 그대로 두면 안 보인다 */
+  & .standalone-icon::before {
+    color: var(--icd-text-2);
+  }
+
+  & a.avatar {
+    background-color: var(--icd-raised);
+  }
+
+  & :is(.ic-flash-info, .ic-flash-success, .ic-flash-warning, .ic-flash-error) {
+    background: var(--icd-raised);
+    color: var(--icd-text);
+  }
+
+  & .ic-flash-error {
+    box-shadow: 0 0 0 1px var(--icd-danger);
+  }
+
+  /* 이전/다음 줄: 라이트에서 바탕과 같은 흰 띠였다. 위쪽 1px 구분선만 둔다 */
+  & .module-sequence-footer-content {
+    background: transparent;
+    border-color: var(--icd-line) transparent transparent;
+  }
+}
+
+/* 10. 메시지함 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .message-list li,
+  & .conversations header.panel,
+  & .search.form-search .ac-input-box {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .message-list li:hover,
+  & .message-list li.active,
+  & .message-list li.selected {
+    background-color: var(--icd-hover);
+  }
+
+  & .message-list li :is(h2, h3, .summary) {
+    color: var(--icd-text);
+  }
+
+  & .message-list li .summary {
+    color: var(--icd-text-2);
+  }
+
+  /* 공통 링크 규칙(a:not(.btn)…)보다 구체적이어야 한다: 클래스를 겹쳐 쓴다 */
+  & .messages a.open-message.open-message {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+
+  & .message-list .date time,
+  & .message-list .date time span {
+    color: var(--icd-text-2);
+  }
+
+  & .conversations .panel .btn.ui-state-active {
+    background: var(--icd-brand-soft);
+  }
+
+  & .filters :is(.current-selection-label, #course-filter-description) {
+    color: var(--icd-text);
+  }
+}
+
+/* 11. 과제 목록, 성적표, 사용자 목록, 공지/토론 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  /* 과제 그룹 목록 바깥(#ag-list)은 라이트에서 바탕과 같은 흰 영역이다. 그룹 상자만 카드로 둔다 */
+  & #ag-list {
+    background-color: transparent;
+    border: 0;
+  }
+
+  & .ig-header {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  /* 퀴즈·과제 그룹 목록의 바깥 틀은 라이트에서 바탕과 같은 흰색이다 */
+  & .item-group-container {
+    background-color: transparent;
+    border: 0;
+  }
+
+  /* 제출 상태 알약(미완료, 지각, 면제): 의미색을 약하게 섞은 어두운 면 + 같은 색 글자와 선 */
+  & .submission-missing-pill {
+    --icd-pill-tone: var(--icd-danger);
+  }
+
+  & .submission-late-pill {
+    --icd-pill-tone: var(--icd-warning);
+  }
+
+  & :is(.submission-excused-pill, .submission-extended-pill, .submission-dropped-pill) {
+    --icd-pill-tone: var(--icd-text-2);
+  }
+
+  & :is(.submission-missing-pill, .submission-late-pill, .submission-excused-pill, .submission-extended-pill, .submission-dropped-pill) span {
+    background-color: color-mix(in srgb, var(--icd-pill-tone) 12%, var(--icd-surface));
+    border-color: color-mix(in srgb, var(--icd-pill-tone) 55%, var(--icd-surface));
+    color: var(--icd-pill-tone);
+  }
+
+  & .ig-row {
+    background-color: var(--icd-table-row-bg);
+    border-color: var(--icd-table-line);
+  }
+
+  /* 퀴즈 목록(.collectionViewItems): 라이트에서 흰 바탕에 아래 줄만 있던 행이다. 그룹 상자(목록)만 카드 면 + 사방 1px 선으로 두고 행은 그 위에 비친다 */
+  & ul.ig-list.collectionViewItems {
+    background-color: var(--icd-surface);
+    border: 1px solid var(--icd-line);
+  }
+
+  /* 과제 페이지에서는 이 UL이 여러 그룹 전체를 감싸는 바깥 틀이다. */
+  & #ag-list > ul.ig-list.collectionViewItems {
+    background-color: transparent;
+    border: 0;
+  }
+
+  & ul.ig-list.collectionViewItems .ig-row {
+    background-color: transparent;
+  }
+
+  & .ig-row:hover,
+  & .ig-list .ig-row:focus,
+  & .ig-row.ig-row-selected,
+  & .ig-row.selected {
+    background-color: var(--icd-table-row-hover);
+  }
+
+  & .ig-details,
+  & .ig-details :is(.ig-details__item, strong, span, .score-display, .status-description) {
+    color: var(--icd-text-2);
+  }
+
+  & .ig-header-title,
+  & .ig-header-title button {
+    color: var(--icd-text);
+  }
+
+  & :is(.stream_header, .stream-details tr):hover {
+    background-color: var(--icd-hover);
+  }
+
+  & table.summary :is(th, td) {
+    background-color: transparent;
+    color: var(--icd-text);
+    border-color: var(--icd-table-line);
+  }
+
+  & #right-side h2 {
+    border-color: var(--icd-line);
+  }
+
+  & #grades_summary tr.final_grade,
+  & #grades_summary tr.final_grade :is(th, td) {
+    border-top-color: var(--icd-table-line-head);
+  }
+
+  /* InstUI 기본 버튼의 테두리 변수(primaryBorderColor)가 instui.css에 없어 밝은 파랑이 남는다 */
+  & #apply_select_menus {
+    border-color: var(--icd-primary);
+  }
+
+  & a.ig-title {
+    color: var(--icd-link);
+  }
+
+  & .drag_and_drop_warning {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+  }
+
+  & :is(#grades_summary, #grades_summary tbody, #grades_summary thead) :is(th, td) {
+    background-color: var(--icd-table-row-bg);
+    color: var(--icd-text);
+    border-color: var(--icd-table-line);
+  }
+
+  /* 본문 일부 행은 마지막 머리글 칸에 대응하는 td가 없다. 표와 행도 칠해 남는 폭을 메운다. */
+  & #grades_summary,
+  & #grades_summary tbody tr {
+    background-color: var(--icd-table-row-bg);
+  }
+
+  & #grades_summary {
+    border: 1px solid var(--icd-line);
+  }
+
+  & #grades_summary thead :is(th, td) {
+    background-color: var(--icd-table-header-bg);
+    color: var(--icd-table-header-text);
+    font-weight: 700;
+    border-bottom-color: var(--icd-table-line-head);
+  }
+
+  & #grades_summary :is(th, td) :is(a, .grade, .context, .tooltip) {
+    color: inherit;
+  }
+
+  & #grades_summary th > a,
+  & #grades_summary td > a {
+    color: var(--icd-link);
+  }
+
+  & #grades_summary tbody tr:hover > :is(th, td) {
+    background-color: var(--icd-table-row-hover);
+  }
+
+  & .ic-Table--hover-row > tbody > tr {
+    background-color: var(--icd-table-row-bg);
+  }
+
+  & .ic-Table--hover-row > tbody > tr:hover {
+    background-color: var(--icd-table-row-hover);
+  }
+
+  & .roster_user_name {
+    color: var(--icd-link);
+  }
+
+  & tr.rosterUser :is(td > div, .section) {
+    color: var(--icd-text-2);
+  }
+
+  & .discussion-fyi {
+    color: var(--icd-text-3);
+  }
+}
+
+/* 12. LearningX 공통(xn-*), 강의콘텐츠(xnmb-*), 출결(xnlaltas-*), 강의 보기(xnvc-*) */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & :is(.xn-common-white-btn, .xndb-v2 button, .xndb-v2 .btn):not(.xnmb-link) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-line-strong);
+  }
+
+  & :is(.xn-common-white-btn):is(:hover, :focus, :active),
+  & :is(.xndb-v2 button, .xndb-v2 .btn):is(:hover, :focus, :active) {
+    background-color: var(--icd-hover);
+  }
+
+  & .xnmb-module-outer-wrapper {
+    background-color: var(--icd-surface);
+    color: var(--icd-text);
+    border-color: var(--icd-line);
+  }
+
+  /* 주차 선택 영역은 라이트에서 페이지 바탕이었다. */
+  & .xnmb-header {
+    background-color: var(--icd-bg);
+    color: var(--icd-text);
+    border-color: var(--icd-line);
+  }
+
+  & .xnmb-module_item-outer-wrapper {
+    background-color: var(--icd-bg);
+    color: var(--icd-text-2);
+    border-color: var(--icd-line);
+  }
+
+  & .xnmb-module-left-wrapper i {
+    color: var(--icd-text-2);
+  }
+
+  & .xnmb-module_item-left-title {
+    color: var(--icd-link);
+  }
+
+  & :is(.xnmb-module_item-completed.incomplete, .xnmb-module_item-meta_data-attendance_status.none) {
+    color: var(--icd-text-3);
+  }
+
+  & .completed-progress-bar {
+    background-color: var(--icd-line-strong);
+  }
+
+  & .completed-progress-summary .completed {
+    color: var(--icd-link);
+  }
+
+  & .xnmb-link:is(.learner, .all_completed) {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+    border-color: var(--icd-primary);
+  }
+
+  & .xnmb-link.no_learning {
+    background-color: transparent;
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text-2);
+  }
+
+  & .xnmb-link:is(.active, .selected, [aria-current='true']) {
+    background-color: var(--icd-brand-soft);
+    border-color: var(--icd-link);
+    color: var(--icd-on-accent);
+    font-weight: 700;
+  }
+
+  & .xnmb-link:is(:hover, :focus, :active) {
+    background-color: var(--icd-brand-soft);
+    border-color: var(--icd-link);
+    color: var(--icd-on-accent);
+  }
+
+  & .xnmb-link.locked {
+    border-color: var(--icd-line);
+  }
+
+  & .xnmb-module_item-completed.completed {
+    background-color: var(--icd-brand-soft);
+    color: var(--icd-text);
+  }
+
+  & :is(.xnmb-module_item-meta_data-attendance_status, .xnlaltas-table-column-attendance_status-inner).attendance {
+    background-color: color-mix(in srgb, var(--icd-success) 12%, var(--icd-bg));
+    border: 1px solid var(--icd-success);
+    color: var(--icd-success);
+  }
+
+  & :is(.xnmb-module_item-meta_data-attendance_status, .xnlaltas-table-column-attendance_status-inner).late {
+    background-color: color-mix(in srgb, var(--icd-warning) 12%, var(--icd-bg));
+    border: 1px solid var(--icd-warning);
+    color: var(--icd-warning);
+  }
+
+  & :is(.xnmb-module_item-meta_data-attendance_status, .xnlaltas-table-column-attendance_status-inner).absent {
+    background-color: color-mix(in srgb, var(--icd-danger) 12%, var(--icd-bg));
+    border: 1px solid var(--icd-danger);
+    color: var(--icd-danger);
+  }
+
+  & :is(.xnmb-module_item-meta_data-attendance_status, .xnlaltas-table-column-attendance_status-inner).none {
+    background-color: var(--icd-raised);
+    border: 1px solid var(--icd-line-strong);
+    color: var(--icd-text-2);
+  }
+
+  & :is(.xnmb-module_item-meta_data-attendance_status, .xnlaltas-table-column-attendance_status-inner).excused {
+    background-color: color-mix(in srgb, var(--icd-link) 12%, var(--icd-bg));
+    border: 1px solid var(--icd-link);
+    color: var(--icd-link);
+  }
+
+  & .xn-resource-item {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .xnri-thumbnail-file {
+    background-color: var(--icd-raised);
+  }
+
+  & .xnri-description-info-text {
+    color: var(--icd-text-2);
+  }
+
+  /* LearningX 자료 상세의 파일 행: 파일명과 다운로드 아이콘은 별도 요소다. 미리보기 이미지는 그대로 둔다. */
+  & .xnlail-file-component .xnbc-file-container {
+    border-color: var(--icd-line);
+  }
+
+  & .xnlail-file-component .xnbc-file-name {
+    color: var(--icd-text);
+  }
+
+  & .xnlail-file-component .xnbc-file-download-icon {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  & .xnapfnas-wrapper {
+    border-color: var(--icd-line);
+  }
+
+  & .xnapfnas-title-wrapper {
+    background-color: var(--icd-brand-soft);
+  }
+
+  & .xnapfnas-wrapper :is(.xnapfnas-title, .xnapfnas-description, i) {
+    color: var(--icd-link);
+  }
+
+  & .xnbp-container :is(.k-grid, .k-grid-pager) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .xnbp-container .k-master-row.k-alt {
+    background-color: var(--icd-table-row-zebra);
+  }
+
+  & .xnbp-container :is(table, td, .k-pager-numbers) {
+    border-color: var(--icd-table-line);
+  }
+
+  & .xnbp-container :is(.xnbp-grid-author, .xnbp-grid-readcount, .xnbp-grid-comment, .xnbp-grid-readcount i, .xnbp-grid-comment i) {
+    color: var(--icd-text-2);
+  }
+
+  & .xnbp-container .xnbp-grid-date {
+    color: var(--icd-text-3);
+  }
+
+  & .xnbp-container .xnbp-grid-title-text {
+    color: var(--icd-text);
+  }
+
+  /* 새 게시판의 표는 원래 페이지 바탕과 이어진다. 변환 규칙이 면색을 다시 입히므로 이 면만 강제로 투명하게 한다. */
+  & #root .sc-eVBRet {
+    background-color: transparent !important;
+  }
+
+  /* 새 게시판의 목록 복귀 버튼은 늦게 렌더링될 때 흰 면만 남기도 한다. */
+  & #root .sc-bczRLJ:has(> i.hamburger) {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & #root .sc-bczRLJ > i.hamburger {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  /* 선택된 페이지 번호도 같은 강조색을 사용한다. */
+  & #root .sc-bczRLJ:has(> i.write_post),
+  & #root .sc-yeoIj.hNlsJo {
+    background-color: var(--icd-primary);
+    /* LearningX가 진한 버튼 글자색을 강제로 덮으므로 읽기 대비를 되살린다. */
+    color: var(--icd-on-accent) !important;
+  }
+
+  /* 글쓰기 파란 버튼 안의 submit은 독립 입력칸이 아니다. 호스트 입력 규칙이 강제로 면색·글자색을 지정하므로 이 두 속성만 덮는다. */
+  & .xnbp-btn-post-new input[type='submit'] {
+    background-color: transparent !important;
+    border: 0;
+    color: inherit !important;
+  }
+
+  /* 문의게시판 상세의 제목과 댓글은 원본의 어두운 글자색이 별도로 남는다. */
+  & :is(.xnpv-title, .xpc-comment-content) {
+    color: var(--icd-text);
+  }
+
+  & :is(.xnlaltas-table-column-week_position, .xnlaltas-table-column-lesson_position) {
+    background-color: var(--icd-surface);
+    color: var(--icd-text);
+  }
+
+  & .xnlaltas-table :is(thead, tbody, tr, th, td) {
+    border-color: var(--icd-table-line);
+  }
+
+  & :is(.xnmb-header-lower, .xnmb-link.no_learning, .xnmb-module_item-meta_data-lesson_periods-week, .xnlal-attendance-list-item-meta_data-lecture_periods > span) {
+    border-color: var(--icd-line);
+  }
+
+  & .xnlaltas-table thead :is(th, td) {
+    background-color: var(--icd-table-header-bg);
+    color: var(--icd-table-header-text);
+    font-weight: 700;
+    border-bottom-color: var(--icd-table-line-head);
+  }
+
+  /* 길고 반복되는 표라 짝수 줄을 한 단계 밝게 한다(주차·차시 칸은 줄을 건너뛰므로 제외) */
+  & .xnlaltas-table tbody tr:nth-child(even) > td:not(.xnlaltas-table-column-week_position):not(.xnlaltas-table-column-lesson_position) {
+    background-color: var(--icd-table-row-zebra);
+  }
+
+  & .xnlaltas-table tbody tr:hover > td:not(.xnlaltas-table-column-week_position):not(.xnlaltas-table-column-lesson_position) {
+    background-color: var(--icd-table-row-hover);
+  }
+
+  & tr.is_upcoming {
+    background-color: var(--icd-raised);
+  }
+
+  & .xnvch-status.late_after {
+    background-color: rgb(255 130 119 / 0.14);
+  }
+
+  & .xnvch-status.late_after span {
+    color: var(--icd-danger);
+  }
+
+  & .xnvc-progress-info-text {
+    color: var(--icd-text-2);
+  }
+
+  & .xnvc-progress-info-text.submitted,
+  & .xnvc-progress-info-description {
+    color: var(--icd-link);
+  }
+
+  & .xnvc-progress-info-attendance-status.attendance {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+}
+
+/* 13. LearningX 마이페이지(xndb-v2): 활동 카드, 공지/할 일 표, 타임라인 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  /* LTI가 about:blank와 중간 폼을 거칠 때도 프레임의 그리기 면을 다크로 둔다. */
+  & #tool_content {
+    background-color: var(--icd-bg);
+    color-scheme: dark;
+  }
+
+  /* LearningX의 원본 로딩 막은 반투명 흰색이라 다크 배경 위에서 회색으로 번쩍인다. */
+  & .xn-indicator-container {
+    background-color: color-mix(in srgb, var(--icd-bg) 88%, transparent);
+    color: var(--icd-text-2);
+  }
+
+  & .xn-indicator-text span {
+    color: var(--icd-text-2);
+  }
+
+  & .xndb-v2 {
+    background-color: var(--icd-bg);
+    color: var(--icd-text);
+  }
+
+  /* 배너 그림 위 제목이 읽히도록 그림 자체를 어둡게 한다 */
+  & img.xndb-v2-banner {
+    filter: brightness(0.4);
+  }
+
+  & :is(.select-box-header, .xndb-v2-term-select-list-item, .xndb-v2-activity-card-carousel-arrow, .tab, .fc-button-primary) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-control-line);
+  }
+
+  /* 글자가 있는 버튼(탭, 달력 버튼)은 테두리를 한 단계 은은하게. 선택 상자와 아이콘 버튼은 control-line 그대로 */
+  & :is(.tab, .fc-button-primary) {
+    border-color: var(--icd-line-strong);
+  }
+
+  & :is(.select-box-header, .xndb-v2-term-select-list-item, .xndb-v2-activity-card-carousel-arrow, .tab, .fc-button-primary):hover {
+    background-color: var(--icd-hover);
+  }
+
+  & .tab.active {
+    background-color: var(--icd-brand-soft);
+  }
+
+  & .xndb-v2 button > i,
+  & .xndb-v2 .select-box-header > i,
+  & .xndb-v2 .disclosure-header-left > i {
+    color: var(--icd-text-2);
+  }
+
+  & :is(.xndb-v2-learner-activity-card-progress-item-label, .select-box-selected, .fc-datagrid-cell-main, .xndb-v2-todo-timeline-header-info-label) {
+    color: var(--icd-text);
+  }
+
+  & .xndb-v2 table :is(th, td, td > span) {
+    color: var(--icd-text);
+  }
+
+  & .xndb-v2 table td > a {
+    color: var(--icd-link);
+  }
+
+  & .fc-button.fc-button-primary {
+    background-color: var(--icd-raised);
+    color: var(--icd-link);
+    border-color: var(--icd-line-strong);
+  }
+
+  & .xndb-v2-header-controller-view-mode-toggle-btn.is-overall {
+    background-color: var(--icd-brand-soft);
+    color: var(--icd-link);
+  }
+
+  & .xndb-v2-header-controller-view-mode-toggle-option {
+    color: var(--icd-link);
+  }
+
+  & .xndb-v2-learner-activity-card {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .xndb-v2-learner-activity-card-divider {
+    background-color: var(--icd-line);
+  }
+
+  & :is(.xndb-v2-learner-activity-card-header-term, .xndb-v2-learner-activity-card-header-professor) {
+    color: var(--icd-text-2);
+  }
+
+  & .xndb-v2-learner-activity-card-progress-item {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+  }
+
+  & .xndb-v2-learner-activity-card-progress-item:hover {
+    background-color: var(--icd-hover);
+  }
+
+  & .xndb-v2-learner-activity-card-progress-item-value {
+    background-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .xndb-v2-learner-activity-card-progress-item-value.uncompleted {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+
+  & .xndb-v2-learner-activity-card-header-format {
+    background-color: rgb(255 255 255 / 0.06);
+  }
+
+  & .xndb-v2-learner-activity-card-header-format.online {
+    color: var(--icd-link);
+  }
+
+  & .xndb-v2-learner-activity-card-header-format.on_campus {
+    color: var(--icd-success);
+  }
+
+  & .xndb-v2-activity-card-title-bold {
+    color: var(--icd-link);
+  }
+
+  & .disclosure {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .disclosure-header {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+  }
+
+  & .disclosure .disclosure-header:hover,
+  & .check-box-list .check-box:hover {
+    background-color: var(--icd-hover);
+  }
+
+  & .disclosure-header-badge {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+
+  & :is(.xndb-v2-announcement-list-sidebar, .xndb-v2-todo-list-sidebar) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & :is(.xndb-v2-announcement-list-sidebar, .xndb-v2-todo-list-sidebar) :is(span, label) {
+    color: var(--icd-text-2);
+  }
+
+  & .check-box-badge.zero {
+    color: var(--icd-text-3);
+  }
+
+  & :is(.xndb-v2-announcement-list-main-table-header, .xndb-v2-todo-list-main-table-header) {
+    background-color: var(--icd-table-header-bg);
+  }
+
+  & .xndb-v2 :is(table, thead, tbody, tr, th, td, .disclosure-header, .xndb-v2-announcement-list-sidebar-header, .xndb-v2-todo-list-sidebar-header, .xndb-v2-announcement-list-sidebar-filter, .xndb-v2-todo-list-sidebar-filter) {
+    border-color: var(--icd-table-line);
+  }
+
+  & .table-hover > tbody > tr:hover,
+  & .table-hover > tbody > tr:hover > td,
+  & .table-hover > tbody > tr.active:hover > td,
+  & .table-hover > tbody > tr > td.active:hover {
+    background-color: var(--icd-table-row-hover);
+  }
+
+  & .table > tbody > tr.active > td,
+  & .table > tbody > tr > td.active,
+  & .table > thead > tr.active > th,
+  & .table > thead > tr > th.active {
+    background-color: var(--icd-table-row-selected);
+  }
+
+  /* 페이지 규칙이 :focus와 활성 버튼의 배경과 글자색을 !important로 박아 두었다 */
+  & .fc-toolbar .fc-toolbar-chunk .fc-button:is(:focus, .fc-button-active) {
+    background-color: var(--icd-brand-soft) !important;
+    color: var(--icd-text) !important;
+  }
+
+  & .fc-timeline-body,
+  & .fc-scroller-harness {
+    background-color: transparent;
+  }
+
+  & .fc-timeline-slot-lane.fc-day-today {
+    background-color: var(--icd-brand-soft);
+  }
+}
+
+/* 14. LearningX 전체게시물(styled-components): 클래스 해시가 빌드마다 바뀌어 sc- 접두사와 구조로만 고른다.
+   페이지네이션(div[disabled] 형제)은 현재 쪽 배경이 파랑이라 글자색을 건드리지 않는다 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & #root [class^='sc-']:not(div[disabled] ~ div) {
+    color: var(--icd-text);
+  }
+
+  /* 전체게시물·게시판·문의게시판의 목록: 라이트에서 ul이 선 색 바탕이고 li가 흰 카드다. sc- 목록 + sc- 항목 구조로만 고른다(해시 클래스에 기대지 않는다) */
+  & #root ul[class^='sc-']:has(> li[class^='sc-']) {
+    background-color: var(--icd-bg);
+  }
+
+  & #root ul[class^='sc-'] > li[class^='sc-'] {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & #root i[src*='icon_board_type_qna.svg'] {
+    filter: invert(.85) hue-rotate(180deg);
+  }
+
+  /* Canvas 기본 아바타 그림(실제 사용자 사진은 제외)의 검은 실루엣만 반전한다. */
+  & span[role='img'][style*='avatar-50.png']:not(:has(img)) {
+    filter: invert(.85) hue-rotate(180deg);
+  }
+
+  /* 사용자 사진은 자식 img가 그린다. 중복 배경 이미지만 제거해 사진의 색은 유지한다. */
+  & [id^='user-avatar-people-page'] span[role='img']:has(> img) {
+    /* Canvas의 인라인 background-image를 이겨 중복 이미지 층만 없앤다. */
+    background-image: none !important;
+  }
+
+  & #root :is(tr, td, th)[class^='sc-'],
+  & #root > div > div:nth-child(2),
+  & #root [tabindex] > div:first-child,
+  & #root div[disabled],
+  & #root div[disabled] ~ div {
+    border-color: var(--icd-table-line);
+  }
+
+  & #root > div > div:nth-child(3) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text-2);
+  }
+
+  /* 현재 쪽의 원래 파랑(#157ef4)과 흰 숫자는 3.95:1이라 배경을 어둡게 한다.
+     LearningX가 현재 쪽에만 붙이는 두 번째 클래스는 빌드 시 해시가 바뀐다. */
+  & #root div[class^='sc-'][class*='iinSiQ'] {
+    background-color: var(--icd-brand-soft);
+    color: var(--icd-on-accent);
+  }
+}
+
+/* 15. 밝은 선과 남은 상태 규칙: 구분선, 입력 테두리, 날짜 선택기, 루브릭 선택 칸, 캘린더 목록 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & #main.ic-Layout-columns,
+  & #minical,
+  & #minical .fc-toolbar,
+  & #use_agenda {
+    border-color: var(--icd-line);
+  }
+
+  & .context_list_context.not-checked .context-list-toggle-box {
+    /* Canvas가 선택하지 않은 과목 상자의 테두리를 #bbb !important로, 바탕을 밝은 회색 !important로 박아 둔다 */
+    border-color: var(--icd-control-line) !important;
+    background-color: var(--icd-raised) !important;
+  }
+
+  & :is(.ic-Dashboard-header__layout, .recent-activity-header, .stream-category, .message-list-scroller, .discussion_entry .entry-content, #right-side :is(h2, .h2)) {
+    border-color: var(--icd-line);
+  }
+
+  & :is(a.avatar, .ic-announcement-row) {
+    border-color: var(--icd-line);
+  }
+
+  & .ic-item-row.ic-announcement-row {
+    box-shadow: 0 -1px 0 0 var(--icd-table-line), 0 -1px 0 0 var(--icd-table-line) inset;
+  }
+
+  & ul.pill {
+    box-shadow: 0 1px 0 0 var(--icd-line);
+  }
+
+  & :is(.messages a.open-message, .drag_and_drop_warning) {
+    border-color: var(--icd-primary);
+  }
+
+  & #context-list .context_list_context:hover {
+    background-color: var(--icd-hover);
+  }
+
+  & .ui-datepicker {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & .ui-dialog,
+  & .ui-widget-content {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .ui-dialog .ui-dialog-titlebar,
+  & .ui-widget-header,
+  & .ui-tabs .ui-tabs-nav {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & .ui-dialog .ui-dialog-buttonpane {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .ui-tabs .ui-tabs-nav li,
+  & .ui-state-default {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text-2);
+  }
+
+  & .ui-tabs .ui-tabs-nav li.ui-tabs-active,
+  & .ui-state-active {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .ui-state-hover,
+  & .ui-menu .ui-menu-item-wrapper:hover,
+  & .ui-autocomplete .ui-menu-item-wrapper:hover {
+    background-color: var(--icd-hover);
+    color: var(--icd-text);
+  }
+
+  & .ui-state-highlight {
+    background-color: var(--icd-brand-soft);
+    border-color: var(--icd-primary);
+    color: var(--icd-text);
+  }
+
+  & .ui-menu,
+  & .ui-autocomplete {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .ui-widget-overlay {
+    background-color: var(--icd-bg);
+    opacity: .7;
+  }
+
+  & .ui-datepicker .ui-state-active,
+  & .ui-datepicker .ui-state-active.ui-state-hover,
+  & .input-append .active,
+  & .rubric_container td.rating.selected {
+    background-color: var(--icd-brand-soft);
+    color: var(--icd-text);
+  }
+
+  & :is(.xnlail-video-component, .xnlail-video-component-header, .xnvc-progress-info-container, .xnvch-period) {
+    border-color: var(--icd-line);
+  }
+
+  /* LearningX 강의 안내 띠의 원본 상태 클래스: 시작 전, 진행 중, 지각, 마감, 열람 종료. */
+  & .xnvch-status {
+    border: 1px solid var(--icd-line-strong);
+    color: var(--icd-text-2);
+  }
+
+  & .xnvch-status.not_open {
+    background-color: color-mix(in srgb, var(--icd-warning) 12%, var(--icd-bg));
+    border-color: var(--icd-warning);
+    color: var(--icd-warning);
+  }
+
+  & .xnvch-status.open {
+    background-color: color-mix(in srgb, var(--icd-link) 12%, var(--icd-bg));
+    border-color: var(--icd-link);
+    color: var(--icd-link);
+  }
+
+  & .xnvch-status:is(.late, .late_after) {
+    background-color: color-mix(in srgb, var(--icd-danger) 12%, var(--icd-bg));
+    border-color: var(--icd-danger);
+    color: var(--icd-danger);
+  }
+
+  & .xnvch-status.closed {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text-2);
+  }
+
+  & .xnvch-status i {
+    filter: brightness(0) invert(.85);
+  }
+}
+
+/* 16. 과목 카드 메뉴(이동/색상 탭, 색상 선택기): InstUI 해시 클래스 대신 id 접두사와 Canvas 클래스로 고른다 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & :is([id^='tab-'], [id^='panel-'], [id^='panel-'] > div) {
+    background-color: var(--icd-surface);
+    color: var(--icd-text);
+    border-color: var(--icd-line);
+  }
+
+  & :is(.DashboardCardMenu__ColorPicker, .ColorPicker__Container) {
+    background-color: var(--icd-surface);
+    color: var(--icd-text);
+  }
+
+  & .ColorPicker__ColorPreview {
+    border-color: var(--icd-control-line);
+  }
+
+  & #ColorPicker__Apply {
+    border-color: var(--icd-primary);
+  }
+}
+
+/* 17. 아이콘: 어두운 단색 그림(스프라이트, SVG)은 색 변수를 따르지 않는다.
+   invert + hue-rotate(180deg)는 회색을 밝은 회색으로 바꾸면서 파란색 등 색상은 그대로 둔다.
+   파일 형식 아이콘(a.pdf, a.word 등)과 미디어 플레이어(.mejs-*)는 원래 색을 쓰므로 건드리지 않는다 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .with-left-side #left-side.ic-app-course-menu.list-view a::before,
+  & .with-left-side .list-view > nav > ul > li > a::before {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  /* jQuery UI 어두운 스프라이트(ui-icons_222222). 흰색, 파랑, 빨강 스프라이트를 쓰는 상태는 뺀다 */
+  & .ui-icon:not(.ui-widget-header .ui-icon, .ui-state-active .ui-icon, .ui-state-highlight .ui-icon, .ui-state-error .ui-icon, .ui-state-error-text .ui-icon, .ui-icon-info),
+  & .ui-dialog .ui-dialog-titlebar-close span,
+  & .ui-datepicker .ui-datepicker-header :is(.ui-datepicker-prev, .ui-datepicker-next) {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  /* LearningX: 새로고침 아이콘과 파일 아이콘(회색). 동영상, PDF, 과제 아이콘은 색이 있어 그대로 둔다 */
+  /* 전체게시물 선택 상자의 화살표(icon_dropdown_arrow.svg) */
+  & #root [tabindex] > div:first-child > i,
+  & :is(.xn-common-btn-refresh-icon, .xnmb-module_item-icon.file, .xndb-v2-todo-list-main-table-body-row-icon.file) {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  /* 선택 상자 화살표: 상자 전체를 뒤집을 수 없어 그림만 바꾼다(크기와 위치는 원래 규칙 그대로). #b3bac2 = --icd-text-2 */
+  & select.ic-Input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 170'%3E%3Cpolygon fill='%23b3bac2' points='150,170 300,0 0,0'/%3E%3C/svg%3E");
+  }
+}
+
+/* 18. 퀴즈: 안내 화면, 결과(기록) 화면, 응시 화면.
+   안내와 결과는 실화면으로 확인했다. "(예측: 실화면 미확인)"은 응시 화면 전용이라 열어 볼 수 없어
+   canvas-lms 소스(app/views/quizzes/quizzes/take_quiz.html.erb, _display_question, _display_answer,
+   _take_quiz_right_side, _question_list_right_side, app/stylesheets/pages/quizzes/_quizzes.scss)로 짠 것이다 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .muted-notice {
+    background: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+    text-shadow: none;
+  }
+
+  & .quiz-header {
+    border-bottom-color: var(--icd-line);
+  }
+
+  & ul#quiz_student_details {
+    border-color: var(--icd-line);
+  }
+
+  /* 라이트에서 흰 바탕에 흰 테두리라 보이지 않던 영역: 바탕과 같게 둔다 */
+  & :is(.quiz-submission, .question_editing, #questions.assessing) {
+    background: transparent;
+    border-color: transparent;
+    color: var(--icd-text);
+  }
+
+  & .quiz_score .score_value {
+    color: var(--icd-text);
+  }
+
+  /* 문제 상자와 머리줄 */
+  & .display_question.question {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .display_question.question > .header {
+    background-color: var(--icd-raised);
+    border-bottom-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & .display_question.question .question_points_holder {
+    color: var(--icd-text-2);
+  }
+
+  /* 답 목록의 구분선 */
+  & :is(.question .answers .answer, .question.matching_question .answer, .question.true_false_question .answer, .question .answer_group) {
+    border-color: var(--icd-line);
+  }
+
+  /* 선택한 답과 눌러 보는 줄(예측: 실화면 미확인) */
+  & #questions.assessing .answer:hover {
+    background-color: var(--icd-hover);
+  }
+
+  & #questions .question .answers .answer.selected_answer {
+    background-color: var(--icd-table-row-selected);
+  }
+
+  & #questions.assessing :is(.answer_label, .answer_text, .answer_html) {
+    color: var(--icd-text);
+  }
+
+  /* 입력 칸: 객관식 드롭다운, 주관식, 서술형 글상자(예측: 실화면 미확인) */
+  & .question .text .question_text .answer_select {
+    border-color: var(--icd-control-line);
+  }
+
+  & .question :is(input[type='text'], select.question_input, textarea.question_input) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-control-line);
+  }
+
+  & .file-upload-box {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-control-line);
+    color: var(--icd-text);
+  }
+
+  /* 답 해설, 문제 해설 상자 */
+  & :is(.answer_comment_holder, .question_comment) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border-color: var(--icd-line-strong);
+  }
+
+  & :is(.question_correct_comment, .unspecified_answer .answer_comment_holder) {
+    border-color: var(--icd-success);
+  }
+
+  & #questions .question_holder .complete {
+    background-color: var(--icd-raised);
+    color: var(--icd-text-3);
+  }
+
+  /* 정답, 오답 표시: 의미(초록, 빨강)는 유지하고 어두운 면에서 읽히는 톤으로 */
+  /* 채운 밝은 배지 대신 어두운 면 + 색 글자 + 안쪽 1px 고리(크기는 그대로) */
+  & .answer_indicator.correct,
+  & .answer_arrow.correct:not(.answer .answer_arrow) {
+    background-color: var(--icd-raised);
+    color: var(--icd-success);
+    box-shadow: inset 0 0 0 1px var(--icd-success);
+  }
+
+  & .answer_indicator.incorrect,
+  & .answer_arrow.incorrect:not(.answer .answer_arrow) {
+    background-color: var(--icd-raised);
+    color: var(--icd-danger);
+    box-shadow: inset 0 0 0 1px var(--icd-danger);
+  }
+
+  & .answer_arrow.info:not(.answer .answer_arrow) {
+    background-color: var(--icd-raised);
+    color: var(--icd-text-2);
+    box-shadow: inset 0 0 0 1px var(--icd-text-3);
+  }
+
+  & .question.incorrect.bordered,
+  & .question.unanswered.bordered {
+    border-color: var(--icd-danger);
+  }
+
+  & .question.correct.bordered {
+    border-color: var(--icd-success);
+  }
+
+  & .answer.wrong_answer .ui-selectmenu-status {
+    color: var(--icd-danger);
+  }
+
+  & .text_box_answer.correct_text_box_answer {
+    color: var(--icd-success);
+  }
+
+  /* 오른쪽 문제 목록, 경과 시간, 제출 줄(예측: 실화면 미확인) */
+  & ul#question_list li i {
+    color: var(--icd-text-2);
+  }
+
+  & ul#question_list li.answered a {
+    color: var(--icd-link);
+  }
+
+  & ul#question_list li.current_question {
+    /* Canvas가 현재 문제 글자색을 어두운 색 !important로 박아 둔다 */
+    color: var(--icd-text) !important;
+  }
+
+  & ul#question_list li.correct,
+  & ul#question_list li.correct a {
+    color: var(--icd-success);
+  }
+
+  & ul#question_list li.incorrect,
+  & ul#question_list li.incorrect a {
+    color: var(--icd-danger);
+  }
+
+  & ul#question_list.read_only li.seen {
+    color: var(--icd-text-3);
+  }
+
+  & :is(#quiz-time-elapsed, .time_running, .time_header) {
+    color: var(--icd-text);
+  }
+
+  & #last_saved_indicator {
+    color: var(--icd-text-3);
+  }
+
+  & .form-actions {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line-strong);
+  }
+
+  & #times_up_dialog {
+    color: var(--icd-text);
+  }
+
+  /* 깃발 아이콘은 어두운 단색 스프라이트다 */
+  & .question .flag_question {
+    filter: invert(0.85) hue-rotate(180deg);
+  }
+
+  /* 구식 선택 상자(jQuery UI selectmenu): Canvas가 글자색을 #222 !important로 박아 둔다 */
+  & :is(.ui-selectmenu, .ui-selectmenu-menu a) {
+    color: var(--icd-text) !important;
+    background-color: var(--icd-raised);
+    border-color: var(--icd-control-line);
+  }
+}
+
+/* 19. 알림 상자(.alert), 과제 상세, 토론(기존 화면). 과목 메뉴 배지의 선택 상태 */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  /* 알림 상자(.alert 계열): 의미색을 어두운 면에 12% 섞은 면 + 같은 색 1px 사방 테두리 + 밝은 글자.
+     기본 .alert는 Canvas 원래 주황(경고) 톤이라 경고로 취급하고, 하늘색인 토론 채점 안내(.discussion-assignment-section)와
+     .alert-info는 정보 톤으로 보낸다. 한쪽만 굵은 선은 쓰지 않는다 */
+  & :is(.alert, .alert-warning) {
+    --icd-alert-tone: var(--icd-warning);
+  }
+
+  & :is(.alert-info, .alert.discussion-assignment-section) {
+    --icd-alert-tone: var(--icd-link);
+  }
+
+  & .alert-success {
+    --icd-alert-tone: var(--icd-success);
+  }
+
+  & :is(.alert-error, .alert-danger) {
+    --icd-alert-tone: var(--icd-danger);
+  }
+
+  & :is(.alert, .alert-info, .alert-warning, .alert-success, .alert-error, .alert-danger) {
+    background-color: color-mix(in srgb, var(--icd-alert-tone) 12%, var(--icd-surface));
+    border: 1px solid color-mix(in srgb, var(--icd-alert-tone) 55%, var(--icd-surface));
+    color: var(--icd-text);
+    text-shadow: none;
+  }
+
+  & :is(.alert, .alert-info, .alert-warning, .alert-success, .alert-error, .alert-danger) :is(span, p, strong, h4, a:not(.btn), .discussion-title) {
+    color: inherit;
+  }
+
+  /* 알림 아이콘(i.icon-*)은 의미색으로 보이게 한다 */
+  & :is(.alert, .alert-info, .alert-warning, .alert-success, .alert-error, .alert-danger) > i[class^='icon-'] {
+    color: var(--icd-alert-tone);
+  }
+
+  & .list-view a.active .nav-badge {
+    background-color: var(--icd-primary);
+    color: var(--icd-on-accent);
+  }
+
+  /* 과제 상세: 제출 상태 표시줄과 오른쪽 상태 */
+  & :is(ul.student-assignment-overview, .student-assignment-overview li) {
+    border-color: var(--icd-line);
+  }
+
+  & #sidebar_content .details .header {
+    color: var(--icd-text);
+  }
+
+  /* 토론: 댓글 줄, 댓글 쓰기 상자, 개수 배지 */
+  /* 댓글 줄은 라이트에서 바탕과 같은 흰색에 위쪽 구분선만 있었다 */
+  & li.entry {
+    background-color: transparent;
+    border-color: var(--icd-line);
+  }
+
+  & :is(.discussion-reply-box, .discussion-entry-reply-area) {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & .new-and-total-badge span.total-items {
+    background-color: var(--icd-raised);
+    color: var(--icd-text-2);
+  }
+
+  & article.discussion_entry {
+    background-color: transparent;
+  }
+
+  /* 읽은 댓글의 ‘읽지 않음으로 표시’ 점은 다크 화면에서 링크 색으로 보인다 */
+  & .discussion_entry.read .discussion-read-state {
+    background-color: var(--icd-link);
+  }
+
+  & .discussion-pubdate {
+    color: var(--icd-text-2);
+  }
+
+  & .discussion-pubdate b {
+    color: var(--icd-text);
+  }
+
+  /* 토론 목록(새 화면, InstUI 해시 클래스): 해시가 아닌 Canvas 클래스로만 고른다 */
+  /* 이 화면의 글자색은 InstUI 변수가 아니라 #434343으로 박혀 instui.css가 못 바꾼다.
+     :where()로 구체성을 올리지 않아, 아래 개별 규칙(배지, 제목 링크)이 이긴다 */
+  & .discussions-container__wrapper :where(span, div, h3) {
+    color: var(--icd-text-2);
+  }
+
+  & .ic-item-row.ic-discussion-row {
+    background-color: var(--icd-table-row-bg);
+    box-shadow: 0 -1px 0 0 var(--icd-table-line), 0 -1px 0 0 var(--icd-table-line) inset;
+  }
+
+  & :is(.discussions-v2__wrapper, .unpinned-discussions-v2__wrapper, .pinned-discussions-v2__wrapper, .closed-for-comments-discussions-v2__wrapper, .discussions-v2__container-image) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .ic-unread-badge__total-count {
+    background-color: var(--icd-raised);
+    color: var(--icd-text-2);
+  }
+
+  & .discussions-container__wrapper button svg {
+    fill: var(--icd-text-2);
+  }
+
+  & .discussions-container__wrapper a.discussion-title span {
+    color: var(--icd-link);
+  }
+}
+
+/* 20. 글 편집기(Canvas RCE = TinyMCE): 도구줄, 메뉴, 상태줄, 대화상자.
+   편집 영역 안쪽(about:blank iframe)은 content script가 같은 문서 규칙으로 처리한다.
+   대화상자와 드롭다운(.tox-dialog, .tox-menu 등)은 열어서 확인하지 못했다 "(예측: 실화면 미확인)" */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & :is(.rce-wrapper, .canvas-rce__skins--root, .tox.tox-tinymce) {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-control-line);
+    color: var(--icd-text);
+  }
+
+  & .tox :is(.tox-editor-header, .tox-menubar, .tox-toolbar-overlord, .tox-toolbar__primary, .tox-toolbar, .tox-toolbar__overflow, .tox-statusbar) {
+    background: var(--icd-raised);
+    border-color: var(--icd-line);
+    color: var(--icd-text-2);
+  }
+
+  & .tox .tox-toolbar__group {
+    border-color: var(--icd-line);
+  }
+
+  & .tox :is(.tox-edit-area, .tox-edit-area__iframe) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+  }
+
+  & .tox :is(.tox-tbtn, .tox-mbtn, .tox-split-button) {
+    background: transparent;
+    color: var(--icd-text-2);
+  }
+
+  & .tox :is(.tox-tbtn, .tox-mbtn) svg,
+  & .tox .tox-tbtn__select-chevron svg {
+    fill: var(--icd-text-2);
+  }
+
+  & .tox :is(.tox-tbtn, .tox-mbtn):hover:not(:disabled):not(.tox-mbtn--active),
+  & .tox :is(.tox-tbtn, .tox-mbtn):focus:not(:disabled),
+  & .tox .tox-split-button:focus,
+  & .tox .tox-split-button:hover {
+    background: var(--icd-hover);
+    color: var(--icd-text);
+  }
+
+  & .tox :is(.tox-tbtn:active, .tox-tbtn--enabled, .tox-mbtn--active, .tox-tbtn--enabled:hover) {
+    background: var(--icd-brand-soft);
+    color: var(--icd-text);
+  }
+
+  & .tox :is(.tox-statusbar__text-container, .tox-statusbar__path-item, .tox-statusbar__wordcount, .tox-statusbar a) {
+    color: var(--icd-text-2);
+  }
+
+  /* 메뉴, 드롭다운, 대화상자(예측: 실화면 미확인) */
+  & :is(.tox .tox-menu, .tox .tox-dialog, .tox .tox-dialog__header, .tox .tox-dialog__footer, .tox .tox-collection--list, .tox .tox-collection--grid, .tox .tox-pop__dialog, .tox .tox-swatches-menu) {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-line-strong);
+    color: var(--icd-text);
+  }
+
+  & .tox :is(.tox-collection__item, .tox-dialog__title, .tox-label, .tox-collection__item-label) {
+    color: var(--icd-text);
+  }
+
+  & .tox :is(.tox-collection__item--active, .tox-collection__item:hover) {
+    background-color: var(--icd-hover);
+  }
+
+  & .tox :is(.tox-textfield, .tox-textarea, .tox-listboxfield .tox-listbox--select, .tox-selectfield select) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-control-line);
+    color: var(--icd-text);
+  }
+
+  & .tox svg {
+    fill: var(--icd-text-2);
+  }
+
+  /* Canvas 전용 아이콘(Instructure 도구)은 어두운 남색 #2B3B46을 속성으로 박아 둔다 */
+  & .tox svg [fill='#2B3B46'] {
+    fill: var(--icd-text-2);
+  }
+}
+
+/* 21. SSO 로그인: 이 경로에는 CSS와 boot.js만 주입하고 입력값은 읽지 않는다.
+ * 원래 화면(라이트)의 역할: 흰 바탕 위에 회색 가로줄 둘로 구획한 영역(상자가 아니라 바탕), 둥근 테두리 하나로 묶은 ID·Password 입력 묶음(컨트롤),
+ * 초록 LOGIN 버튼(학교색), 회색 안내문(3번 줄만 더 진한 강조). */
+html[data-icd='on'][data-icd-login='true']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  /* 학교 초록. 원래 #508e0d는 흰 글자와 3.8:1이라 색상은 두고 명도만 낮춰 4.7:1을 맞췄다 */
+  --icd-school-green: #467d0c;
+  --icd-school-green-hover: #3d6b0b;
+
+  & body {
+    background-color: var(--icd-bg);
+    background-blend-mode: multiply;
+    color: var(--icd-text);
+  }
+
+  & :is(.content, .login, .login-wrap, .login-box, .login-form, .error .box) {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  /* 로그인 영역은 라이트에서도 바탕과 같은 흰색이었다. 위아래 줄만 구분선으로 둔다(떠 보이는 면 금지) */
+  & :is(#login_wrapper, #login_wrapper form, #login_wrapper .loginForm) {
+    background-color: transparent;
+  }
+
+  & :is(#header .header_logo, #login_wrapper .loginForm) {
+    border-bottom-color: var(--icd-line);
+  }
+
+  /* ID·Password 묶음이 하나의 컨트롤이다: 묶음에 면과 3:1 테두리, 안의 입력칸은 투명, 두 칸 사이는 구분선 */
+  & #login_wrapper .loginForm .loginBox {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-control-line);
+  }
+
+  & #login_wrapper .loginForm .inputText {
+    border-bottom-color: var(--icd-line);
+  }
+
+  & :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+    background-color: var(--icd-raised);
+    border-color: var(--icd-control-line);
+    color: var(--icd-text);
+  }
+
+  & #login_wrapper .loginForm .inputText input {
+    background-color: transparent;
+    color: var(--icd-text);
+  }
+
+  & :is(button[type='submit'], input[type='submit'], .btn-login, #login_wrapper .loginForm .loginBtn) {
+    background-color: var(--icd-school-green);
+    border-color: var(--icd-school-green);
+    color: var(--icd-on-accent);
+  }
+
+  & :is(button[type='submit'], input[type='submit'], .btn-login, #login_wrapper .loginForm .loginBtn):hover {
+    background-color: var(--icd-school-green-hover);
+    border-color: var(--icd-school-green-hover);
+  }
+
+  & :is(p, label, .notice, .help, .error) {
+    color: var(--icd-text-2);
+  }
+
+  /* 안내문: 본문은 text-2, 3번 줄의 진한 강조(<b>)는 한 단계 밝게(라이트에서 더 진한 회색이던 역할), 링크는 --icd-link */
+  & .footerBtn .btnLink {
+    color: var(--icd-text-2);
+  }
+
+  & .footerBtn .btnLink b {
+    color: var(--icd-text);
+  }
+
+  & .footerBtn .btnLink a {
+    color: var(--icd-link);
+  }
+
+  /* 계정 선택·잠김 안내 모달(오류가 났을 때만 보인다) */
+  & .modalOverlay .modalContainer {
+    background-color: var(--icd-surface);
+    color: var(--icd-text);
+  }
+
+  & .modalOverlay p {
+    color: var(--icd-text);
+  }
+
+  & .modalOverlay hr,
+  & .modalOverlay .modalContainer table tr {
+    border-bottom-color: var(--icd-line);
+  }
+
+  & .modalOverlay .modalContainer table {
+    border-top-color: var(--icd-line-strong);
+    border-bottom-color: var(--icd-line-strong);
+  }
+
+  & .modalOverlay .modalContainer .buttonSelect {
+    background-color: var(--icd-school-green);
+    color: var(--icd-on-accent);
+  }
+
+  & .modalOverlay .modalContainer .buttonSelect:hover {
+    background-color: var(--icd-school-green-hover);
+  }
+
+  & .modalOverlay .modalContainer .noticeBox .grayMessageBox {
+    background-color: var(--icd-raised);
+  }
+
+  & img[src*='logo'] {
+    filter: brightness(.85);
+  }
+}

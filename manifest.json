@@ -1,51 +1,105 @@
 {
   "manifest_version": 3,
-  "name": "iCampus Check V2",
-  "description": "성균관대학교 iCampus의 강의와 과제 일정을 효율적으로 관리하는 도구",
-  "version": "0.2.1",
-
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "sjssjs1344@gmail.com",
-      "strict_min_version": "109.0"
-    }
+  "name": "아캠체크 플러스",
+  "version": "1.7.5",
+  "description": "즐겨찾기 과목의 과제와 강의콘텐츠 마감을 확인하고, 아이캠퍼스를 읽기 좋은 다크 모드로 보여 줍니다.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://canvas.skku.edu/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
   },
-
   "content_scripts": [
     {
-      "matches": ["*://canvas.skku.edu/*"],
-      "js": ["content.js"]
+      "matches": [
+        "https://lcms.skku.edu/*"
+      ],
+      "js": [
+        "player.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://canvas.skku.edu/*"
+      ],
+      "exclude_matches": [
+        "https://canvas.skku.edu/xn-sso/*"
+      ],
+      "css": [
+        "dark/sheets.css",
+        "dark/instui.css",
+        "dark/dark.css",
+        "dark/adapt.css"
+      ],
+      "js": [
+        "dark/color.js",
+        "dark/boot.js",
+        "dark/transform.js",
+        "dark/styles.js",
+        "dark/adapt.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    },
+    {
+      "matches": [
+        "https://canvas.skku.edu/xn-sso/*",
+        "https://icampus.skku.edu/xn-sso/*"
+      ],
+      "css": [
+        "dark/dark.css"
+      ],
+      "js": [
+        "dark/boot.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://canvas.skku.edu/*"
+      ],
+      "exclude_matches": [
+        "https://canvas.skku.edu/xn-sso/*"
+      ],
+      "js": [
+        "timetable.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://kingoinfo.skku.edu/gaia/nxui/index.html*"
+      ],
+      "js": [
+        "timetable-portal.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
-
-  "background": {
-    "service_worker": "background.js",
-    "scripts": ["background.js"]
-  },
-
   "action": {
+    "default_title": "아캠체크 플러스",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_popup": "popup.html",
-    "default_title": "iCampus Check V2"
+    "default_popup": "popup.html"
   },
-
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-
-  "web_accessible_resources": [
-    {
-      "resources": ["utils.js"],
-      "matches": ["*://canvas.skku.edu/*"]
-    }
-  ],
-
-  "host_permissions": ["*://canvas.skku.edu/*"],
-  "permissions": ["scripting", "tabs", "storage"]
+  }
 }

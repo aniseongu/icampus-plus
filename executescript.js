@@ -1,181 +1,227 @@
-/**
- * 쿠키 값을 가져옵니다.
- */
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-  return null;
-}
+// Runs only inside the signed-in canvas.skku.edu tab. No credentials leave that tab.
+(async () => {
+  const base = location.origin;
+  const now = Date.now();
+  const warnings = [];
 
-/**
- * 두 날짜 사이의 시간 차이를 밀리초 단위로 계산합니다.
- */
-function getTimeGap(now, date) {
-  if (!date) return -1;
-  return new Date(date).getTime() - now.getTime();
-}
-
-/**
- * 항목을 남은 시간 순으로 정렬합니다.
- */
-function sortByRemainingTime(items) {
-  return [...items].sort((a, b) => a.remainingTime_ms - b.remainingTime_ms);
-}
-
-/**
- * Canvas API에서 사용자의 즐겨찾기 과목 목록을 가져옵니다.
- */
-async function getCourses() {
-  const url = "https://canvas.skku.edu/api/v1/users/self/favorites/courses";
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // 요청 시간 제한
-      signal: AbortSignal.timeout(5000),
-    });
-
-    let text = await response.text();
-    text = text.replace(/^while\(1\);/, "");
-    return JSON.parse(text);
-  } catch (error) {
-    return [];
+  function cookie(name) {
+    const part = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+    return part ? decodeURIComponent(part.slice(name.length + 1)) : null;
   }
-}
 
-/**
- * 특정 과목의 모듈(강의 및 과제) 정보를 가져옵니다.
- */
-async function getCourseModules(courseId, courseName) {
-  const authorizationToken = "Bearer " + getCookie("xn_api_token");
-  const url = `https://canvas.skku.edu/learningx/api/v1/courses/${courseId}/modules`;
-  const now = new Date();
-  const result = { lecture: [], assignment: [] };
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        Authorization: authorizationToken,
-      },
-      // 요청 시간 제한
-      signal: AbortSignal.timeout(5000),
-    });
-
-    let text = await response.text();
-    text = text.replace(/^while\(1\);/, "");
-    const modules = JSON.parse(text);
-
-    // 모듈 처리를 최적화: Promise.all로 병렬 처리
-    await Promise.all(
-      modules.map(async (module) => {
-        if (!module.module_items || !Array.isArray(module.module_items)) {
-          return;
-        }
-
-        // 항목 처리 최적화: Promise.all 사용하여 병렬 처리
-        const itemPromises = module.module_items.map(async (item) => {
-          // content_data가 없거나 마감기한이 없으면 null 반환
-          if (!item.content_data || !item.content_data.due_at) {
-            return null;
-          }
-
-          const remainingTime = getTimeGap(now, item.content_data.due_at);
-          const isUnlocked =
-            !item.content_data.unlock_at ||
-            getTimeGap(now, item.content_data.unlock_at) < 0;
-
-          // 열람 가능하고 마감기한이 남은 항목만 처리
-          if (remainingTime > 0 && isUnlocked) {
-            const itemData = {
-              course: courseName,
-              title: item.title,
-              remainingTime_ms: remainingTime,
-              due: item.content_data.due_at,
-              url: `https://canvas.skku.edu/courses/${courseId}/modules/items/${item.module_item_id}`,
-            };
-
-            // 강의 항목
-            if (
-              item.content_data.use_attendance &&
-              item.attendance_status !== "attendance"
-            ) {
-              return { type: "lecture", data: itemData };
-            }
-            // 과제 항목
-            else if (item.content_type === "assignment" && !item.completed) {
-              return { type: "assignment", data: itemData };
-            }
-          }
-          return null;
-        });
-
-        // 모든 항목 처리가 완료될 때까지 기다림
-        const processedItems = await Promise.all(itemPromises);
-
-        // null이 아닌 항목만 필터링하고 해당 배열에 추가
-        processedItems
-          .filter((item) => item !== null)
-          .forEach((item) => {
-            result[item.type].push(item.data);
-          });
-      }),
-    );
-
-    return result;
-  } catch (error) {
-    return { lecture: [], assignment: [] };
+  function nextLink(header) {
+    const part = (header || '').split(',').find(value => /rel="next"/.test(value));
+    const match = part && part.match(/<([^>]+)>/);
+    if (!match) return null;
+    const url = new URL(match[1], base);
+    return url.origin === base ? url.href : null;
   }
-}
 
-/**
- * 모든 과목의 과제 및 강의 정보를 병렬로 가져옵니다.
- */
-async function getAllCourseAssignments() {
-  try {
-    // 1. 모든 과목 정보 가져오기
-    const courses = await getCourses();
-
-    if (!courses || courses.length === 0) {
-      return { lecture: [], assignment: [] };
+  async function jsonPages(path, headers = {}, budgetMs = 8000) {
+    let url = new URL(path, base).href;
+    const rows = [];
+    const visited = new Set();
+    const deadline = Date.now() + budgetMs;
+    for (let page = 0; url && page < 25; page++) {
+      if (visited.has(url)) throw new Error('반복된 페이지 주소');
+      visited.add(url);
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error('조회 시간 초과');
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json', ...headers },
+        signal: AbortSignal.timeout(remaining)
+      });
+      if (!response.ok) throw Object.assign(new Error('HTTP ' + response.status), { status: response.status });
+      const text = (await response.text()).replace(/^while\(1\);\s*/, '');
+      let data;
+      try { data = JSON.parse(text); }
+      catch { throw new Error('로그인 만료 또는 응답 형식 변경'); }
+      if (!Array.isArray(data)) throw new Error('목록 응답 형식 변경');
+      rows.push(...data);
+      url = nextLink(response.headers.get('Link'));
     }
-
-    // 2. 각 과목별로 모듈 정보를 병렬로 가져오고 처리
-    const modulePromises = courses.map((course) =>
-      getCourseModules(course.id, course.name),
-    );
-
-    // Promise.allSettled로 일부 실패해도 계속 진행
-    const results = await Promise.allSettled(modulePromises);
-
-    // 3. 결과 병합 (성공한 요청만)
-    const thingsToDo = {
-      lecture: [],
-      assignment: [],
-    };
-
-    results.forEach((result) => {
-      if (result.status === "fulfilled" && result.value) {
-        thingsToDo.lecture.push(...result.value.lecture);
-        thingsToDo.assignment.push(...result.value.assignment);
-      }
-    });
-
-    // 4. 마감기한에 따라 정렬
-    thingsToDo.lecture = sortByRemainingTime(thingsToDo.lecture);
-    thingsToDo.assignment = sortByRemainingTime(thingsToDo.assignment);
-
-    return thingsToDo;
-  } catch (error) {
-    return { lecture: [], assignment: [] };
+    if (url) throw new Error('25페이지 초과: 일부 항목을 가져오지 못함');
+    return rows;
   }
-}
 
-// 스크립트 실행 및 결과 반환
-getAllCourseAssignments();
+  let courses;
+  try {
+    courses = await jsonPages('/api/v1/users/self/favorites/courses?per_page=100');
+  } catch (error) {
+    return { fatal: '즐겨찾기 과목을 가져오지 못했습니다. 아이캠퍼스 로그인 상태를 확인하고 새로고침해 주세요. (' + error.message + ')', warnings };
+  }
+  courses = [...new Map(courses.filter(c => c && c.id && c.name).map(c => [String(c.id), c])).values()];
+  let token = cookie('xn_api_token');
+  let tokenRefresh = null;
+  const found = new Map();
+
+  // The xn_api_token cookie goes stale while the Canvas session stays valid, and
+  // LearningX then answers every call with HTTP 400 "Invalid request." (seen since
+  // 2026-09). Opening the My Page tool re-issues it, so load that page once in a
+  // hidden iframe and wait for the cookie to change. At most once per popup open.
+  function refreshToken() {
+    tokenRefresh ||= new Promise(resolve => {
+      const before = cookie('xn_api_token');
+      // Only the global-navigation My Page tool; never another LTI link on the page.
+      const fallback = '/accounts/1/external_tools/346?launch_type=global_navigation';
+      const link = [...document.querySelectorAll('a[href*="launch_type=global_navigation"]')]
+        .find(a => a.textContent.includes('마이페이지') &&
+          /^\/accounts\/\d+\/external_tools\/\d+$/.test(new URL(a.href, base).pathname));
+      const url = new URL(link?.getAttribute('href') || fallback, base);
+      const frame = document.createElement('iframe');
+      frame.hidden = true;
+      frame.tabIndex = -1;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.src = url.origin === base ? url.href : base + fallback;
+      const started = Date.now();
+      const timer = setInterval(() => {
+        const current = cookie('xn_api_token');
+        const renewed = current && current !== before;
+        if (!renewed && Date.now() - started < 8000) return;
+        clearInterval(timer);
+        frame.remove();
+        resolve(renewed ? current : null);
+      }, 200);
+      document.body.appendChild(frame);
+    });
+    return tokenRefresh;
+  }
+
+  async function loadModules(id) {
+    const path = '/learningx/api/v1/courses/' + id + '/modules';
+    if (!token) token = await refreshToken();
+    if (!token) return null;
+    const used = token;
+    try {
+      return await jsonPages(path, { Authorization: 'Bearer ' + used });
+    } catch (error) {
+      if (![400, 401, 403].includes(error.status)) throw error;
+      const fresh = await refreshToken();
+      if (!fresh) throw new Error(error.message + ', 인증 재발급 실패');
+      if (fresh === used) throw error;
+      token = fresh;
+      return jsonPages(path, { Authorization: 'Bearer ' + fresh });
+    }
+  }
+  let assignmentSources = 0;
+  let moduleSources = 0;
+  const moduleFailures = new Map();
+
+  function validDue(value) {
+    const time = value ? Date.parse(value) : NaN;
+    return Number.isFinite(time) ? new Date(time).toISOString() : null;
+  }
+
+  function addAssignment(course, assignment) {
+    if (!assignment || !assignment.id || !assignment.name || assignment.published === false) return;
+    const submission = assignment.submission || {};
+    const done = Boolean(submission.submitted_at || submission.excused ||
+      ['submitted', 'graded', 'pending_review'].includes(submission.workflow_state));
+    const due = validDue(assignment.due_at || assignment.lock_at);
+    const key = String(course.id) + ':assignment:' + String(assignment.id);
+    // Keep all open tasks, including items without a due date and overdue items.
+    if (done && (!due || Date.parse(due) < now)) {
+      found.delete(key);
+      return;
+    }
+    const previous = found.get(key);
+    found.set(key, {
+      key, course: course.name, title: assignment.name, type: '과제', due,
+      done: done || Boolean(previous?.done),
+      url: assignment.html_url || base + '/courses/' + course.id + '/assignments/' + assignment.id
+    });
+  }
+
+  function addModule(course, item) {
+    const info = item && item.content_data;
+    if (!info || !item.title || !info.due_at) return;
+    const due = validDue(info.due_at);
+    if (!due || Date.parse(due) < now) return;
+    const unlock = validDue(info.unlock_at);
+    if (unlock && Date.parse(unlock) > now) return;
+    const assignmentId = item.content_id || info.id;
+    const isAssignment = String(item.content_type || '').toLowerCase() === 'assignment';
+    const isLecture = Boolean(info.use_attendance) && item.attendance_status !== 'attendance';
+    if (!isAssignment && !isLecture) return;
+    if (isAssignment && assignmentId && found.has(String(course.id) + ':assignment:' + String(assignmentId))) {
+      const existing = found.get(String(course.id) + ':assignment:' + String(assignmentId));
+      existing.done = existing.done || Boolean(item.completed);
+      return;
+    }
+    if (isAssignment) {
+      const sameTask = [...found.values()].find(existing => existing.type === '과제' &&
+        existing.course === course.name && existing.title === item.title && existing.due === due);
+      if (sameTask) {
+        sameTask.done = sameTask.done || Boolean(item.completed);
+        return;
+      }
+    }
+    const key = String(course.id) + ':' + (isAssignment ? 'assignment:' : 'lecture:') +
+      String(assignmentId || item.module_item_id || item.id || item.title + due);
+    if (found.has(key)) return;
+    const done = Boolean(item.completed);
+    found.set(key, {
+      key, course: course.name, title: item.title,
+      type: isLecture ? '강의' : '과제', due, done,
+      url: base + '/courses/' + course.id + '/modules/items/' + (item.module_item_id || item.id)
+    });
+  }
+
+  async function loadCourse(course) {
+    const id = encodeURIComponent(course.id);
+    const assignmentRequest = jsonPages('/api/v1/courses/' + id + '/assignments?include%5B%5D=submission&per_page=100');
+    const moduleRequest = loadModules(id);
+    const [assignmentResult, moduleResult] = await Promise.allSettled([assignmentRequest, moduleRequest]);
+    if (assignmentResult.status === 'fulfilled') {
+      assignmentSources++;
+      assignmentResult.value.forEach(a => addAssignment(course, a));
+    } else {
+      warnings.push(course.name + ': 과제 목록 조회 실패 (' + assignmentResult.reason.message + ')');
+    }
+    if (moduleResult.status === 'fulfilled' && moduleResult.value) {
+      moduleSources++;
+      moduleResult.value.forEach(module => {
+        if (Array.isArray(module.module_items)) module.module_items.forEach(item => addModule(course, item));
+      });
+    } else if (moduleResult.status === 'rejected') {
+      const reason = moduleResult.reason.message;
+      moduleFailures.set(reason, [...(moduleFailures.get(reason) || []), course.name]);
+    }
+  }
+
+  // Fetch at most eight favorite courses at once; the two sources within each
+  // course run in parallel, so one slow source does not delay the other.
+  let nextCourse = 0;
+  async function worker() {
+    while (nextCourse < courses.length) await loadCourse(courses[nextCourse++]);
+  }
+  await Promise.all(Array.from({ length: Math.min(8, courses.length) }, worker));
+  // One line per cause, so a LearningX outage does not repeat for every course.
+  for (const [reason, names] of moduleFailures) {
+    warnings.push('강의콘텐츠 조회 실패 ' + names.length + '/' + courses.length + '과목 (' + reason + '): ' + names.join(', '));
+  }
+  // A failed course assignment request gets one short Canvas TODO fallback.
+  // TODO entries outside the favorite list are never displayed.
+  if (assignmentSources < courses.length) {
+    try {
+      const favoriteById = new Map(courses.map(course => [String(course.id), course]));
+      const todo = await jsonPages('/api/v1/users/self/todo?per_page=100', {}, 3000);
+      for (const entry of todo) {
+        if (entry?.type !== 'submitting' || !entry.assignment) continue;
+        const course = favoriteById.get(String(entry.course_id || entry.assignment.course_id));
+        if (course) addAssignment(course, entry.assignment);
+      }
+    } catch (error) {
+      warnings.push('보조 할 일 조회 실패 (' + error.message + ')');
+    }
+  }
+  if (!token) warnings.push('강의콘텐츠 인증을 자동으로 받지 못했습니다. 아이캠퍼스 마이페이지를 한 번 연 뒤 새로고침해 주세요. 현재는 과제만 확인했습니다.');
+  const items = [...found.values()].sort((a, b) =>
+    (a.due ? Date.parse(a.due) : Infinity) - (b.due ? Date.parse(b.due) : Infinity) ||
+    a.course.localeCompare(b.course, 'ko'));
+  return {
+    items, warnings, courseCount: courses.length,
+    assignmentSources, moduleSources, fetchedAt: new Date().toISOString()
+  };
+})();
