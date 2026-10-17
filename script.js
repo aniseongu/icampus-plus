@@ -158,15 +158,17 @@ async function refreshExamStatus() {
     const bannerAction = document.querySelector('#exam-banner-action');
     const examActive = status.guard && active;
     banner.hidden = !examActive && status.pendingRestore === 0 &&
-      !status.notificationsBlocked && !status.notificationRestorePending;
+      !status.restoreNeedsApproval && !status.notificationsBlocked && !status.notificationRestorePending;
     if (examActive) {
       bannerText.textContent = '시험 중이에요. ' + examProtectionText() + examBlockedText() +
         (status.manual ? '' : ' 시험 화면을 벗어나면 자동으로 끝나요.');
       bannerAction.hidden = !status.manual;
       bannerAction.textContent = '시험 끝내기';
     } else {
-      bannerText.textContent = status.pendingRestore > 0
-        ? `확장 ${status.pendingRestore}개를 다시 켜지 못했어요`
+      bannerText.textContent = status.restoreNeedsApproval
+        ? '오래된 복구 기록이 있어요. 다시 켜기를 눌러 확인해 주세요'
+        : status.pendingRestore > 0
+          ? `확장 ${status.pendingRestore}개를 다시 켜지 못했어요`
         : '사이트 알림을 다시 허용하지 못했어요';
       bannerAction.hidden = false;
       bannerAction.textContent = '다시 켜기';
@@ -214,8 +216,9 @@ async function handleExamAction() {
     if (!examStatus.hasPermission) {
       await chrome.permissions.request({ permissions: ['management', 'contentSettings'] });
       if (examStatus.examTabs || examStatus.manual) await ExamMode.enterExamMode('manual');
-      else if (examStatus.pendingRestore || examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
-        await ExamMode.exitExamMode();
+      else if (examStatus.pendingRestore || examStatus.restoreNeedsApproval ||
+          examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
+        await ExamMode.exitExamMode({ manualRestore: true });
       }
     } else if (examStatus.manual) {
       await chrome.storage.local.set({ examModeManual: false });
@@ -650,8 +653,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (examStatus.manual) {
         await chrome.storage.local.set({ examModeManual: false });
         if (!examStatus.examTabs) await ExamMode.exitExamMode();
-      } else if (examStatus.pendingRestore > 0 || examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
-        await ExamMode.exitExamMode();
+      } else if (examStatus.pendingRestore > 0 || examStatus.restoreNeedsApproval ||
+          examStatus.notificationsBlocked || examStatus.notificationRestorePending) {
+        await ExamMode.exitExamMode({ manualRestore: true });
       }
       await refreshExamPresentation();
     } finally { button.disabled = false; }
@@ -662,10 +666,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (area === 'session' && changes.icampusPlaylistState) {
       if (!examNoticeShown) renderPlaylistStatus(changes.icampusPlaylistState.newValue);
     }
-    if (area === 'session' && changes.examTabs) refreshExamPresentation().catch(() => {});
+    if (area === 'session' && (changes.examTabs || changes.examBlockedCount ||
+        changes.examDisabledIds || changes.examRestoreManualIds)) {
+      refreshExamPresentation().catch(() => {});
+    }
     if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen ||
-        changes.examDisabledIds || changes.examRestorePending || changes.examNotificationsBlocked ||
-        changes.examBlockedCount)) {
+        changes.examDisabledIds || changes.examRestorePending || changes.examRestoreManual ||
+        changes.examNotificationsBlocked)) {
       refreshExamPresentation().catch(() => {});
     }
   });

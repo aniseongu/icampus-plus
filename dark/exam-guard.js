@@ -10,13 +10,8 @@
   let requestPending = false;
   let lockPending = false;
   let keyboardLocked = false;
-  let countQueue = Promise.resolve();
-
   const countBlocked = () => {
-    countQueue = countQueue.then(async () => {
-      const saved = await chrome.storage.local.get('examBlockedCount');
-      await chrome.storage.local.set({ examBlockedCount: (saved.examBlockedCount || 0) + 1 });
-    }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'icampus-exam-blocked-count' }).catch(() => {});
   };
 
   const blocksShortcut = event => {

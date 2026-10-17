@@ -1,4 +1,5 @@
 importScripts('exam.js');
+const examSessionReady = chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 // Keep the playlist in the existing iCampus tab. The worker may be suspended
 // between videos, so chrome.storage.session is the source of truth.
 const STATE_KEY = 'icampusPlaylistState';
@@ -13,7 +14,10 @@ const EXAM_TABS_KEY = 'examTabs';
 let examQueue = Promise.resolve();
 
 function queueExam(task) {
-  const next = examQueue.then(task);
+  const next = examQueue.then(async () => {
+    await examSessionReady;
+    return task();
+  });
   examQueue = next.catch(() => {});
   return next;
 }
@@ -41,32 +45,39 @@ async function reconcileExamTabs() {
   const before = await examTabs();
   await chrome.storage.session.set({ [EXAM_TABS_KEY]: found });
   await notifyExamState();
-  const { examGuard, examModeManual, examDisabledIds, examNotificationsBlocked } = await chrome.storage.local.get([
-    'examGuard', 'examModeManual', 'examDisabledIds', 'examNotificationsBlocked'
+  const { examGuard, examModeManual, examNotificationsBlocked } = await chrome.storage.local.get([
+    'examGuard', 'examModeManual', 'examNotificationsBlocked'
   ]);
+  const disabledIds = await ExamMode.disabledIds();
   if (found.length && examGuard !== false && !before.length) await ExamMode.enterExamMode('auto');
   if (!found.length && examModeManual !== true &&
-      ((Array.isArray(examDisabledIds) && examDisabledIds.length) || examNotificationsBlocked === true)) {
+      (disabledIds.length || examNotificationsBlocked === true)) {
     await ExamMode.exitExamMode();
   }
 }
 
 async function examStatus() {
-  const [tabs, saved, hasManagementPermission, hasContentSettingsPermission] = await Promise.all([
+  const [tabs, saved, session, hasManagementPermission, hasContentSettingsPermission] = await Promise.all([
     examTabs(),
-    chrome.storage.local.get(['examGuard', 'examModeManual', 'examDisabledIds', 'examRestorePending', 'examDisableFailures', 'examNotificationsBlocked', 'examFullscreen', 'examBlockedCount']),
+    chrome.storage.local.get(['examGuard', 'examModeManual', 'examDisabledIds', 'examRestorePending', 'examRestoreManual', 'examRestoreManualIds', 'examDisableFailures', 'examNotificationsBlocked', 'examFullscreen']),
+    chrome.storage.session.get(['examDisabledIds', 'examRestoreManualIds', 'examBlockedCount']),
     chrome.permissions.contains({ permissions: ['management'] }),
     chrome.permissions.contains({ permissions: ['contentSettings'] })
   ]);
-  const count = Array.isArray(saved.examDisabledIds) ? saved.examDisabledIds.length : 0;
+  const ids = Object.hasOwn(session, 'examDisabledIds') ? session.examDisabledIds : saved.examDisabledIds;
+  const count = Array.isArray(ids) ? ids.length : 0;
+  const manualIds = Object.hasOwn(session, 'examRestoreManualIds')
+    ? session.examRestoreManualIds : saved.examRestoreManualIds;
+  const manualCount = Array.isArray(manualIds) ? manualIds.length : 0;
   return {
     guard: saved.examGuard !== false,
     manual: saved.examModeManual === true,
     examTabs: tabs.length,
     disabledCount: saved.examRestorePending ? 0 : count,
-    pendingRestore: saved.examRestorePending ? count : 0,
+    pendingRestore: saved.examRestorePending ? count + manualCount : 0,
+    restoreNeedsApproval: saved.examRestoreManual === true,
     disableFailures: saved.examDisableFailures || 0,
-    blockedCount: saved.examBlockedCount || 0,
+    blockedCount: session.examBlockedCount || 0,
     notificationsBlocked: saved.examNotificationsBlocked === true && hasContentSettingsPermission,
     notificationRestorePending: saved.examNotificationsBlocked === true && !hasContentSettingsPermission,
     fullscreen: saved.examFullscreen !== false,
@@ -283,13 +294,29 @@ async function stopPlaylist() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
     'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
-    'icampus-player-ended', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type)) return;
+    'icampus-player-ended', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
+    'icampus-exam-blocked-count'].includes(message.type)) return;
   // Only extension pages (the popup) may start a playlist or open a lecture.
+  const extensionPage = sender.id === chrome.runtime.id &&
+    sender.url?.startsWith(chrome.runtime.getURL(''));
   if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
        'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
-      !sender.url?.startsWith(chrome.runtime.getURL(''))) return;
-  if (message.type === 'exam-status' && !sender.url?.startsWith(chrome.runtime.getURL('')) &&
+      !extensionPage) return;
+  if (message.type === 'exam-status' && !extensionPage &&
       !['https://lcms.skku.edu', 'https://kingoinfo.skku.edu'].some(origin => sender.url?.startsWith(origin + '/'))) return;
+  if (message.type === 'icampus-exam-blocked-count') {
+    if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.tab?.id) return;
+    const task = queueExam(async () => {
+      const url = sender.tab.url || '';
+      const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
+      if (saved.examGuard === false || !(ExamMode.EXAM_URL.test(url) ||
+          (saved.examModeManual === true && url.startsWith('https://canvas.skku.edu/')))) return;
+      const state = await chrome.storage.session.get('examBlockedCount');
+      await chrome.storage.session.set({ examBlockedCount: (state.examBlockedCount || 0) + 1 });
+    });
+    task.then(() => sendResponse({ ok: true }), error => sendResponse({ error: error.message }));
+    return true;
+  }
   if (message.type.startsWith('exam-')) {
     const task = queueExam(async () => {
       if (message.type === 'exam-start') {
@@ -299,7 +326,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await chrome.storage.local.set({ examModeManual: false });
         if (!(await examTabs()).length) await ExamMode.exitExamMode();
       } else if (message.type === 'exam-restore') {
-        await ExamMode.exitExamMode();
+        await ExamMode.exitExamMode({ manualRestore: true });
       }
       return examStatus();
     });

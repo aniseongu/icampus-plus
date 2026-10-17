@@ -2,10 +2,36 @@
 const ExamMode = (() => {
   const EXAM_URL = /^https:\/\/canvas\.skku\.edu\/courses\/\d+\/quizzes\/\d+\/take(?:[/?#]|$)/;
   const IDS_KEY = 'examDisabledIds';
+  const MAX_RESTORE_AGE = 7 * 24 * 60 * 60 * 1000;
+
+  function validIds(value) {
+    return Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string'))] : [];
+  }
+
+  async function disabledState() {
+    const [session, local] = await Promise.all([
+      chrome.storage.session.get(IDS_KEY),
+      chrome.storage.local.get([IDS_KEY, 'examStartedAt'])
+    ]);
+    if (Object.hasOwn(session, IDS_KEY)) {
+      return { ids: validIds(session[IDS_KEY]), source: 'session', startedAt: local.examStartedAt };
+    }
+    return { ids: validIds(local[IDS_KEY]), source: 'local', startedAt: local.examStartedAt };
+  }
 
   async function disabledIds() {
-    const saved = await chrome.storage.local.get(IDS_KEY);
-    return Array.isArray(saved[IDS_KEY]) ? saved[IDS_KEY].filter(id => typeof id === 'string') : [];
+    return (await disabledState()).ids;
+  }
+
+  function isStale(startedAt) {
+    return !Number.isFinite(startedAt) || startedAt > Date.now() ||
+      Date.now() - startedAt > MAX_RESTORE_AGE;
+  }
+
+  async function markManualRestore(ids) {
+    await chrome.storage.session.set({ [IDS_KEY]: [], examRestoreManualIds: ids });
+    await chrome.storage.local.set({ [IDS_KEY]: [], examRestorePending: true,
+      examRestoreManual: true, examRestoreManualIds: ids, examStartedAt: null });
   }
 
   async function blockNotifications() {
@@ -34,7 +60,7 @@ const ExamMode = (() => {
   }
 
   async function enterExamMode(reason) {
-    await chrome.storage.local.set({ examBlockedCount: 0 });
+    await chrome.storage.session.set({ examBlockedCount: 0 });
     const hasPermission = await chrome.permissions.contains({ permissions: ['management'] });
     if (!hasPermission) {
       await blockNotifications();
@@ -42,7 +68,29 @@ const ExamMode = (() => {
       return { disabledCount: (await disabledIds()).length, failed: 0 };
     }
 
-    const existing = new Set(await disabledIds());
+    const previous = await disabledState();
+    let existing = new Set(previous.ids);
+    if (previous.source === 'local') {
+      if (existing.size && isStale(previous.startedAt)) {
+        await markManualRestore([...existing]);
+        existing = new Set();
+        await chrome.storage.local.set({ examStartedAt: Date.now() });
+      } else {
+        const verified = [];
+        for (const id of existing) {
+          try {
+            const item = await chrome.management.get(id);
+            if (item.type === 'extension' && item.enabled === false && id !== chrome.runtime.id) verified.push(id);
+          } catch { /* Removed extensions are no longer restorable. */ }
+        }
+        existing = new Set(verified);
+        await chrome.storage.session.set({ [IDS_KEY]: verified });
+        await chrome.storage.local.set({ [IDS_KEY]: verified,
+          examStartedAt: verified.length ? previous.startedAt : Date.now() });
+      }
+    } else if (!existing.size) {
+      await chrome.storage.local.set({ examStartedAt: Date.now() });
+    }
     const saved = await chrome.storage.local.get('examKeepIds');
     const keepIds = new Set(Array.isArray(saved.examKeepIds)
       ? saved.examKeepIds.filter(id => typeof id === 'string') : []);
@@ -60,7 +108,8 @@ const ExamMode = (() => {
       try {
         await chrome.management.setEnabled(item.id, false);
         existing.add(item.id);
-        // Save each success so a sleeping worker or closed popup cannot lose the restore list.
+        // Session is authoritative; local is only a restart backup.
+        await chrome.storage.session.set({ [IDS_KEY]: [...existing] });
         await chrome.storage.local.set({ [IDS_KEY]: [...existing] });
       } catch { failed++; }
     }
@@ -69,9 +118,22 @@ const ExamMode = (() => {
     return { disabledCount: existing.size, failed };
   }
 
-  async function exitExamMode() {
+  async function exitExamMode({ manualRestore = false } = {}) {
     await restoreNotifications();
-    const ids = await disabledIds();
+    const [manual, localManual] = await Promise.all([
+      chrome.storage.session.get('examRestoreManualIds'),
+      chrome.storage.local.get('examRestoreManualIds')
+    ]);
+    const manualIds = validIds(Object.hasOwn(manual, 'examRestoreManualIds')
+      ? manual.examRestoreManualIds : localManual.examRestoreManualIds);
+    const state = await disabledState();
+    if (state.source === 'local' && state.ids.length && isStale(state.startedAt)) {
+      await markManualRestore(state.ids);
+      return manualRestore ? exitExamMode({ manualRestore: true })
+        : { pendingRestore: state.ids.length };
+    }
+    const restoringManual = manualRestore && manualIds.length > 0;
+    const ids = restoringManual ? manualIds : state.ids;
     if (ids.length && !await chrome.permissions.contains({ permissions: ['management'] })) {
       await chrome.storage.local.set({ examRestorePending: true });
       return { pendingRestore: ids.length };
@@ -81,16 +143,22 @@ const ExamMode = (() => {
       let item;
       try { item = await chrome.management.get(id); }
       catch { continue; } // Removed extensions no longer need restoring.
-      if (item.enabled) continue;
+      if (item.type !== 'extension' || item.id === chrome.runtime.id || item.enabled !== false) continue;
       try { await chrome.management.setEnabled(id, true); }
       catch { remaining.push(id); }
     }
+    const nextNormal = restoringManual ? state.ids : remaining;
+    const nextManual = restoringManual ? remaining : manualIds;
+    await chrome.storage.session.set({ [IDS_KEY]: nextNormal, examRestoreManualIds: nextManual });
     await chrome.storage.local.set({
-      [IDS_KEY]: remaining,
-      examRestorePending: remaining.length > 0,
+      [IDS_KEY]: nextNormal,
+      examRestorePending: nextNormal.length > 0 || nextManual.length > 0,
+      examRestoreManual: nextManual.length > 0,
+      examRestoreManualIds: nextManual,
+      examStartedAt: nextNormal.length ? (state.startedAt || Date.now()) : null,
       examDisableFailures: 0
     });
-    return { pendingRestore: remaining.length };
+    return { pendingRestore: nextNormal.length + nextManual.length };
   }
 
   return { EXAM_URL, disabledIds, enterExamMode, exitExamMode };
