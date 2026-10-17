@@ -115,6 +115,17 @@
         text-align: center;
         color: var(--primary-color);
         font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      /* 툴바 아이콘과 같은 그림을 제목 앞에 둔다(1.7.8). */
+      .title-icon {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
       }
 
       .btn {
@@ -639,7 +650,7 @@
           <span class="tooltip">어둡게 보기</span>
         </span>
       </button>
-      <h1>아캠 플러스</h1>
+      <h1><img class="title-icon" src="icons/icon128.png" alt="" />아캠 플러스</h1>
       <button id="refresh-button" class="btn" aria-label="새로고침">
         <span class="tooltip-container">
           <span class="tooltip">새로고침</span>
