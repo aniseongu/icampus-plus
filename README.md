@@ -6,7 +6,7 @@
 
 성균관대학교 아이캠퍼스의 남은 강의와 과제를 한곳에서 보고, 아이캠퍼스를 어두운 화면으로 쓸 수 있게 해 주는 브라우저 확장 프로그램
 
-![version](https://img.shields.io/badge/version-1.7.11-124532)
+![version](https://img.shields.io/badge/version-1.7.12-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Whale%20%7C%20Chrome-Chromium%20150-555555)
 
