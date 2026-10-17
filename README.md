@@ -1,12 +1,12 @@
-# 아캠체크 플러스 (iCampus Check Plus)
+# 아캠 플러스 (iCampus Plus)
 
 <img src="icons/icon128.png">
 
 ## 소개
 
-아캠체크 플러스는 성균관대학교 아이캠퍼스에서 남은 강의와 과제를 확인하고, 아이캠퍼스를 다크 모드로 볼 수 있게 해 주는 확장 프로그램입니다. [moseoridev](https://github.com/moseoridev)님의 [iCampus Check V2](https://github.com/moseoridev/iCampusCheck)를 바탕으로, 네이버 웨일에서 쓰려고 고친 버전입니다. iCampus Check는 2020년 [ductility](https://github.com/ductility)님이 처음 만들었습니다.
+아캠 플러스는 성균관대학교 아이캠퍼스에서 남은 강의와 과제를 확인하고, 아이캠퍼스를 다크 모드로 볼 수 있게 해 주는 확장 프로그램입니다. [moseoridev](https://github.com/moseoridev)님의 [iCampus Check V2](https://github.com/moseoridev/iCampusCheck)를 바탕으로, 네이버 웨일에서 쓰려고 고친 버전입니다. iCampus Check는 2020년 [ductility](https://github.com/ductility)님이 처음 만들었습니다.
 
-원본의 팝업 배치, 강의와 과제 표, 아이콘은 그대로 두었습니다. 1.6부터 1.7.4까지는 "아캠 매니저"라는 이름이었지만, 같은 이름의 다른 확장([iCampus Manager](https://github.com/again7536/icampus-manager))과 구분하려고 1.7.5에서 이름을 바꿨습니다.
+원본의 팝업 배치, 강의와 과제 표, 아이콘은 그대로 두었습니다. 1.6부터는 "아캠 매니저"라는 이름이었지만, 같은 이름의 다른 확장([iCampus Manager](https://github.com/again7536/icampus-manager))과 구분하려고 1.7.6에서 "아캠 플러스"로 바꿨습니다.
 
 ## 주요 기능 및 변경점
 
@@ -47,10 +47,10 @@
 
 ## 버전 히스토리
 
-### 아캠체크 플러스 (1.5-1.7) by [aniseongu](https://github.com/aniseongu)
+### 아캠 플러스 (1.5-1.7) by [aniseongu](https://github.com/aniseongu)
 
 - **1.7**
-  > 이름을 아캠체크 플러스로 변경  
+  > 이름을 아캠 플러스로 변경  
   > 다크 모드를 규칙 기반으로 다시 작성  
   > 게시판, 수업자료, 과제 화면 다크 색 보정  
   > 시간표 버튼이 정보광장 주간테이블을 자동 조회
@@ -96,8 +96,10 @@
 
 ## 참고한 프로젝트
 
-- [iCampus Premium](https://github.com/kangrnin/icampus-premium) (kangrnin): 인트로 건너뛰기 방식. 코드는 새로 작성했습니다.
-- [iCampus Manager](https://github.com/again7536/icampus-manager) (again7536): 재생목록의 강의 선택과 다음 강의 넘김 방식
+- [아캠체크 (iCampus Check)](https://github.com/moseoridev/iCampusCheck): 이 확장의 바탕입니다. 2020년 [ductility](https://github.com/ductility/iCampusCheck)님이 만들고 2025년 moseoridev님이 V2로 고쳤습니다. 팝업 배치, 강의와 과제 표, 과제 수집 구조를 이어받았습니다.
+- [아캠 프리미엄 (iCampus Premium)](https://github.com/kangrnin/icampus-premium) (kangrnin): 강의 영상의 인트로 건너뛰기 방식을 참고했습니다. 코드는 새로 작성했습니다.
+- [아캠 매니저 (iCampus Manager)](https://github.com/again7536/icampus-manager) (again7536): 재생목록의 강의 선택과 다음 강의로 넘어가는 방식을 참고했습니다.
+- [Material UI 선택 목록](https://mui.com/material-ui/react-list/): 재생목록 체크 상태와 선택 개수 표시를 참고했습니다.
 
 ## 오류 및 문의
 
