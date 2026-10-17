@@ -1,8 +1,29 @@
 // 아이캠퍼스 시간표 버튼이 연 정보광장 탭에서만 주간테이블을 조회한다.
 // Nexacro는 URL을 바꾸지 않고 화면을 교체하므로 화면별 버튼이 준비될 때까지 짧게 기다린다.
 // 로그인 정보·학번은 읽거나 저장하지 않는다. 조회 이외의 버튼은 누르지 않는다.
-(() => {
+(async () => {
   if (new URLSearchParams(location.search).get('icd_timetable') !== '1') return;
+  let examBlocked = true;
+  const checkExam = async () => {
+    try {
+      const status = await chrome.runtime.sendMessage({ type: 'exam-status' });
+      if (typeof status?.guard !== 'boolean') throw new Error('시험 상태를 확인하지 못함');
+      examBlocked = status.guard && (status.manual || status.examTabs > 0);
+    } catch { examBlocked = true; }
+  };
+  await checkExam();
+  chrome.runtime.onMessage.addListener(message => {
+    if (message?.type === 'icampus-exam-blocked') {
+      const wasBlocked = examBlocked;
+      examBlocked = message.blocked === true;
+      if (wasBlocked && !examBlocked) advance();
+    }
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && (changes.examGuard || changes.examModeManual)) {
+      checkExam().then(() => { if (!examBlocked) advance(); }).catch(() => {});
+    }
+  });
 
   const bySuffix = (suffix) => document.querySelector(`[id$="${suffix}"]`);
   const click = (el) => {
@@ -38,6 +59,7 @@
   let week = null;
   const deadline = Date.now() + 30000;
   const advance = () => {
+    if (examBlocked) return;
     if (Date.now() > deadline || stage === 'done') return;
     if (stage === 'home') {
       if (clickIfReady('.btnLinkHS0453')) stage = 'semester';
