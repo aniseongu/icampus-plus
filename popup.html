@@ -8,6 +8,7 @@
     <!-- utils.js 스크립트 추가 -->
     <script src="utils.js" defer></script>
     <script src="exam.js" defer></script>
+    <script src="errlog.js" defer></script>
     <script src="script.js" defer></script>
     <style>
       /* ===== 1. 폰트 및 기본 설정 ===== */
@@ -311,6 +312,21 @@
       }
       .playlist-status-table .playlist-state {
         color: var(--text-light);
+      }
+      .playlist-status-table .playlist-lecture-title {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+      .playlist-status-table .playlist-lecture-course {
+        color: var(--text-light);
+        font-size: 0.85em;
+      }
+      .playlist-status-table .playlist-stop {
+        margin-left: auto;
+        font-size: 0.7em;
+      }
+      #playlist-status .playlist-sound-help {
+        margin: 8px 0 0;
       }
 
       table .colum1 {
@@ -779,7 +795,7 @@
     </details>
 
     <details id="settings" class="completed-panel">
-      <summary>화면 설정</summary>
+      <summary>설정</summary>
       <div class="setting-group">
         <div class="setting-row">
           <div class="setting-text">
@@ -792,7 +808,7 @@
             <button type="button" class="playlist-action" role="radio" aria-checked="false" data-mode="dark">어둡게</button>
           </div>
         </div>
-        <p class="setting-note">아이캠퍼스 페이지와 이 창에 같이 적용돼요. 웨일의 웹 콘텐츠 다크 모드는 아이캠퍼스에서 꺼 두면 색이 더 정확해요.</p>
+        <p class="setting-note">웨일의 웹 콘텐츠 다크 모드는 아이캠퍼스에서 꺼 두면 색이 더 정확해요.</p>
       </div>
       <div class="setting-group">
         <div class="setting-row">
@@ -817,7 +833,7 @@
             <button type="button" class="playlist-action" role="radio" aria-checked="false" data-fullscreen="false">끄기</button>
           </div>
         </div>
-        <p class="setting-note">Esc를 길게 누르면 전체화면에서 나갈 수 있어요. 윈도우 알림까지 숨기려면 설정 &gt; 시스템 &gt; 알림에서 '전체 화면 모드로 앱을 사용할 때' 방해 금지를 켜 주세요.</p>
+        <p class="setting-note">Esc를 길게 누르면 전체화면에서 나갈 수 있어요</p>
       </div>
       <details id="exam-keep" class="setting-group" hidden>
         <summary class="setting-row">
@@ -836,6 +852,18 @@
             <span id="exam-status" class="setting-help" role="status">상태를 확인하는 중이에요</span>
           </div>
           <button type="button" id="exam-action" class="playlist-action" hidden>지금 시작</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="error-log-label" class="setting-label">오류 기록</span>
+            <span class="setting-help">기록 프로그램을 설치한 컴퓨터에서만 파일로 남아요</span>
+          </div>
+          <div class="mode-choice" aria-labelledby="error-log-label">
+            <span id="error-log-status" class="setting-help" role="status"></span>
+            <button type="button" id="error-log-action" class="playlist-action">켜기</button>
+          </div>
         </div>
       </div>
     </details>
