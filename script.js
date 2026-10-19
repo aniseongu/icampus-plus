@@ -1,7 +1,13 @@
 // The original popup layout is kept; this script renders the favorite-only scan
 // into its lecture and assignment tables without inserting API text as HTML.
 const CANVAS_ORIGIN = 'https://canvas.skku.edu';
-const BUILD_VERSION = '1.6.2';
+window.addEventListener('error', event => {
+  reportError('popup', event.message || '알 수 없는 오류', { stack: event.error?.stack });
+});
+window.addEventListener('unhandledrejection', event => {
+  reportError('popup', String(event.reason?.message || event.reason || '처리되지 않은 오류'),
+    { stack: event.reason?.stack });
+});
 let activeTab = null;
 let loading = false;
 // 화면 모드는 팝업과 아이캠퍼스 페이지(dark/boot.js)가 같이 쓴다: 'auto'(브라우저 설정) | 'light' | 'dark'
@@ -10,6 +16,7 @@ let examStatus = null;
 let examNoticeShown = false;
 let examKeepIds = new Set();
 let examKeepSaving = false;
+let errorLogEnabled = false;
 const colorMedia = matchMedia('(prefers-color-scheme: dark)');
 let lastResult = null;
 let selectingLectures = false;
@@ -189,7 +196,7 @@ async function refreshExamStatus() {
           : status.disabledCount > 0
             ? `시험 중이에요. 확장 ${status.disabledCount}개를 꺼 두었어요`
             : '시험 중이에요'
-        : '대기 중이에요') + (active ? examBlockedText() : '');
+        : '퀴즈 화면을 열면 시작해요') + (active ? examBlockedText() : '');
       action.textContent = status.manual ? '끝내기' : '지금 시작';
       if (!status.manual && status.disableFailures > 0) action.textContent = '다시 시도';
       action.hidden = status.manual || (active && status.disableFailures === 0);
@@ -260,6 +267,7 @@ function showLoading() {
 }
 
 function showError(message) {
+  reportError('popup', message);
   document.querySelector('#completed').hidden = true;
   document.querySelector('#lecture').replaceChildren();
   document.querySelector('#assignment').replaceChildren(element('div', 'error-message', message));
@@ -347,7 +355,10 @@ function createTable(items, captionText, type) {
   const body = element('tbody');
   items.forEach(item => {
     const row = element('tr');
-    row.append(element('td', '', replaceUnderbar(item.course)));
+    const course = replaceUnderbar(item.course);
+    const courseCell = element('td', '', course.replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim() || course);
+    courseCell.title = course;
+    row.append(courseCell);
     const title = element('td', 'title');
     if (type === 'lecture' && selectingLectures) {
       // The checkbox selects; the title still opens the lecture. A click
@@ -409,7 +420,7 @@ function playlistToolbar() {
       });
     });
     all.id = 'playlist-select-all';
-    button('취소', 'playlist-secondary', () => {
+    button('선택 해제', 'playlist-secondary', () => {
       selectingLectures = false;
       selectedLectureKeys.clear();
       persistPlaylistSelection();
@@ -419,8 +430,8 @@ function playlistToolbar() {
     play.id = 'playlist-start';
     queueMicrotask(updatePlaylistSelection);
   } else {
-    toolbar.append(element('span', 'playlist-toolbar-label', '강의 재생목록'));
-    button('＋ 재생목록 만들기', 'playlist-primary', () => {
+    toolbar.append(element('span', 'playlist-toolbar-label', '연속 재생'));
+    button('연속 재생 만들기', 'playlist-primary', () => {
       selectingLectures = true;
       selectedLectureKeys.clear();
       persistPlaylistSelection();
@@ -445,7 +456,7 @@ function updatePlaylistSelection() {
   if (all) all.textContent = checks.length && checks.every(check => check.checked) ? '전체 해제' : '전체 선택';
   if (play && !play.dataset.busy) {
     play.disabled = size === 0;
-    play.textContent = size ? '▶ ' + size + '개 강의 재생' : '▶ 선택한 강의 재생';
+    play.textContent = size ? size + '개 재생하기' : '강의 재생하기';
   }
 }
 
@@ -457,15 +468,15 @@ function formatPlaybackTime(value) {
 function playlistStatusText(state) {
   if (state.status === 'opening') return '아이캠퍼스에서 강의를 여는 중...';
   if (state.status === 'connecting') return '학교 영상 플레이어에 연결하는 중...';
-  if (state.status === 'blocked') return '자동 재생에 실패했습니다. 잠시 후 다시 확인해 주세요.';
-  if (state.status === 'ended-unconfirmed') return '영상이 끝났지만 학교의 완료 표시를 확인하지 못했습니다.';
-  if (state.status === 'finished') return '재생목록이 끝났습니다. 출석 상태를 아이캠퍼스에서 확인해 주세요.';
-  if (state.status === 'stopped') return '연속 재생을 중지했습니다.';
-  if (state.status === 'error') return '강의를 열지 못했습니다: ' + (state.error || '알 수 없는 오류');
+  if (state.status === 'blocked') return '강의 화면을 한 번 눌러 재생해 주세요';
+  if (state.status === 'ended-unconfirmed') return '영상이 끝났어요. 아이캠퍼스에서 완료 표시를 확인해 주세요';
+  if (state.status === 'finished') return '연속 재생이 끝났어요. 아이캠퍼스에서 출석 상태를 확인해 주세요';
+  if (state.status === 'stopped') return '연속 재생을 멈췄어요';
+  if (state.status === 'error') return '강의를 열지 못했어요. ' + (state.error || '다시 시도해 주세요');
   const progress = formatPlaybackTime(state.currentTime) +
     (state.duration > 0 ? ' / ' + formatPlaybackTime(state.duration) : '');
-  const rate = state.rate > 0 ? ' · ' + Number(state.rate).toFixed(1) + '배속' : '';
-  return (state.status === 'playing' ? '재생 중 · ' : '일시정지 · ') + progress + rate;
+  const rate = state.rate > 0 ? Number(state.rate).toString() + '배속으로 ' : '';
+  return rate + (state.status === 'playing' ? '재생 중이에요 ' : '일시정지했어요 ') + progress;
 }
 
 function renderPlaylistStatus(state) {
@@ -477,30 +488,41 @@ function renderPlaylistStatus(state) {
   const table = element('table', 'playlist-status-table');
   const caption = element('caption', '', '연속 재생 ');
   caption.append(element('span', 'badge', Math.min(state.index + 1, state.queue.length) + ' / ' + state.queue.length));
-  const body = element('tbody');
-  const lectureRow = element('tr');
-  lectureRow.append(element('td', 'title', replaceUnderbar(current.course) + ' · ' + replaceUnderbar(current.title)));
-  const stateRow = element('tr');
-  stateRow.append(element('td', 'playlist-state', playlistStatusText(state)));
-  body.append(lectureRow, stateRow);
-  table.append(caption, body);
-  container.append(table);
   if (!['finished', 'stopped', 'error'].includes(state.status)) {
-    const toolbar = element('div', 'playlist-toolbar');
-    const stop = element('button', 'playlist-action playlist-secondary', '연속 재생 중지');
+    const stop = element('button', 'playlist-action playlist-secondary playlist-stop', '멈추기');
     stop.type = 'button';
     stop.addEventListener('click', async () => {
       stop.disabled = true;
       try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-stop' }); }
-      catch { stop.disabled = false; }
+      catch { stop.disabled = false; return; }
       selectingLectures = false;
       selectedLectureKeys.clear();
       persistPlaylistSelection();
       if (lastResult) render(lastResult);
       renderPlaylistStatus(null);
     });
-    toolbar.append(stop);
-    container.append(toolbar);
+    caption.append(stop);
+  }
+  const body = element('tbody');
+  const lectureRow = element('tr');
+  const lectureCell = element('td');
+  lectureCell.append(element('div', 'playlist-lecture-title', replaceUnderbar(current.title)));
+  lectureCell.append(element('div', 'playlist-lecture-course', replaceUnderbar(current.course)));
+  lectureRow.append(lectureCell);
+  const stateRow = element('tr');
+  stateRow.append(element('td', 'playlist-state', playlistStatusText(state)));
+  body.append(lectureRow, stateRow);
+  table.append(caption, body);
+  container.append(table);
+  if (state.soundBlocked && !['finished', 'stopped', 'error'].includes(state.status)) {
+    const help = element('p', 'setting-help playlist-sound-help');
+    help.append(element('span', '', '강의 화면을 한 번 누르면 다른 탭에서도 계속 재생돼요'));
+    const link = element('a', '', '자동 재생 허용 파일을 설치하면 다음부터 누르지 않아도 돼요');
+    link.href = 'https://github.com/aniseongu/icampus-plus#자동-재생-허용';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    help.append(document.createElement('br'), link);
+    container.append(help);
   }
 }
 
@@ -573,9 +595,19 @@ async function load() {
   }
 }
 
+// Compare the loaded manifest with the one on disk instead of a hardcoded
+// constant, which went stale twice (1.5.15, 1.6.3+) and reloaded on every start.
+async function diskManifestVersion() {
+  try {
+    const response = await fetch(chrome.runtime.getURL('manifest.json'), { cache: 'no-store' });
+    return (await response.json()).version || null;
+  } catch { return null; }
+}
+
 async function requestPlaylistStart(message) {
   const manifest = chrome.runtime.getManifest();
-  if (manifest.version !== BUILD_VERSION || !manifest.background?.service_worker) {
+  const diskVersion = await diskManifestVersion();
+  if ((diskVersion && diskVersion !== manifest.version) || !manifest.background?.service_worker) {
     setTimeout(() => chrome.runtime.reload(), 600);
     throw new Error('확장 업데이트를 적용합니다. 잠시 후 확장을 다시 열어 재생해 주세요.');
   }
@@ -583,8 +615,8 @@ async function requestPlaylistStart(message) {
   catch (error) {
     if (!/Receiving end does not exist|Could not establish connection/i.test(String(error.message))) throw error;
     const saved = await chrome.storage.local.get('icampusWorkerReloadedFor');
-    if (saved.icampusWorkerReloadedFor !== BUILD_VERSION) {
-      await chrome.storage.local.set({ icampusWorkerReloadedFor: BUILD_VERSION });
+    if (saved.icampusWorkerReloadedFor !== manifest.version) {
+      await chrome.storage.local.set({ icampusWorkerReloadedFor: manifest.version });
       setTimeout(() => chrome.runtime.reload(), 600);
       throw new Error('재생 연결을 다시 설정합니다. 잠시 후 확장을 다시 열어 재생해 주세요.');
     }
@@ -599,7 +631,7 @@ async function startPlaylist() {
   if (!button || !selectedLectureKeys.size) return;
   button.disabled = true;
   button.dataset.busy = '1';
-  button.textContent = '재생목록 준비 중...';
+  button.textContent = '연속 재생 준비 중...';
   try {
     const queue = lastResult.items.filter(item => item.type === '강의' && !item.done &&
       selectedLectureKeys.has(item.key) && new URL(item.url).origin === CANVAS_ORIGIN)
@@ -608,10 +640,12 @@ async function startPlaylist() {
     const response = await requestPlaylistStart({
       type: 'icampus-playlist-start', tabId: activeTab.id, queue
     });
-    if (!response?.ok) throw new Error(response?.error || '재생목록을 시작하지 못했습니다.');
+    if (!response?.ok) throw new Error(response?.error || '연속 재생을 시작하지 못했어요.');
   } catch (error) {
+    const text = '연속 재생을 준비하지 못했어요. ' + error.message;
+    reportError('popup', text, { stack: error.stack });
     document.querySelector('#sync-status').replaceChildren(
-      element('div', 'error-message', '재생목록 준비 실패: ' + error.message)
+      element('div', 'error-message', text)
     );
   } finally {
     delete button.dataset.busy;
@@ -620,6 +654,33 @@ async function startPlaylist() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const errorLogButton = document.querySelector('#error-log-action');
+  const errorLogStatus = document.querySelector('#error-log-status');
+  async function refreshErrorLogPermission() {
+    errorLogEnabled = await chrome.permissions.contains({ permissions: ['nativeMessaging'] });
+    errorLogStatus.textContent = errorLogEnabled ? '켜짐' : '';
+    errorLogButton.textContent = errorLogEnabled ? '끄기' : '켜기';
+  }
+  errorLogButton.addEventListener('click', async () => {
+    if (errorLogButton.disabled) return;
+    errorLogButton.disabled = true;
+    try {
+      if (errorLogEnabled) {
+        await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+      } else {
+        await chrome.permissions.request({ permissions: ['nativeMessaging'] });
+      }
+      await refreshErrorLogPermission();
+    } catch {
+      errorLogStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
+    } finally {
+      errorLogButton.disabled = false;
+    }
+  });
+  chrome.permissions.onAdded.addListener(refreshErrorLogPermission);
+  chrome.permissions.onRemoved.addListener(refreshErrorLogPermission);
+  // Do not let the optional error-log row block the rest of the popup.
+  refreshErrorLogPermission().catch(() => {});
   document.querySelector('#exam-keep').addEventListener('toggle', event => {
     const keep = event.currentTarget;
     keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '고르기';
