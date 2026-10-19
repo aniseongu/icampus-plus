@@ -21,7 +21,10 @@
   let playlistKey = null;
   let directModeReady = false;
   let directTabMuted = false;
-  let lastTrustedMuteInputAt = 0;
+  let lastDirectInput = null;
+  let directControlsTouched = false;
+  let directFirstPlay = false;
+  let directResetDefaults = false;
   const directMutedByUser = new WeakSet();
   const directRecovering = new WeakSet();
   const directMutePending = new WeakSet();
@@ -118,12 +121,16 @@
 
   // Silent means muted or volume 0. The school player's mute button sets volume 0.
   const silent = element => element.muted || element.volume === 0;
+  const markPlaylistDefaultsDirty = () => {
+    chrome.storage.local.set({ playerDefaultsDirty: true }).catch(() => {});
+  };
 
   // Without a click (or the AutoplayAllowlist policy) Whale only autoplays a silent
   // video. Volume 0 keeps playing in a background tab; a muted video is paused there.
   // Either way the tab is not audible, so Whale may put it to sleep after a while (D-016).
   async function fallbackToMuted(element) {
     if (examBlocked || !playlistKey || !element.isConnected) return false;
+    if (element.volume !== 0) markPlaylistDefaultsDirty();
     element.muted = false;
     element.volume = 0;
     reportMutedFallback(element);
@@ -138,6 +145,7 @@
     let retryMuted = false;
     try {
       element.muted = false;
+      if (element.volume !== 1) markPlaylistDefaultsDirty();
       element.volume = 1;
       let playing = element.paused ? await playWithin(element) : true;
       // The school player can pause just after its mute setting changes.
@@ -162,11 +170,18 @@
 
   function noteDirectInput(event) {
     if (examBlocked || !event.isTrusted) return;
-    const control = event.target.closest?.('button, [role="button"], [class*="volume"], [class*="mute"]');
-    const label = [control?.className, control?.title, control?.getAttribute('aria-label'),
-      control?.textContent].filter(Boolean).join(' ');
-    if (!/mute|volume|sound|음소거|소리|볼륨/i.test(label)) return;
-    lastTrustedMuteInputAt = Date.now();
+    const target = event.target;
+    const slider = target.closest?.('.vc-pctrl-volume-slider, .vc-pctrl-volume-thumb');
+    const control = target.closest?.('.vc-pctrl-volume-btn, button, [role="button"], [title], [aria-label]');
+    const label = [control?.title, control?.getAttribute('aria-label')].filter(Boolean).join(' ');
+    const muteButton = !slider && (control?.matches?.('.vc-pctrl-volume-btn') ||
+      /^(?:음소거|mute|unmute|음소거 해제)$/i.test(label.trim()));
+    const volumeControl = slider || target.closest?.('[class*="volume"]');
+    const speedControl = target.closest?.('[class*="playback-rate"]');
+    if (!muteButton && !volumeControl && !speedControl) return;
+    if (!directFirstPlay) directControlsTouched = true;
+    if (!muteButton && !volumeControl) return;
+    lastDirectInput = { kind: muteButton ? 'button' : 'slider', at: Date.now() };
     // Pressing the player's mute button again means "sound on". The video is already
     // audible, so the player may not fire volumechange; unmute the tab ourselves.
     if (directTabMuted && !playlistKey) setTimeout(() => {
@@ -198,8 +213,17 @@
     const element = event.target;
     if (!(element instanceof HTMLVideoElement) || examBlocked || !directModeReady || playlistKey ||
         isIntro(element) || element !== video() || directRecovering.has(element) ||
-        Date.now() - lastTrustedMuteInputAt > 1000 || directMutePending.has(element)) return;
-    if (!silent(element)) { directMutedByUser.delete(element); return; }
+        !lastDirectInput || Date.now() - lastDirectInput.at > 1000 || directMutePending.has(element)) return;
+    if (!silent(element)) {
+      directMutedByUser.delete(element);
+      if (directTabMuted) {
+        chrome.runtime.sendMessage({ type: 'icampus-direct-mute', muted: false })
+          .then(response => { if (typeof response?.muted === 'boolean') directTabMuted = response.muted; })
+          .catch(() => {});
+      }
+      return;
+    }
+    if (lastDirectInput.kind !== 'button') return;
     if (element.paused) {
       directMutedByUser.add(element);
       return;
@@ -218,19 +242,21 @@
     finally { directMutePending.delete(element); }
   }
   document.addEventListener('volumechange', handleDirectMute, true);
-  // A lecture opened by hand starts at 1x with sound once per page, even when the
-  // school player remembered the playlist's 2x and volume 0.
+  // Reset only values that the previous playlist may have left behind.
   const directDefaulted = new WeakSet();
   function applyDirectDefaults(element) {
     if (!directModeReady || playlistKey || examBlocked || isIntro(element) ||
-        directDefaulted.has(element) || !navigator.userActivation?.hasBeenActive) return;
+        !directResetDefaults || directControlsTouched || directDefaulted.has(element)) return;
     directDefaulted.add(element);
     if (element.playbackRate !== 1) element.playbackRate = 1;
     if (element.volume === 0) element.volume = 1;
+    directResetDefaults = false;
+    chrome.storage.local.set({ playerDefaultsDirty: false }).catch(() => {});
   }
   document.addEventListener('playing', event => {
     if (!(event.target instanceof HTMLVideoElement)) return;
     applyDirectDefaults(event.target);
+    if (directModeReady && !isIntro(event.target)) directFirstPlay = true;
     restoreDirectSound(event.target);
   }, true);
 
@@ -336,10 +362,11 @@
     if (lastAttempt?.source === source && Date.now() - lastAttempt.time < 1000) return false;
     const button = rateButton();
     speedAttempts.set(element, { source, time: Date.now() });
-    if (button) button.click();
+    if (button) { markPlaylistDefaultsDirty(); button.click(); }
     else {
       const toggle = document.querySelector('.vc-pctrl-playback-rate-toggle-btn');
       if (!toggle) return false;
+      markPlaylistDefaultsDirty();
       toggle.click();
       setTimeout(() => {
         if (examBlocked) return;
@@ -443,7 +470,7 @@
         // Play with sound while the worker keeps the tab muted: an audible tab is
         // neither paused nor put to sleep in the background (D-014, D-016).
         element.muted = false;
-        if (element.volume === 0) element.volume = 1;
+        if (element.volume === 0) { markPlaylistDefaultsDirty(); element.volume = 1; }
         const wasPlaying = !element.paused;
         const withSound = wasPlaying ? true : await playWithin(element);
         if (wasPlaying) await new Promise(resolve => setTimeout(resolve, 1200));
@@ -512,6 +539,7 @@
         if (response?.direct) {
           directModeReady = true;
           directTabMuted = response.muted === true;
+          directResetDefaults = response.resetDefaults === true;
           if (video() && !video().paused) applyDirectDefaults(video());
           restoreDirectSound(video());
           return;
@@ -583,7 +611,7 @@
         if (element && !isIntro(element)) {
           // Native media speed is a fallback if the school's menu changed.
           // Never set a rate above the school's stated 2x ceiling.
-          try { element.playbackRate = 2; } catch { /* Restricted player. */ }
+          try { markPlaylistDefaultsDirty(); element.playbackRate = 2; } catch { /* Restricted player. */ }
           if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) sendState('speed-2x');
           else sendState('speed-unavailable');
         }

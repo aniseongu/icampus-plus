@@ -19,6 +19,9 @@ const WORKER_VERSION = chrome.runtime.getManifest().version;
 // help below; player.js gets no playlist key there, so no 2x or autoplay.
 const DIRECT_KEY = 'icampusDirectTabs';
 const DIRECT_MUTED_KEY = 'directMutedTabs';
+const PLAYLIST_MUTED_KEY = 'playlistMutedTabs';
+const DEFAULTS_DIRTY_KEY = 'playerDefaultsDirty';
+const AWAKE_KEY = 'awakeLectureTabs';
 const DIRECT_TTL_MS = 2 * 60 * 1000;
 const advanceLocks = new Set();
 let messageQueue = Promise.resolve();
@@ -116,6 +119,8 @@ async function notifyExamState() {
     const task = messageQueue.then(async () => {
       await stopPlaylist();
       await releaseAllDirectMutes();
+      const awake = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
+      for (const tabId of Object.keys(awake)) await keepTabAwake(Number(tabId), false);
     });
     messageQueue = task.catch(() => {});
     await task;
@@ -190,24 +195,28 @@ async function getState() {
 }
 
 // Keep a lecture tab out of Whale's automatic tab sleep while the extension plays it.
-// Tab ids are kept in session storage so a restarted worker can still release them.
-const AWAKE_KEY = 'awakeLectureTabs';
+// Ownership survives an extension reload; playlist progress itself stays in session.
 async function keepTabAwake(tabId, awake) {
+  const saved = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
+  if (awake) saved[tabId] = true; else delete saved[tabId];
+  await chrome.storage.local.set({ [AWAKE_KEY]: saved });
   try { await chrome.tabs.update(tabId, { autoDiscardable: !awake }); }
   catch { /* The tab may already be closed. */ }
-  const saved = (await chrome.storage.session.get(AWAKE_KEY))[AWAKE_KEY] || {};
-  if (awake) saved[tabId] = true; else delete saved[tabId];
-  await chrome.storage.session.set({ [AWAKE_KEY]: saved });
+}
+
+async function releasePlaylistMute(tabId) {
+  const owned = (await chrome.storage.local.get(PLAYLIST_MUTED_KEY))[PLAYLIST_MUTED_KEY] || {};
+  if (!owned[tabId]) return;
+  try { await chrome.tabs.update(tabId, { muted: false }); } catch { /* Closed tab. */ }
+  delete owned[tabId];
+  await chrome.storage.local.set({ [PLAYLIST_MUTED_KEY]: owned });
 }
 
 async function saveState(state) {
   await chrome.storage.session.set({ [STATE_KEY]: { ...state, updatedAt: Date.now() } });
   if (state.status === 'error') reportError('worker', String(state.error || '재생목록 오류'));
   if (['finished', 'stopped', 'error'].includes(state.status)) await keepTabAwake(state.tabId, false);
-  if (['finished', 'stopped', 'error'].includes(state.status) && state.tabMutedBefore === false) {
-    try { await chrome.tabs.update(state.tabId, { muted: false }); }
-    catch (error) { reportError('worker', '재생목록 탭 음소거를 되돌리지 못했습니다.', { stack: error?.stack }); }
-  }
+  if (['finished', 'stopped', 'error'].includes(state.status)) await releasePlaylistMute(state.tabId);
 }
 
 function canvasLectureUrl(url) {
@@ -219,22 +228,63 @@ function canvasLectureUrl(url) {
 }
 
 async function releaseDirectMute(tabId, closed = false) {
-  const saved = await chrome.storage.session.get(DIRECT_MUTED_KEY);
+  const saved = await chrome.storage.local.get(DIRECT_MUTED_KEY);
   const tabs = saved[DIRECT_MUTED_KEY] || {};
   if (!tabs[tabId]) return;
   if (!closed) {
     try { await chrome.tabs.update(tabId, { muted: false }); }
-    catch { return; }
+    catch { /* Closed tab. */ }
   }
   delete tabs[tabId];
-  await chrome.storage.session.set({ [DIRECT_MUTED_KEY]: tabs });
+  await chrome.storage.local.set({ [DIRECT_MUTED_KEY]: tabs });
 }
 
 async function releaseAllDirectMutes() {
-  const saved = await chrome.storage.session.get(DIRECT_MUTED_KEY);
+  const saved = await chrome.storage.local.get(DIRECT_MUTED_KEY);
   for (const tabId of Object.keys(saved[DIRECT_MUTED_KEY] || {})) {
     await releaseDirectMute(Number(tabId));
   }
+}
+
+async function reconcileOwnedTabs(startup = false) {
+  const keys = [DIRECT_MUTED_KEY, AWAKE_KEY, PLAYLIST_MUTED_KEY];
+  const [local, legacy] = await Promise.all([
+    chrome.storage.local.get(keys), chrome.storage.session.get([DIRECT_MUTED_KEY, AWAKE_KEY])
+  ]);
+  const owned = Object.fromEntries(keys.map(key => [key, { ...(legacy[key] || {}), ...(local[key] || {}) }]));
+  await chrome.storage.session.remove([DIRECT_MUTED_KEY, AWAKE_KEY]);
+  if (startup) {
+    await chrome.storage.local.remove(keys);
+    return; // Browser restart may reuse tab ids for different tabs.
+  }
+  const state = await getState();
+  const tabs = await chrome.tabs.query({});
+  const byId = new Map(tabs.map(tab => [tab.id, tab]));
+  const playlistActive = state && !['finished', 'stopped', 'error'].includes(state.status) &&
+    canvasLectureUrl(byId.get(state.tabId)?.url);
+  if (playlistActive && state.tabMutedBefore === false) owned[PLAYLIST_MUTED_KEY][state.tabId] = true;
+  const ids = new Set(keys.flatMap(key => Object.keys(owned[key])));
+  for (const id of ids) {
+    const tab = byId.get(Number(id));
+    const playlist = playlistActive && state.tabId === Number(id);
+    const directPlaying = !playlist && tab && canvasLectureUrl(tab.url) && tab.audible === true;
+    // Only lecture tabs: after a browser restart a reused id may belong to another tab.
+    if (tab && canvasLectureUrl(tab.url) && !playlist && !directPlaying) {
+      if (owned[DIRECT_MUTED_KEY][id] || owned[PLAYLIST_MUTED_KEY][id]) {
+        try { await chrome.tabs.update(tab.id, { muted: false }); } catch { /* Tab changed. */ }
+      }
+      if (owned[AWAKE_KEY][id]) {
+        try { await chrome.tabs.update(tab.id, { autoDiscardable: true }); } catch { /* Tab changed. */ }
+      }
+    }
+    // A lecture still playing after a reload keeps our mute; hand it to the direct
+    // record so leaving the lecture later still unmutes the tab.
+    if (directPlaying && owned[PLAYLIST_MUTED_KEY][id]) owned[DIRECT_MUTED_KEY][id] = true;
+    if (!directPlaying) delete owned[DIRECT_MUTED_KEY][id];
+    if (!playlist) delete owned[PLAYLIST_MUTED_KEY][id];
+    if (!playlist && !directPlaying) delete owned[AWAKE_KEY][id];
+  }
+  await chrome.storage.local.set(owned);
 }
 
 async function setDirectMute(message, sender) {
@@ -247,13 +297,13 @@ async function setDirectMute(message, sender) {
   if (state?.tabId === sender.tab.id && !['finished', 'stopped', 'error'].includes(state.status)) return null;
   const tab = await chrome.tabs.get(sender.tab.id);
   if (!canvasLectureUrl(tab.url)) return null;
-  const saved = await chrome.storage.session.get(DIRECT_MUTED_KEY);
+  const saved = await chrome.storage.local.get(DIRECT_MUTED_KEY);
   const owned = saved[DIRECT_MUTED_KEY] || {};
   if (message.muted) {
     if (!tab.mutedInfo?.muted) {
-      await chrome.tabs.update(tab.id, { muted: true });
       owned[tab.id] = true;
-      await chrome.storage.session.set({ [DIRECT_MUTED_KEY]: owned });
+      await chrome.storage.local.set({ [DIRECT_MUTED_KEY]: owned });
+      await chrome.tabs.update(tab.id, { muted: true });
     }
   } else if (owned[tab.id]) {
     await releaseDirectMute(tab.id);
@@ -282,6 +332,11 @@ async function startPlaylist(message) {
     queue, index: 0, status: 'opening', currentTime: 0, duration: 0, rate: 1, soundBlocked: false };
   await saveState(state);
   try {
+    if (state.tabMutedBefore === false) {
+      const owned = (await chrome.storage.local.get(PLAYLIST_MUTED_KEY))[PLAYLIST_MUTED_KEY] || {};
+      owned[tab.id] = true;
+      await chrome.storage.local.set({ [PLAYLIST_MUTED_KEY]: owned });
+    }
     await chrome.tabs.update(tab.id, { muted: true });
     await keepTabAwake(tab.id, true);
     if (tab.url === queue[0].url) await chrome.tabs.reload(tab.id);
@@ -332,7 +387,9 @@ async function handlePlayerMessage(message, sender) {
     const tab = await chrome.tabs.get(sender.tab.id);
     if (!canvasLectureUrl(tab.url)) return null;
     await keepTabAwake(tab.id, true);
-    return { direct: true, muted: tab.mutedInfo?.muted === true };
+    const defaults = await chrome.storage.local.get(DEFAULTS_DIRTY_KEY);
+    return { direct: true, muted: tab.mutedInfo?.muted === true,
+      resetDefaults: defaults[DEFAULTS_DIRTY_KEY] === true };
   }
   const current = state.queue[state.index];
   if (!current) return null;
@@ -472,6 +529,8 @@ chrome.tabs.onRemoved.addListener(tabId => {
     const state = await getState();
     if (state?.tabId === tabId) await chrome.storage.session.remove(STATE_KEY);
     await releaseDirectMute(tabId, true);
+    await releasePlaylistMute(tabId);
+    await keepTabAwake(tabId, false);
   });
   messageQueue = task.catch(() => {});
   return task;
@@ -483,7 +542,7 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
     await releaseDirectMute(tabId);
     const state = await getState();
     const playlistTab = state?.tabId === tabId && !['finished', 'stopped', 'error'].includes(state.status);
-    const awake = (await chrome.storage.session.get(AWAKE_KEY))[AWAKE_KEY] || {};
+    const awake = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
     if (awake[tabId] && !playlistTab) await keepTabAwake(tabId, false);
   });
   messageQueue = task.catch(() => {});
@@ -534,3 +593,14 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     } catch { /* The tab may have moved to its lecture frame already. */ }
   }).catch(() => {});
 });
+
+let startupOwnershipCleanup = false;
+function queueOwnershipCleanup(startup = false) {
+  if (startup) startupOwnershipCleanup = true;
+  const task = messageQueue.then(() => reconcileOwnedTabs(startup));
+  messageQueue = task.catch(() => {});
+}
+chrome.runtime.onInstalled.addListener(() => queueOwnershipCleanup());
+chrome.runtime.onStartup.addListener(() => queueOwnershipCleanup(true));
+// Give onStartup a chance to mark browser restart before the ordinary reload pass.
+setTimeout(() => { if (!startupOwnershipCleanup) queueOwnershipCleanup(); }, 0);
