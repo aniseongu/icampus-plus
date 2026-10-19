@@ -1,10 +1,9 @@
 // Runs only on LCMS pages. The playlist is controlled by the extension worker
 // while the official iCampus lecture stays in the user's existing tab.
-// Intro skip runs on every lecture. 2x, autoplay, mute and dialog clicks run
-// only for the playlist; a lecture opened by title click or by hand keeps the
-// school player's own speed.
+// Intro skip runs on every lecture. 2x, autoplay and dialog clicks run only
+// for the playlist. Direct lectures keep the school's speed and play controls.
 (async () => {
-  const PLAYER_VERSION = '1.5.18';
+  const PLAYER_VERSION = chrome.runtime.getManifest().version;
   if (window.__icampusCheckPlayer) return;
   window.__icampusCheckPlayer = true;
   let examBlocked = true;
@@ -20,6 +19,12 @@
   const speedSources = new WeakMap();
   const speedAttempts = new WeakMap();
   let playlistKey = null;
+  let directModeReady = false;
+  let directTabMuted = false;
+  let lastTrustedMuteInputAt = 0;
+  const directMutedByUser = new WeakSet();
+  const directRecovering = new WeakSet();
+  const directMutePending = new WeakSet();
   let completionSent = false;
   let lastProgressSent = 0;
   let lastDialogClick = 0;
@@ -30,13 +35,20 @@
   const trackedIntros = new WeakSet();
   const continuedIntroSources = new Set();
   const recoveringVideos = new WeakSet();
+  const mutedFallbackVideos = new WeakSet();
+  const soundRecoveryVideos = new WeakSet();
+  let mutedFallbackReported = false;
+  let soundOnReported = false;
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'icampus-exam-blocked') {
       examBlocked = message.blocked === true;
       if (examBlocked) {
         playlistKey = null;
+        directModeReady = false;
         readyRequested = false;
+        mutedFallbackReported = false;
+        soundOnReported = false;
       }
       else ready(true);
       return;
@@ -50,6 +62,8 @@
     if (message?.type !== 'icampus-playlist-stop' || !playlistKey) return;
     playlistKey = null;
     completionSent = true;
+    mutedFallbackReported = false;
+    soundOnReported = false;
     try { video()?.pause(); } catch { /* The frame may already be navigating. */ }
   });
 
@@ -73,6 +87,152 @@
     if (!playlistKey) return;
     chrome.runtime.sendMessage({ type: 'icampus-player-state', key: playlistKey, state }).catch(() => {});
   }
+
+  function reportMutedFallback(element) {
+    mutedFallbackVideos.add(element);
+    soundOnReported = false;
+    if (mutedFallbackReported) return;
+    mutedFallbackReported = true;
+    sendState('muted-fallback');
+  }
+
+  function reportSoundOn(element) {
+    mutedFallbackVideos.delete(element);
+    mutedFallbackReported = false;
+    if (soundOnReported) return;
+    soundOnReported = true;
+    sendState('sound-on');
+  }
+
+  async function playWithin(element) {
+    let timeout;
+    try {
+      const playPromise = element.play();
+      return await Promise.race([
+        Promise.resolve(playPromise).then(() => true, () => false),
+        new Promise(resolve => { timeout = setTimeout(() => resolve(false), 1200); })
+      ]);
+    } catch { return false; }
+    finally { clearTimeout(timeout); }
+  }
+
+  // Silent means muted or volume 0. The school player's mute button sets volume 0.
+  const silent = element => element.muted || element.volume === 0;
+
+  // Without a click (or the AutoplayAllowlist policy) Whale only autoplays a silent
+  // video. Volume 0 keeps playing in a background tab; a muted video is paused there.
+  // Either way the tab is not audible, so Whale may put it to sleep after a while (D-016).
+  async function fallbackToMuted(element) {
+    if (examBlocked || !playlistKey || !element.isConnected) return false;
+    element.muted = false;
+    element.volume = 0;
+    reportMutedFallback(element);
+    return await playWithin(element) && !element.paused;
+  }
+
+  async function restoreSoundOnInput(event) {
+    if (!event.isTrusted || examBlocked || !playlistKey) return;
+    const element = video();
+    if (!element || !silent(element) || soundRecoveryVideos.has(element)) return;
+    soundRecoveryVideos.add(element);
+    let retryMuted = false;
+    try {
+      element.muted = false;
+      element.volume = 1;
+      let playing = element.paused ? await playWithin(element) : true;
+      // The school player can pause just after its mute setting changes.
+      if (playing) await new Promise(resolve => setTimeout(resolve, 1200));
+      if (examBlocked || !playlistKey || !element.isConnected) return;
+      if (playing && element.paused) {
+        playing = await playWithin(element);
+        if (playing) await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+      if (!playing || element.paused || silent(element)) {
+        await fallbackToMuted(element);
+        retryMuted = element.paused;
+      } else reportSoundOn(element);
+    } finally {
+      soundRecoveryVideos.delete(element);
+      if (retryMuted) ensurePlayback(element);
+    }
+  }
+
+  document.addEventListener('pointerdown', restoreSoundOnInput, true);
+  document.addEventListener('keydown', restoreSoundOnInput, true);
+
+  function noteDirectInput(event) {
+    if (examBlocked || !event.isTrusted) return;
+    const control = event.target.closest?.('button, [role="button"], [class*="volume"], [class*="mute"]');
+    const label = [control?.className, control?.title, control?.getAttribute('aria-label'),
+      control?.textContent].filter(Boolean).join(' ');
+    if (!/mute|volume|sound|음소거|소리|볼륨/i.test(label)) return;
+    lastTrustedMuteInputAt = Date.now();
+    // Pressing the player's mute button again means "sound on". The video is already
+    // audible, so the player may not fire volumechange; unmute the tab ourselves.
+    if (directTabMuted && !playlistKey) setTimeout(() => {
+      const element = video();
+      if (!directTabMuted || !element || silent(element) || examBlocked) return;
+      chrome.runtime.sendMessage({ type: 'icampus-direct-mute', muted: false })
+        .then(response => { if (typeof response?.muted === 'boolean') directTabMuted = response.muted; })
+        .catch(() => {});
+    }, 400);
+  }
+  document.addEventListener('pointerdown', noteDirectInput, true);
+  document.addEventListener('keydown', noteDirectInput, true);
+
+  async function restoreDirectSound(element) {
+    if (!element || examBlocked || !directModeReady || playlistKey || isIntro(element) ||
+        !element.muted || directMutedByUser.has(element) || directRecovering.has(element) ||
+        !navigator.userActivation?.hasBeenActive) return;
+    directRecovering.add(element);
+    try {
+      element.muted = false;
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      if (examBlocked || !directModeReady || playlistKey || !element.isConnected ||
+          directMutedByUser.has(element)) return;
+      if (element.paused && !(await playWithin(element) && !element.paused)) element.muted = true;
+    } finally { directRecovering.delete(element); }
+  }
+
+  async function handleDirectMute(event) {
+    const element = event.target;
+    if (!(element instanceof HTMLVideoElement) || examBlocked || !directModeReady || playlistKey ||
+        isIntro(element) || element !== video() || directRecovering.has(element) ||
+        Date.now() - lastTrustedMuteInputAt > 1000 || directMutePending.has(element)) return;
+    if (!silent(element)) { directMutedByUser.delete(element); return; }
+    if (element.paused) {
+      directMutedByUser.add(element);
+      return;
+    }
+    directMutePending.add(element);
+    directMutedByUser.add(element);
+    // Keep the video audible to Whale (no tab sleep) and silence the tab instead.
+    element.muted = false;
+    if (element.volume === 0) element.volume = 1;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'icampus-direct-mute', muted: !directTabMuted });
+      if (typeof response?.muted === 'boolean') directTabMuted = response.muted;
+      else if (!examBlocked) element.volume = 0;
+      if (element.paused && !examBlocked) await playWithin(element);
+    } catch { if (!examBlocked) element.volume = 0; }
+    finally { directMutePending.delete(element); }
+  }
+  document.addEventListener('volumechange', handleDirectMute, true);
+  // A lecture opened by hand starts at 1x with sound once per page, even when the
+  // school player remembered the playlist's 2x and volume 0.
+  const directDefaulted = new WeakSet();
+  function applyDirectDefaults(element) {
+    if (!directModeReady || playlistKey || examBlocked || isIntro(element) ||
+        directDefaulted.has(element) || !navigator.userActivation?.hasBeenActive) return;
+    directDefaulted.add(element);
+    if (element.playbackRate !== 1) element.playbackRate = 1;
+    if (element.volume === 0) element.volume = 1;
+  }
+  document.addEventListener('playing', event => {
+    if (!(event.target instanceof HTMLVideoElement)) return;
+    applyDirectDefaults(event.target);
+    restoreDirectSound(event.target);
+  }, true);
 
   function acceptPlayerDialog() {
     if (examBlocked) return false;
@@ -254,7 +414,10 @@
           // so drop the key before any later video gets 2x or autoplay.
           const key = playlistKey;
           playlistKey = null;
-          chrome.runtime.sendMessage({ type: 'icampus-player-ended', key }).catch(() => {});
+          chrome.runtime.sendMessage({ type: 'icampus-player-ended', key }).catch(error => {
+            if (!examBlocked) reportError('player', '재생목록의 다음 강의로 넘어가지 못했습니다.',
+              { stack: error?.stack, url: location.href });
+          });
         } else if (++checks >= 30) {
           clearInterval(timer);
           sendState('ended-unconfirmed');
@@ -265,22 +428,32 @@
 
   async function ensurePlayback(element) {
     if (examBlocked) return;
-    if (recoveringVideos.has(element)) return;
+    if (recoveringVideos.has(element) || soundRecoveryVideos.has(element)) return;
     recoveringVideos.add(element);
     try {
       for (let attempt = 0; attempt < 4 && !examBlocked && playlistKey && element.isConnected; attempt++) {
-        if (!element.paused) { sendProgress(element, true); return; }
-        element.muted = true;
+        if (!element.paused && (!silent(element) || mutedFallbackVideos.has(element))) {
+          if (!silent(element)) reportSoundOn(element);
+          sendProgress(element, true);
+          return;
+        }
         const front = document.querySelector('#front-screen');
         const playButton = front?.querySelector('.vc-front-screen-play-btn');
         if (playButton && getComputedStyle(front).display !== 'none') playButton.click();
-        try {
-          await Promise.race([
-            Promise.resolve(element.play()).catch(() => {}),
-            new Promise(resolve => setTimeout(resolve, 1200))
-          ]);
-        } catch { /* Retry after the school's player finishes loading. */ }
-        if (!element.paused) { sendProgress(element, true); return; }
+        // Play with sound while the worker keeps the tab muted: an audible tab is
+        // neither paused nor put to sleep in the background (D-014, D-016).
+        element.muted = false;
+        if (element.volume === 0) element.volume = 1;
+        const wasPlaying = !element.paused;
+        const withSound = wasPlaying ? true : await playWithin(element);
+        if (wasPlaying) await new Promise(resolve => setTimeout(resolve, 1200));
+        if (soundRecoveryVideos.has(element) || examBlocked || !playlistKey) return;
+        if (withSound && !element.paused) {
+          reportSoundOn(element);
+          sendProgress(element, true);
+          return;
+        }
+        if (await fallbackToMuted(element)) { sendProgress(element, true); return; }
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
       if (playlistKey && element.paused) sendState('autoplay-blocked');
@@ -295,7 +468,6 @@
       watchCompletion(element);
       watchProgress(element);
     }
-    element.muted = true;
     keepTwoX();
     ensurePlayback(element);
   }
@@ -303,16 +475,17 @@
   async function startPlaylist(response) {
     if (examBlocked) return;
     if (!response?.start || !response.key || response.rate > 2) return;
+    directModeReady = false;
     playlistKey = response.key;
+    mutedFallbackReported = false;
+    soundOnReported = false;
     acceptPlayerDialog();
     const element = video();
     if (!element) return;
-    element.muted = true;
     if (isIntro(element)) {
       const onMainVideo = event => {
         if (!(event.target instanceof HTMLVideoElement) || isIntro(event.target)) return;
         document.removeEventListener('loadedmetadata', onMainVideo, true);
-        event.target.muted = true;
         attachVideo(event.target);
       };
       document.addEventListener('loadedmetadata', onMainVideo, true);
@@ -335,7 +508,15 @@
     readyRequested = true;
     chrome.runtime.sendMessage({ type: 'icampus-player-ready', playerVersion: PLAYER_VERSION })
       .then(response => {
-        if (examBlocked || !response?.start) { readyRequested = false; return; }
+        if (examBlocked) { readyRequested = false; return; }
+        if (response?.direct) {
+          directModeReady = true;
+          directTabMuted = response.muted === true;
+          if (video() && !video().paused) applyDirectDefaults(video());
+          restoreDirectSound(video());
+          return;
+        }
+        if (!response?.start) { readyRequested = false; return; }
         startPlaylist(response);
       }).catch(() => { readyRequested = false; });
     return true;
@@ -357,7 +538,7 @@
     ready();
   }, 1000);
 
-  // Keep muted lecture playback alive when Whale backgrounds the Canvas tab.
+  // Retry a paused playlist video; tab mute normally keeps it playing in the background.
   setInterval(() => {
     if (examBlocked || !playlistKey) return;
     acceptPlayerDialog();
