@@ -620,4 +620,54 @@
     const element = video();
     if (element) applyTwoX(element);
   }
+
+  // 영상 저장 (D-019). Only after the user turned it on in the popup, which grants
+  // the optional permissions. The player's own content info lists the lecture
+  // files, so no playback is needed: main alone, or main (camera, right) and
+  // sub (screen, left) when the lecture was recorded as two videos.
+  async function lectureMedia() {
+    const id = location.pathname.match(/^\/em\/([0-9a-z]+)/i)?.[1];
+    if (!id) return [];
+    const response = await fetch('/viewer/ssplayer/uniplayer_support/content.php?content_id=' + encodeURIComponent(id),
+      { credentials: 'include' });
+    if (!response.ok) return [];
+    const xml = new DOMParser().parseFromString(await response.text(), 'text/xml');
+    const uri = name => xml.querySelector(name + ' > desktop > html5 > media_uri')?.textContent.trim() || '';
+    const files = [['sub', uri('sub_media')], ['main', uri('main_media')]]
+      .filter(([, url]) => /^https:\/\/[a-z0-9.-]+\.skku\.edu\/\S+\.mp4$/i.test(url));
+    return files.map(([kind, url]) => ({ kind, url, label: files.length < 2 ? '강의' : kind === 'sub' ? '화면' : '카메라' }));
+  }
+
+  async function videoSaveEnabled() {
+    if (examBlocked) return false;
+    try { return (await chrome.runtime.sendMessage({ type: 'icampus-video-save-status' }))?.enabled === true; }
+    catch { return false; }
+  }
+
+  const mediaFound = () => lectureMedia().then(media => ({ media, title: document.title }));
+
+  // One icon in the control bar, just left of 전체화면, sized like its neighbours.
+  async function setupVideoSave() {
+    if (window.top === window || !/^\/em\//.test(location.pathname) || !globalThis.ICDVideoSave) return;
+    if (!(await videoSaveEnabled())) return;
+    // Look the files up once now, so a click starts the download at once; a
+    // failed lookup is tried again on the click.
+    let ready = mediaFound().catch(() => null);
+    const getMedia = async () => (await ready)?.media?.length ? ready : (ready = mediaFound());
+    const place = () => {
+      const fullscreen = document.querySelector('.vc-pctrl-buttons-bar > .vc-pctrl-fullscreen-btn');
+      if (!fullscreen || fullscreen.parentElement.querySelector('[data-icd-video-save]')) return Boolean(fullscreen);
+      const host = document.createElement('div');
+      host.dataset.icdVideoSave = '';
+      host.style.cssText = 'float: right; height: 27px;';
+      ICDVideoSave.mount(host, { getMedia });
+      fullscreen.after(host);
+      return true;
+    };
+    if (place()) return;
+    const observer = new MutationObserver(() => { if (place()) observer.disconnect(); });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 60000);
+  }
+  setupVideoSave();
 })();
