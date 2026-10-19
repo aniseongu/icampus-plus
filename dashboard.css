@@ -1,0 +1,38 @@
+#dashboard_header_container .ic-Dashboard-header__actions #icd-expand-completed {
+  margin-right: 0.75rem;
+}
+
+#dashboard-planner-header[style*="display: none"] ~ #icd-expand-completed {
+  display: none;
+}
+
+#dashboard-planner .planner-day h2 [data-icd-day-badge] {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+#dashboard-planner .planner-day h2 [data-icd-day-badge="soon"] {
+  background-color: #fde9e5;
+  color: #852d1c;
+}
+
+#dashboard-planner .planner-day h2 [data-icd-day-badge="warning"] {
+  background-color: #fff1cf;
+  color: #694500;
+}
+
+html[data-icd="on"] #dashboard-planner .planner-day h2 [data-icd-day-badge="soon"] {
+  background-color: #402326;
+  color: var(--icd-danger);
+}
+
+html[data-icd="on"] #dashboard-planner .planner-day h2 [data-icd-day-badge="warning"] {
+  background-color: #392e1b;
+  color: var(--icd-warning);
+}
