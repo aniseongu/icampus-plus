@@ -20,6 +20,8 @@ let errorLogEnabled = false;
 const colorMedia = matchMedia('(prefers-color-scheme: dark)');
 let lastResult = null;
 let selectingLectures = false;
+// 'open': only tasks that can be submitted now (default), 'all': every unfinished task.
+let assignmentView = 'open';
 const selectedLectureKeys = new Set();
 
 async function examBlocksPopup() {
@@ -148,10 +150,10 @@ async function refreshExamStatus() {
       option.setAttribute('aria-checked', String((option.dataset.fullscreen === 'true') === status.fullscreen));
       option.disabled = !status.guard;
     }
-    const fullscreenGroup = document.querySelector('#exam-fullscreen-group');
-    fullscreenGroup.setAttribute('aria-disabled', String(!status.guard));
+    // The sub-settings below 시험 모드 only show while it is on.
+    document.querySelector('#exam-fullscreen-group').hidden = !status.guard;
     const keep = document.querySelector('#exam-keep');
-    keep.hidden = !status.hasManagementPermission;
+    keep.hidden = !status.guard || !status.hasManagementPermission;
     keep.inert = !status.guard;
     keep.setAttribute('aria-disabled', String(!status.guard));
     if (!status.guard || !status.hasManagementPermission) keep.open = false;
@@ -251,16 +253,50 @@ function element(tag, className, textValue) {
   return node;
 }
 
+function setBadgeCount(badge, count) {
+  const text = String(count);
+  badge.textContent = text;
+  badge.dataset.count = text;
+  return badge;
+}
+
+// Whale recolors CSS text in the action popup, but leaves SVG filter output alone.
+// Wrap only terminal text nodes: never filter a cell's painted surface or its icons.
+function wrapLightInk(root) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    if (!root.textContent.trim()) return;
+    const parent = root.parentElement;
+    if (!parent || parent.closest('svg, .badge, .nm-light-ink, script, style')) return;
+    const ink = document.createElement('span');
+    ink.className = 'nm-light-ink';
+    root.replaceWith(ink);
+    ink.append(root);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE || root.matches('svg, .badge, .nm-light-ink, script, style')) return;
+  for (const child of [...root.childNodes]) wrapLightInk(child);
+}
+
+function observeLightInk() {
+  wrapLightInk(document.body);
+  new MutationObserver(records => {
+    for (const record of records) {
+      if (record.type === 'characterData') wrapLightInk(record.target);
+      else for (const node of record.addedNodes) wrapLightInk(node);
+    }
+  }).observe(document.body, { subtree: true, childList: true, characterData: true });
+}
+
 function showLoading() {
   document.querySelector('#completed').hidden = true;
   document.querySelector('#lecture').replaceChildren();
   const loadingBox = element('div', 'loading');
   loadingBox.append(
-    element('h2', '', '즐겨찾기 과목을 확인하는 중입니다...'),
+    element('h2', '', '즐겨찾기 과목을 확인하는 중이에요'),
     element('div', 'spinner')
   );
   const status = element('div', 'connection-status');
-  status.append(element('span', 'status-dot connecting'), element('span', '', '강의와 과제를 불러오는 중...'));
+  status.append(element('span', '', '강의와 과제를 불러오고 있어요'));
   loadingBox.append(status);
   document.querySelector('#assignment').replaceChildren(loadingBox);
   document.querySelector('#sync-status').replaceChildren();
@@ -337,13 +373,24 @@ function makeTitleLink(node, item) {
   });
 }
 
-function createTable(items, captionText, type) {
-  if (!items.length) return element('div', 'empty-message', '완료할 ' + captionText + '가 없습니다');
-  const table = element('table', type);
-  const caption = element('caption', '', captionText + ' ');
-  const badge = element('span', 'badge', String(items.length));
+function createTable(items, captionText, type, captionExtra) {
+  const empty = element('div', 'empty-message', '남은 ' + captionText + '가 없어요');
+  if (!items.length && !captionExtra) return empty;
+  const captionRow = element('span', 'caption-row', captionText);
+  const badge = setBadgeCount(element('span', 'badge'), items.length);
   badge.id = type + '-count';
-  caption.append(badge);
+  captionRow.append(badge);
+  if (captionExtra) captionRow.append(captionExtra);
+  // Keep the title and its buttons when the filter leaves nothing to show.
+  if (!items.length) {
+    const box = element('div');
+    box.append(element('div', 'caption-standalone'), empty);
+    box.firstChild.append(captionRow);
+    return box;
+  }
+  const table = element('table', type);
+  const caption = element('caption');
+  caption.append(captionRow);
   table.append(caption);
   const head = element('thead');
   const headerRow = element('tr');
@@ -391,12 +438,43 @@ function createTable(items, captionText, type) {
     row.append(title);
     row.append(element('td', '', displayDate(item.due)));
     const timeCell = element('td');
-    timeCell.textContent = remainingTime(item.due, timeCell);
+    if (item.closed) {
+      row.classList.add('closed-task');
+      timeCell.textContent = closedText(item);
+    } else {
+      timeCell.textContent = remainingTime(item.due, timeCell);
+    }
     row.append(timeCell);
     body.append(row);
   });
   table.append(body);
   return table;
+}
+
+function closedText(item) {
+  if (item.closed === 'offline') return '제출 없음';
+  if (item.closed === 'not-open' && item.opensAt) {
+    const opens = new Date(item.opensAt);
+    return (opens.getMonth() + 1) + '월 ' + opens.getDate() + '일 열림';
+  }
+  if (item.closed === 'closed') return '제출 마감';
+  return '잠김';
+}
+
+// One toggle at the right end of the 과제 title, shown only when some tasks cannot
+// be submitted now (locked, not open yet, or nothing to submit online). Off lists
+// what can be submitted; on is the pre-1.8.11 list with the reason in each row.
+function assignmentViewToggle() {
+  const toggle = element('button', 'playlist-action caption-toggle', '전체 보기');
+  toggle.type = 'button';
+  toggle.setAttribute('aria-pressed', String(assignmentView === 'all'));
+  toggle.addEventListener('click', () => {
+    assignmentView = assignmentView === 'all' ? 'open' : 'all';
+    chrome.storage.local.set({ assignmentView }).catch(() => {});
+    if (lastResult) render(lastResult);
+    document.querySelector('#assignment .caption-toggle')?.focus();
+  });
+  return toggle;
 }
 
 function playlistToolbar() {
@@ -412,7 +490,7 @@ function playlistToolbar() {
     const count = element('span', 'playlist-toolbar-label');
     count.id = 'playlist-selected-count';
     toolbar.append(count);
-    const all = button('전체 선택', 'playlist-secondary', () => {
+    const all = button('모두 고르기', 'playlist-secondary', () => {
       const checks = [...document.querySelectorAll('table.lecture input[type="checkbox"]')];
       const target = !checks.every(check => check.checked);
       checks.forEach(check => {
@@ -420,7 +498,7 @@ function playlistToolbar() {
       });
     });
     all.id = 'playlist-select-all';
-    button('선택 해제', 'playlist-secondary', () => {
+    button('닫기', 'playlist-secondary', () => {
       selectingLectures = false;
       selectedLectureKeys.clear();
       persistPlaylistSelection();
@@ -430,8 +508,7 @@ function playlistToolbar() {
     play.id = 'playlist-start';
     queueMicrotask(updatePlaylistSelection);
   } else {
-    toolbar.append(element('span', 'playlist-toolbar-label', '연속 재생'));
-    button('연속 재생 만들기', 'playlist-primary', () => {
+    button('재생 목록 만들기', 'playlist-primary', () => {
       selectingLectures = true;
       selectedLectureKeys.clear();
       persistPlaylistSelection();
@@ -452,8 +529,8 @@ function updatePlaylistSelection() {
   const play = document.querySelector('#playlist-start');
   const all = document.querySelector('#playlist-select-all');
   const checks = [...document.querySelectorAll('table.lecture input[type="checkbox"]')];
-  if (count) count.textContent = size ? size + '개 선택' : '재생할 강의를 고르세요';
-  if (all) all.textContent = checks.length && checks.every(check => check.checked) ? '전체 해제' : '전체 선택';
+  if (count) count.textContent = size ? size + '개 골랐어요' : '재생할 강의를 골라 주세요';
+  if (all) all.textContent = checks.length && checks.every(check => check.checked) ? '모두 빼기' : '모두 고르기';
   if (play && !play.dataset.busy) {
     play.disabled = size === 0;
     play.textContent = size ? size + '개 재생하기' : '강의 재생하기';
@@ -470,51 +547,184 @@ function playlistStatusText(state) {
   if (state.status === 'connecting') return '학교 영상 플레이어에 연결하는 중...';
   if (state.status === 'blocked') return '강의 화면을 한 번 눌러 재생해 주세요';
   if (state.status === 'ended-unconfirmed') return '영상이 끝났어요. 아이캠퍼스에서 완료 표시를 확인해 주세요';
-  if (state.status === 'finished') return '연속 재생이 끝났어요. 아이캠퍼스에서 출석 상태를 확인해 주세요';
-  if (state.status === 'stopped') return '연속 재생을 멈췄어요';
   if (state.status === 'error') return '강의를 열지 못했어요. ' + (state.error || '다시 시도해 주세요');
+  if (state.status === 'halted') return '정지했어요. 재생을 누르면 이어서 들어요';
   const progress = formatPlaybackTime(state.currentTime) +
     (state.duration > 0 ? ' / ' + formatPlaybackTime(state.duration) : '');
   const rate = state.rate > 0 ? Number(state.rate).toString() + '배속으로 ' : '';
   return rate + (state.status === 'playing' ? '재생 중이에요 ' : '일시정지했어요 ') + progress;
 }
 
+let playlistFocus = null;
+let playlistSortable = null;
+let playlistDragging = false;
+let playlistPending;
+let playlistSignature = '';
+
+// Six-dot grip. Drag it (SortableJS) or focus it and press the arrow keys.
+function gripIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 14 14');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const [cx, cy] of [[5, 3], [9, 3], [5, 7], [9, 7], [5, 11], [9, 11]]) {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', cx);
+    dot.setAttribute('cy', cy);
+    dot.setAttribute('r', '1.3');
+    svg.append(dot);
+  }
+  return svg;
+}
+
+async function reorderPlaylist(keys, focus) {
+  for (const control of document.querySelectorAll('#playlist-status button')) control.disabled = true;
+  playlistFocus = focus;
+  playlistPending = undefined;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'icampus-playlist-reorder', keys });
+    if (!response?.ok) throw new Error(response?.error || '순서를 바꾸지 못했어요.');
+  } catch (error) {
+    playlistFocus = null;
+    playlistSignature = '';
+    document.querySelector('#sync-status').replaceChildren(
+      element('div', 'error-message', '재생 목록 순서를 바꾸지 못했어요. ' + error.message));
+    await refreshPlaylistStatus();
+  }
+}
+
 function renderPlaylistStatus(state) {
   const container = document.querySelector('#playlist-status');
+  // Never rebuild the table under a drag; render the latest state when it ends.
+  if (playlistDragging) { playlistPending = state; return; }
+  const signature = state?.queue?.length ? JSON.stringify([state.queue.map(item => item.key), state.status,
+    Boolean(state.soundBlocked)]) : '';
+  const stateCell = container.querySelector('.playlist-current .playlist-state');
+  // Progress ticks only change the current lecture's line; keep focus and the table as they are.
+  if (signature && signature === playlistSignature && stateCell) {
+    stateCell.textContent = playlistStatusText(state);
+    return;
+  }
+  playlistSignature = signature;
+  playlistSortable?.destroy();
+  playlistSortable = null;
   container.replaceChildren();
   if (!state?.queue?.length) { container.hidden = true; return; }
   container.hidden = false;
-  const current = state.queue[Math.min(state.index, state.queue.length - 1)];
+  const queue = state.queue;
+  const keys = queue.map(item => item.key);
   const table = element('table', 'playlist-status-table');
-  const caption = element('caption', '', '연속 재생 ');
-  caption.append(element('span', 'badge', Math.min(state.index + 1, state.queue.length) + ' / ' + state.queue.length));
-  if (!['finished', 'stopped', 'error'].includes(state.status)) {
-    const stop = element('button', 'playlist-action playlist-secondary playlist-stop', '멈추기');
-    stop.type = 'button';
-    stop.addEventListener('click', async () => {
-      stop.disabled = true;
-      try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-stop' }); }
-      catch { stop.disabled = false; return; }
-      selectingLectures = false;
-      selectedLectureKeys.clear();
-      persistPlaylistSelection();
-      if (lastResult) render(lastResult);
-      renderPlaylistStatus(null);
-    });
-    caption.append(stop);
-  }
+  const caption = element('caption');
+  const captionRow = element('span', 'caption-row', '재생 목록');
+  caption.append(captionRow);
+  captionRow.append(setBadgeCount(element('span', 'badge'), queue.length));
+  const stop = element('button', 'playlist-action playlist-secondary playlist-stop',
+    '목록 지우기');
+  stop.type = 'button';
+  stop.addEventListener('click', async () => {
+    stop.disabled = true;
+    try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-stop' }); }
+    catch { stop.disabled = false; return; }
+    selectingLectures = false;
+    selectedLectureKeys.clear();
+    persistPlaylistSelection();
+    if (lastResult) render(lastResult);
+    renderPlaylistStatus(null);
+  });
+  captionRow.append(stop);
+  const head = element('thead');
+  const headerRow = element('tr');
+  [['과목', 'colum1'], ['제목', ''], ['남은시간', 'colum4'], ['순서', 'playlist-order']].forEach(([label, className]) => {
+    headerRow.append(element('th', className, label));
+  });
+  head.append(headerRow);
   const body = element('tbody');
-  const lectureRow = element('tr');
-  const lectureCell = element('td');
-  lectureCell.append(element('div', 'playlist-lecture-title', replaceUnderbar(current.title)));
-  lectureCell.append(element('div', 'playlist-lecture-course', replaceUnderbar(current.course)));
-  lectureRow.append(lectureCell);
-  const stateRow = element('tr');
-  stateRow.append(element('td', 'playlist-state', playlistStatusText(state)));
-  body.append(lectureRow, stateRow);
-  table.append(caption, body);
+  queue.forEach((item, index) => {
+    const row = element('tr', index === 0 ? 'playlist-current' : '');
+    const course = replaceUnderbar(item.course);
+    const courseCell = element('td', '', course.replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim() || course);
+    courseCell.title = course;
+    const titleCell = element('td', 'playlist-title-cell');
+    titleCell.append(element('div', 'playlist-lecture-title', replaceUnderbar(item.title)));
+    titleCell.title = replaceUnderbar(item.title);
+    if (index === 0) titleCell.append(element('div', 'playlist-state', playlistStatusText(state)));
+    const timeCell = element('td');
+    timeCell.textContent = remainingTime(item.due, timeCell);
+    const orderCell = element('td', 'playlist-order');
+    // Every row has a grip. Whatever ends up first plays now, so dragging a lecture
+    // to the top (or pressing ArrowUp on the second row) switches to it.
+    row.classList.add('playlist-queued');
+    row.dataset.key = item.key;
+    const actions = element('div', 'playlist-order-actions');
+    const name = replaceUnderbar(item.title);
+    const grip = element('button', 'playlist-action playlist-icon-button playlist-grip');
+    grip.type = 'button';
+    grip.dataset.key = item.key;
+    grip.title = '끌어서 순서 바꾸기';
+    grip.setAttribute('aria-label', name + ', ' + (index + 1) + '번째. 위아래 화살표 키로 순서를 바꿔요');
+    grip.append(gripIcon());
+    grip.addEventListener('keydown', event => {
+      const target = event.key === 'ArrowUp' ? index - 1 : event.key === 'ArrowDown' ? index + 1 : null;
+      if (target === null) return;
+      event.preventDefault();
+      if (target < 0 || target >= queue.length) return;
+      const next = [...keys];
+      [next[index], next[target]] = [next[target], next[index]];
+      reorderPlaylist(next, { key: item.key });
+    });
+    actions.append(grip);
+    // The current row toggles 정지 and 재생; other rows play right away.
+    const playing = index === 0 && !['error', 'halted'].includes(state.status);
+    const play = element('button', 'playlist-action playlist-now-button', playing ? '정지' : '재생');
+    play.type = 'button';
+    play.setAttribute('aria-label', name + (playing ? ' 정지' : ' 재생'));
+    play.addEventListener('click', async () => {
+      if (!playing) {
+        reorderPlaylist([item.key, ...keys.filter(key => key !== item.key)], null);
+        return;
+      }
+      play.disabled = true;
+      try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-halt' }); }
+      catch { play.disabled = false; }
+    });
+    actions.append(play);
+    orderCell.append(actions);
+    row.append(courseCell, titleCell, timeCell, orderCell);
+    body.append(row);
+  });
+  table.append(caption, head, body);
   container.append(table);
-  if (state.soundBlocked && !['finished', 'stopped', 'error'].includes(state.status)) {
+  if (queue.length > 1) {
+    container.append(element('p', 'setting-help playlist-order-help', '맨 위 강의를 재생해요. 끌어서 순서를 바꿀 수 있어요'));
+  }
+  if (queue.length > 1 && globalThis.Sortable) {
+    playlistSortable = Sortable.create(body, {
+      draggable: 'tr.playlist-queued',
+      handle: '.playlist-grip',
+      animation: 0,
+      ghostClass: 'playlist-drag-ghost',
+      onStart: () => { playlistDragging = true; },
+      onEnd: () => {
+        playlistDragging = false;
+        const order = [...body.querySelectorAll('tr.playlist-queued')].map(row => row.dataset.key);
+        if (order.join('\n') !== keys.join('\n')) {
+          playlistSignature = '';
+          reorderPlaylist(order, null);
+        } else if (playlistPending !== undefined) {
+          const pending = playlistPending;
+          playlistPending = undefined;
+          renderPlaylistStatus(pending);
+        }
+      }
+    });
+  } else {
+    for (const grip of body.querySelectorAll('.playlist-grip')) grip.disabled = queue.length < 2;
+  }
+  if (playlistFocus) {
+    const target = container.querySelector(`.playlist-grip[data-key="${CSS.escape(playlistFocus.key)}"]`);
+    playlistFocus = null;
+    if (target && !target.disabled) target.focus();
+  }
+  if (state.soundBlocked && !['error', 'halted'].includes(state.status)) {
     const help = element('p', 'setting-help playlist-sound-help');
     help.append(element('span', '', '강의 화면을 한 번 누르면 다른 탭에서도 계속 재생돼요'));
     const link = element('a', '', '자동 재생 허용 파일을 설치하면 다음부터 누르지 않아도 돼요');
@@ -524,6 +734,15 @@ function renderPlaylistStatus(state) {
     help.append(document.createElement('br'), link);
     container.append(help);
   }
+}
+
+// After each scan, let the worker drop lectures that are already complete.
+async function syncPlaylist(result) {
+  const doneKeys = [...result.items.filter(item => item.type === '강의' && item.done).map(item => item.key),
+    ...(Array.isArray(result.doneLectureKeys) ? result.doneLectureKeys : [])];
+  if (!doneKeys.length) return;
+  try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-sync', doneKeys }); }
+  catch { /* The worker cleans up on the next scan. */ }
 }
 
 async function refreshPlaylistStatus() {
@@ -546,8 +765,11 @@ function render(result) {
     ...(lectures.length ? [playlistToolbar()] : []),
     createTable(lectures, '강의', 'lecture')
   );
+  const assignments = pending.filter(item => item.type === '과제');
+  const closedCount = assignments.filter(item => item.closed).length;
   document.querySelector('#assignment').replaceChildren(
-    createTable(pending.filter(item => item.type === '과제'), '과제', 'assignment')
+    createTable(assignmentView === 'all' ? assignments : assignments.filter(item => !item.closed), '과제', 'assignment',
+      closedCount ? assignmentViewToggle() : null)
   );
   const completedPanel = document.querySelector('#completed');
   const completedItems = document.querySelector('#completed-items');
@@ -556,14 +778,14 @@ function render(result) {
     const matches = completed.filter(item => item.type === type);
     if (matches.length) completedItems.append(createTable(matches, type, 'completed-' + type));
   }
-  document.querySelector('#completed-count').textContent = String(completed.length);
+  setBadgeCount(document.querySelector('#completed-count'), completed.length);
   completedPanel.hidden = completed.length === 0;
   const status = document.querySelector('#sync-status');
   status.replaceChildren();
   if (result.warnings && result.warnings.length) {
     const details = element('details');
     details.append(
-      element('summary', '', '일부 강의·과제를 확인하지 못했습니다 (' + result.warnings.length + '건)'),
+      element('summary', '', '강의와 과제 ' + result.warnings.length + '건을 불러오지 못했어요'),
       element('p', '', result.warnings.join(' / '))
     );
     status.append(details);
@@ -584,10 +806,17 @@ async function load() {
     const result = injected[0]?.result;
     if (!result || result.fatal) throw new Error(result?.fatal || '응답이 없습니다.');
     render(result);
+    syncPlaylist(result);
+    // The popup's full scan (with lectures) refreshes the alert schedule.
+    chrome.runtime.sendMessage({ type: 'icampus-schedule', result: {
+      items: result.items, doneLectureKeys: result.doneLectureKeys, userId: result.userId,
+      assignmentSources: result.assignmentSources, moduleSources: result.moduleSources,
+      failedAssignmentCourses: result.failedAssignmentCourses, failedModuleCourses: result.failedModuleCourses
+    } }).catch(() => {});
   } catch (error) {
     const closedTab = /No tab with id|tab was closed|No tab with given id/i.test(String(error?.message));
     showError(closedTab
-      ? '아이캠퍼스 탭이 닫히거나 바뀌었습니다. 해당 탭에서 확장을 다시 열어 주세요.'
+      ? '아이캠퍼스 탭에서 팝업을 다시 열어 주세요.'
       : error.message + ' 아이캠퍼스 탭을 새로고침한 뒤 다시 시도해 주세요.');
   } finally {
     loading = false;
@@ -631,18 +860,23 @@ async function startPlaylist() {
   if (!button || !selectedLectureKeys.size) return;
   button.disabled = true;
   button.dataset.busy = '1';
-  button.textContent = '연속 재생 준비 중...';
+  button.textContent = '재생 목록 준비 중...';
   try {
     const queue = lastResult.items.filter(item => item.type === '강의' && !item.done &&
       selectedLectureKeys.has(item.key) && new URL(item.url).origin === CANVAS_ORIGIN)
-      .map(item => ({ key: item.key, course: item.course, title: item.title, url: item.url }));
+      // Closest deadline first; the user can reorder in the playlist table.
+      .sort((a, b) => (a.due ? Date.parse(a.due) : Infinity) - (b.due ? Date.parse(b.due) : Infinity))
+      .map(item => ({ key: item.key, course: item.course, title: item.title, url: item.url, due: item.due }));
     if (!queue.length) throw new Error('선택한 강의의 아이캠퍼스 주소를 확인할 수 없습니다.');
     const response = await requestPlaylistStart({
       type: 'icampus-playlist-start', tabId: activeTab.id, queue
     });
-    if (!response?.ok) throw new Error(response?.error || '연속 재생을 시작하지 못했어요.');
+    if (!response?.ok) throw new Error(response?.error || '재생 목록을 시작하지 못했어요.');
+    selectingLectures = false;
+    selectedLectureKeys.clear();
+    render(lastResult);
   } catch (error) {
-    const text = '연속 재생을 준비하지 못했어요. ' + error.message;
+    const text = '재생 목록을 준비하지 못했어요. ' + error.message;
     reportError('popup', text, { stack: error.stack });
     document.querySelector('#sync-status').replaceChildren(
       element('div', 'error-message', text)
@@ -654,29 +888,33 @@ async function startPlaylist() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const errorLogButton = document.querySelector('#error-log-action');
+  observeLightInk();
+  const errorLogOptions = [...document.querySelectorAll('#error-log [data-error-log]')];
   const errorLogStatus = document.querySelector('#error-log-status');
+  const errorLogHelp = errorLogStatus.textContent;
   async function refreshErrorLogPermission() {
     errorLogEnabled = await chrome.permissions.contains({ permissions: ['nativeMessaging'] });
-    errorLogStatus.textContent = errorLogEnabled ? '켜짐' : '';
-    errorLogButton.textContent = errorLogEnabled ? '끄기' : '켜기';
-  }
-  errorLogButton.addEventListener('click', async () => {
-    if (errorLogButton.disabled) return;
-    errorLogButton.disabled = true;
-    try {
-      if (errorLogEnabled) {
-        await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
-      } else {
-        await chrome.permissions.request({ permissions: ['nativeMessaging'] });
-      }
-      await refreshErrorLogPermission();
-    } catch {
-      errorLogStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
-    } finally {
-      errorLogButton.disabled = false;
+    for (const option of errorLogOptions) {
+      option.setAttribute('aria-checked', String((option.dataset.errorLog === 'true') === errorLogEnabled));
     }
-  });
+  }
+  for (const option of errorLogOptions) {
+    option.addEventListener('click', async () => {
+      const enable = option.dataset.errorLog === 'true';
+      if (option.disabled || enable === errorLogEnabled) return;
+      errorLogOptions.forEach(control => { control.disabled = true; });
+      try {
+        if (enable) await chrome.permissions.request({ permissions: ['nativeMessaging'] });
+        else await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+        errorLogStatus.textContent = errorLogHelp;
+        await refreshErrorLogPermission();
+      } catch {
+        errorLogStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
+      } finally {
+        errorLogOptions.forEach(control => { control.disabled = false; });
+      }
+    });
+  }
   chrome.permissions.onAdded.addListener(refreshErrorLogPermission);
   chrome.permissions.onRemoved.addListener(refreshErrorLogPermission);
   // Do not let the optional error-log row block the rest of the popup.
@@ -686,6 +924,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '고르기';
     if (keep.open) renderExamKeepList().catch(() => {});
   });
+  // Shortcut: manifest commands._execute_action (suggested Alt+Shift+K). Users
+  // change it on the browser's extension shortcuts page.
+  const shortcutStatus = document.querySelector('#shortcut-status');
+  chrome.commands.getAll().then(commands => {
+    const key = commands.find(command => command.name === '_execute_action')?.shortcut;
+    shortcutStatus.textContent = key ? key.replace(/\+/g, ' + ') + ' 키로 열어요'
+      : '단축키가 없어요. 바꾸기에서 정할 수 있어요';
+  }).catch(() => {});
+  document.querySelector('#shortcut-change').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }).catch(() => {});
+  });
+  // 영상 저장: the optional permissions are the switch (D-019, same set as background.js).
+  const videoPermissions = { permissions: ['downloads'], origins: ['https://vod.skku.edu/*'] };
+  const videoOptions = [...document.querySelectorAll('#video-save [data-video-save]')];
+  const videoStatus = document.querySelector('#video-save-status');
+  const videoHelp = videoStatus.textContent;
+  async function refreshVideoSave() {
+    const enabled = await chrome.permissions.contains(videoPermissions);
+    videoOptions.forEach(option =>
+      option.setAttribute('aria-checked', String((option.dataset.videoSave === 'true') === enabled)));
+    return enabled;
+  }
+  refreshVideoSave().catch(() => {});
+  for (const option of videoOptions) {
+    option.addEventListener('click', async () => {
+      const enable = option.dataset.videoSave === 'true';
+      videoOptions.forEach(control => { control.disabled = true; });
+      try {
+        if (enable) await chrome.permissions.request(videoPermissions);
+        else await chrome.permissions.remove(videoPermissions);
+        const on = await refreshVideoSave();
+        videoStatus.textContent = on ? '켜졌어요. 강의 화면을 새로고침하면 버튼이 보여요' : videoHelp;
+      } catch {
+        videoStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
+      } finally {
+        videoOptions.forEach(control => { control.disabled = false; });
+      }
+    });
+  }
+  // Alerts: on by default. The worker reacts to the stored value (notify.js).
+  const notifyOptions = [...document.querySelectorAll('#notify [data-notify]')];
+  const showNotify = enabled => notifyOptions.forEach(option =>
+    option.setAttribute('aria-checked', String((option.dataset.notify === 'true') === enabled)));
+  chrome.storage.local.get('notifyEnabled').then(saved => showNotify(saved.notifyEnabled !== false)).catch(() => {});
+  for (const option of notifyOptions) {
+    option.addEventListener('click', async () => {
+      const enabled = option.dataset.notify === 'true';
+      showNotify(enabled);
+      await chrome.storage.local.set({ notifyEnabled: enabled });
+    });
+  }
   for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
     option.addEventListener('click', async () => {
       await chrome.storage.local.set({ examFullscreen: option.dataset.fullscreen === 'true' });
@@ -726,6 +1015,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.onChanged?.addListener((changes, area) => {
     if (area === 'session' && changes.icampusPlaylistState) {
       if (!examNoticeShown) renderPlaylistStatus(changes.icampusPlaylistState.newValue);
+      // A lecture left the playlist: rescan so the lecture table shows it as done.
+      const before = changes.icampusPlaylistState.oldValue?.queue?.length || 0;
+      const after = changes.icampusPlaylistState.newValue?.queue?.length || 0;
+      if (after < before && lastResult && !examNoticeShown) load();
     }
     if (area === 'session' && (changes.examTabs || changes.examBlockedCount ||
         changes.examDisabledIds || changes.examRestoreManualIds)) {
@@ -738,7 +1031,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   try {
-    const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme', 'icampusPlaylistDraft']);
+    const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme', 'icampusPlaylistDraft', 'assignmentView']);
+    if (saved.assignmentView === 'all') assignmentView = 'all';
     if (saved.icampusPlaylistDraft) {
       selectingLectures = Boolean(saved.icampusPlaylistDraft.selecting);
       for (const key of saved.icampusPlaylistDraft.keys || []) selectedLectureKeys.add(key);

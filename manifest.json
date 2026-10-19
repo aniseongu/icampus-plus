@@ -1,17 +1,21 @@
 {
   "manifest_version": 3,
   "name": "아캠 플러스",
-  "version": "1.8.10",
+  "version": "1.8.29",
   "description": "즐겨찾기 과목의 과제와 강의콘텐츠 마감을 확인하고, 아이캠퍼스를 읽기 좋은 다크 모드로 보여 줍니다.",
   "permissions": [
     "activeTab",
     "scripting",
     "tabs",
-    "storage"
+    "storage", "notifications", "alarms", "declarativeNetRequestWithHostAccess"
   ],
-  "optional_permissions": ["management", "contentSettings", "nativeMessaging"],
+  "optional_permissions": ["management", "contentSettings", "nativeMessaging", "downloads"],
+  "optional_host_permissions": ["https://vod.skku.edu/*"],
+  "declarative_net_request": {
+    "rule_resources": [{ "id": "vod_referer", "enabled": true, "path": "dnr/vod-referer.json" }]
+  },
   "host_permissions": [
-    "https://canvas.skku.edu/*"
+    "https://canvas.skku.edu/*", "https://icampus.skku.edu/xn-sso/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -23,6 +27,7 @@
       ],
       "js": [
         "errlog.js",
+        "video-save-ui.js",
         "player.js"
       ],
       "run_at": "document_idle",
@@ -94,6 +99,22 @@
     },
     {
       "matches": [
+        "https://canvas.skku.edu/*"
+      ],
+      "exclude_matches": [
+        "https://canvas.skku.edu/xn-sso/*"
+      ],
+      "css": [
+        "dashboard.css"
+      ],
+      "js": [
+        "dashboard.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
         "https://kingoinfo.skku.edu/gaia/nxui/index.html*"
       ],
       "js": [
@@ -103,10 +124,17 @@
       "all_frames": false
     }
   ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+K" },
+      "description": "아캠 플러스 열기"
+    }
+  },
   "action": {
     "default_title": "아캠 플러스",
     "default_icon": {
       "16": "icons/icon16.png",
+      "24": "icons/icon24.png",
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"

@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [{ "header": "referer", "operation": "set", "value": "https://lcms.skku.edu/" }]
+    },
+    "condition": { "requestDomains": ["vod.skku.edu"], "resourceTypes": ["xmlhttprequest", "media", "other"] }
+  }
+]

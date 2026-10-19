@@ -1,4 +1,4 @@
-importScripts('exam.js', 'errlog.js');
+importScripts('exam.js', 'errlog.js', 'executescript.js', 'notify.js');
 chrome.permissions.onAdded.addListener(added => {
   if (added.permissions?.includes('nativeMessaging')) ErrorLog.flushPending();
 });
@@ -24,6 +24,9 @@ const DEFAULTS_DIRTY_KEY = 'playerDefaultsDirty';
 const AWAKE_KEY = 'awakeLectureTabs';
 const DIRECT_TTL_MS = 2 * 60 * 1000;
 const advanceLocks = new Set();
+// The playlist tab is not playing in these states: no mute or sleep exemption is
+// held. 'halted' is a user pause (정지) that keeps the queue for 재생.
+const INACTIVE_STATUSES = ['finished', 'stopped', 'error', 'halted'];
 let messageQueue = Promise.resolve();
 const EXAM_TABS_KEY = 'examTabs';
 let examQueue = Promise.resolve();
@@ -160,14 +163,32 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 
 // 확장이 설치·업데이트·다시 로드되거나 웨일이 시작할 때, 이미 열려 있는 아이캠퍼스 탭에는 콘텐츠 스크립트가 들어가지 않는다(새로고침 전까지).
 // 다크 모드가 켜져 있는데 그 탭만 밝게 남지 않도록 manifest와 같은 순서로 CSS와 스크립트를 넣는다. 이미 들어간 프레임(ICDColor가 있는 프레임)은 건너뛴다.
-// 권한은 기존 scripting과 canvas.skku.edu 호스트 권한만 쓴다. 로그인 화면(/xn-sso/)은 manifest와 같이 제외한다.
+// 권한은 기존 scripting과 manifest 주입 범위(canvas.skku.edu, 로그인 화면)만 쓴다. 웨일이 시작할 때 복원된 탭은 확장보다 먼저 열릴 수 있다.
 const DARK_CSS = ['dark/sheets.css', 'dark/instui.css', 'dark/dark.css', 'dark/adapt.css'];
 const DARK_JS = ['dark/color.js', 'dark/transform.js', 'dark/boot.js', 'dark/exam-guard.js', 'dark/styles.js', 'dark/adapt.js'];
 
+// 로그인 화면(/xn-sso/)은 manifest와 같이 dark.css와 boot.js만 넣는다(D-012). 입력값은 건드리지 않는다.
+const LOGIN_DARK_CSS = ['dark/dark.css'];
+const LOGIN_DARK_JS = ['dark/boot.js'];
+
+async function injectDarkIntoLoginTab(tab) {
+  const probe = await chrome.scripting.executeScript({ target: { tabId: tab.id, allFrames: true },
+    func: () => document.documentElement.hasAttribute('data-icd-login') });
+  const frameIds = probe.filter(r => r.result === false).map(r => r.frameId);
+  if (!frameIds.length) return;
+  await chrome.scripting.insertCSS({ target: { tabId: tab.id, frameIds }, files: LOGIN_DARK_CSS });
+  await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds }, files: LOGIN_DARK_JS });
+}
+
 async function injectDarkIntoOpenTabs() {
-  const tabs = await chrome.tabs.query({ url: 'https://canvas.skku.edu/*' });
+  // icampus.skku.edu는 로그인 화면만 호스트 권한이 있다(1.8.11, 사용자 승인 2026-10-19).
+  const tabs = await chrome.tabs.query({ url: ['https://canvas.skku.edu/*', 'https://icampus.skku.edu/xn-sso/*'] });
   for (const tab of tabs) {
-    if (!tab.id || tab.discarded || !tab.url || new URL(tab.url).pathname.startsWith('/xn-sso/')) continue;
+    if (!tab.id || tab.discarded || !tab.url) continue;
+    if (new URL(tab.url).pathname.startsWith('/xn-sso/')) {
+      try { await injectDarkIntoLoginTab(tab); } catch (e) { /* 새로고침하면 manifest 주입이 한다 */ }
+      continue;
+    }
     try {
       const probe = await chrome.scripting.executeScript({ target: { tabId: tab.id, allFrames: true }, func: () => !!globalThis.ICDColor });
       const frameIds = probe.filter(r => r.result === false).map(r => r.frameId);
@@ -191,7 +212,12 @@ function canvasUrl(value) {
 
 async function getState() {
   const saved = await chrome.storage.session.get(STATE_KEY);
-  return saved[STATE_KEY] || null;
+  const state = saved[STATE_KEY] || null;
+  // Before 1.8.11 the queue kept played lectures and index pointed at the current one.
+  if (state && Number.isInteger(state.index) && state.index > 0 && Array.isArray(state.queue)) {
+    return { ...state, queue: state.queue.slice(state.index), index: 0 };
+  }
+  return state;
 }
 
 // Keep a lecture tab out of Whale's automatic tab sleep while the extension plays it.
@@ -215,8 +241,8 @@ async function releasePlaylistMute(tabId) {
 async function saveState(state) {
   await chrome.storage.session.set({ [STATE_KEY]: { ...state, updatedAt: Date.now() } });
   if (state.status === 'error') reportError('worker', String(state.error || '재생목록 오류'));
-  if (['finished', 'stopped', 'error'].includes(state.status)) await keepTabAwake(state.tabId, false);
-  if (['finished', 'stopped', 'error'].includes(state.status)) await releasePlaylistMute(state.tabId);
+  if (INACTIVE_STATUSES.includes(state.status)) await keepTabAwake(state.tabId, false);
+  if (INACTIVE_STATUSES.includes(state.status)) await releasePlaylistMute(state.tabId);
 }
 
 function canvasLectureUrl(url) {
@@ -260,7 +286,7 @@ async function reconcileOwnedTabs(startup = false) {
   const state = await getState();
   const tabs = await chrome.tabs.query({});
   const byId = new Map(tabs.map(tab => [tab.id, tab]));
-  const playlistActive = state && !['finished', 'stopped', 'error'].includes(state.status) &&
+  const playlistActive = state && !INACTIVE_STATUSES.includes(state.status) &&
     canvasLectureUrl(byId.get(state.tabId)?.url);
   if (playlistActive && state.tabMutedBefore === false) owned[PLAYLIST_MUTED_KEY][state.tabId] = true;
   const ids = new Set(keys.flatMap(key => Object.keys(owned[key])));
@@ -294,7 +320,7 @@ async function setDirectMute(message, sender) {
   catch { return null; }
   if (await examIsActive()) return null;
   const state = await getState();
-  if (state?.tabId === sender.tab.id && !['finished', 'stopped', 'error'].includes(state.status)) return null;
+  if (state?.tabId === sender.tab.id && !INACTIVE_STATUSES.includes(state.status)) return null;
   const tab = await chrome.tabs.get(sender.tab.id);
   if (!canvasLectureUrl(tab.url)) return null;
   const saved = await chrome.storage.local.get(DIRECT_MUTED_KEY);
@@ -318,35 +344,233 @@ function validSender(sender, state) {
   catch { return false; }
 }
 
+// The queue holds only the lectures still to play; queue[0] is the current one.
+// A lecture leaves the queue when it ends, and the state is removed when the
+// queue is empty, so a finished playlist does not linger in the popup.
+async function claimPlaylistTab(state) {
+  if (state.tabMutedBefore === false) {
+    const owned = (await chrome.storage.local.get(PLAYLIST_MUTED_KEY))[PLAYLIST_MUTED_KEY] || {};
+    owned[state.tabId] = true;
+    await chrome.storage.local.set({ [PLAYLIST_MUTED_KEY]: owned });
+  }
+  await chrome.tabs.update(state.tabId, { muted: true });
+  await keepTabAwake(state.tabId, true);
+}
+
+async function openQueueHead(state, claim = false) {
+  const next = { ...state, status: 'opening', error: null, currentTime: 0, duration: 0, rate: 1,
+    soundBlocked: false, speedUnavailable: false, playerReloadedFor: null };
+  await saveState(next);
+  try {
+    if (claim) await claimPlaylistTab(next);
+    const tab = await chrome.tabs.get(next.tabId);
+    if (tab.url === next.queue[0].url) await chrome.tabs.reload(next.tabId);
+    else await chrome.tabs.update(next.tabId, { url: next.queue[0].url });
+    chrome.tabs.sendMessage(next.tabId, { type: 'icampus-playlist-probe' }).catch(() => {});
+  } catch (error) {
+    await saveState({ ...next, status: 'error', error: error.message });
+    throw error;
+  }
+}
+
+async function finishPlaylist(state) {
+  // saveState releases the tab's mute and sleep exemption before the state goes.
+  await saveState({ ...state, queue: [], status: 'finished' });
+  await chrome.storage.session.remove(STATE_KEY);
+}
+
+function queueItem(item) {
+  if (!item || typeof item.key !== 'string' || !canvasUrl(item.url)) return null;
+  const text = value => typeof value === 'string' ? value.slice(0, 300) : '';
+  const due = typeof item.due === 'string' && Number.isFinite(Date.parse(item.due)) ? item.due : null;
+  return { key: item.key, course: text(item.course), title: text(item.title), url: canvasUrl(item.url), due };
+}
+
 async function startPlaylist(message) {
-  if (await examIsActive()) throw new Error('시험 중에는 연속 재생을 시작할 수 없어요.');
+  if (await examIsActive()) throw new Error('시험 중에는 재생 목록을 시작할 수 없어요.');
   const tab = await chrome.tabs.get(message.tabId);
   if (new URL(tab.url).origin !== 'https://canvas.skku.edu') throw new Error('아이캠퍼스 탭에서 시작해 주세요.');
-  const queue = Array.isArray(message.queue) ? message.queue.filter(item =>
-    typeof item.key === 'string' && canvasUrl(item.url)) : [];
+  const queue = Array.isArray(message.queue) ? message.queue.map(queueItem).filter(Boolean) : [];
   if (!queue.length || queue.length > 100) throw new Error('재생할 아이캠퍼스 강의를 찾지 못했습니다.');
   await stopPlaylist();
   await releaseDirectMute(tab.id);
   const lectureTab = await chrome.tabs.get(tab.id);
-  const state = { tabId: tab.id, tabMutedBefore: lectureTab.mutedInfo?.muted,
-    queue, index: 0, status: 'opening', currentTime: 0, duration: 0, rate: 1, soundBlocked: false };
-  await saveState(state);
-  try {
-    if (state.tabMutedBefore === false) {
-      const owned = (await chrome.storage.local.get(PLAYLIST_MUTED_KEY))[PLAYLIST_MUTED_KEY] || {};
-      owned[tab.id] = true;
-      await chrome.storage.local.set({ [PLAYLIST_MUTED_KEY]: owned });
-    }
-    await chrome.tabs.update(tab.id, { muted: true });
-    await keepTabAwake(tab.id, true);
-    if (tab.url === queue[0].url) await chrome.tabs.reload(tab.id);
-    else await chrome.tabs.update(tab.id, { url: queue[0].url });
-    chrome.tabs.sendMessage(tab.id, { type: 'icampus-playlist-probe' }).catch(() => {});
-  } catch (error) {
-    await saveState({ ...state, status: 'error', error: error.message });
-    throw error;
+  await openQueueHead({ tabId: tab.id, tabMutedBefore: lectureTab.mutedInfo?.muted, queue }, true);
+  return { ok: true };
+}
+
+// The popup sends the order the user chose. A new first lecture plays right away;
+// the one it replaces keeps its place second and resumes later.
+async function reorderPlaylist(message) {
+  if (await examIsActive()) throw new Error('시험 중에는 재생 목록을 바꿀 수 없어요.');
+  const state = await getState();
+  if (!state?.queue?.length) throw new Error('재생 목록이 없어요.');
+  const byKey = new Map(state.queue.map(item => [item.key, item]));
+  const keys = Array.isArray(message.keys) ? message.keys : [];
+  if (keys.length !== byKey.size || new Set(keys).size !== keys.length || !keys.every(key => byKey.has(key))) {
+    throw new Error('재생 목록이 그사이 바뀌었어요. 다시 시도해 주세요.');
+  }
+  const queue = keys.map(key => byKey.get(key));
+  const idle = ['error', 'halted'].includes(state.status);
+  if (queue[0].key === state.queue[0].key && !idle) {
+    await saveState({ ...state, queue });
+  } else {
+    await openQueueHead({ ...state, queue }, idle);
   }
   return { ok: true };
+}
+
+// The popup rescans lectures each time it opens. Lectures the scan already shows
+// as complete leave the queue. The current one leaves only when the player could
+// not confirm its end, so a lecture still playing is never cut off.
+async function syncPlaylist(message) {
+  if (await examIsActive()) return { ok: true };
+  const state = await getState();
+  if (!state?.queue?.length || !Array.isArray(message.doneKeys)) return { ok: true };
+  const done = new Set(message.doneKeys.filter(key => typeof key === 'string'));
+  const [head, ...others] = state.queue;
+  const rest = others.filter(item => !done.has(item.key));
+  // A paused list only drops finished lectures; it never starts playing by itself.
+  if (state.status === 'halted') {
+    const queue = done.has(head.key) ? rest : [head, ...rest];
+    if (!queue.length) await finishPlaylist(state);
+    else if (queue.length !== state.queue.length) await saveState({ ...state, queue });
+  } else if (done.has(head.key) && ['ended-unconfirmed', 'error'].includes(state.status)) {
+    if (!rest.length) await finishPlaylist(state);
+    else await openQueueHead({ ...state, queue: rest }, state.status === 'error');
+  } else if (rest.length !== others.length) {
+    await saveState({ ...state, queue: [head, ...rest] });
+  }
+  return { ok: true };
+}
+
+// 영상 저장 (D-019): the lecture frame sends the files the player lists; only
+// https vod.skku.edu mp4 addresses are saved, into Downloads/아캠 플러스/.
+// vod.skku.edu answers with an error page unless the request names the lecture
+// player as its referrer. The static rule dnr/vod-referer.json sets it for
+// requests to vod.skku.edu once the optional permissions are granted. (A session
+// rule set from code stayed pending right after the grant until a restart, and
+// chrome.runtime.reload() then left the unpacked extension blocked; 2026-10-20.)
+// declarativeNetRequestWithHostAccess is a required permission (the static rule
+// needs it; it shows no warning and acts only on hosts the extension may access),
+// so 영상 저장 asks only for downloads and vod.skku.edu.
+const VIDEO_SAVE_PERMISSIONS = { permissions: ['downloads'], origins: ['https://vod.skku.edu/*'] };
+const VIDEO_STREAM_PATH = '/video-download';
+
+function vodUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'vod.skku.edu' && url.pathname.endsWith('.mp4') ? url.href : null;
+  } catch { return null; }
+}
+
+// The download manager's own request bypasses the referer rule. As in
+// StreamSaver.js, a background tab navigates to this worker instead: the
+// worker's fetch gets the rule, the attachment header turns the navigation into
+// a download (Chrome closes the tab), and the body streams to disk, so the file
+// is never held in memory.
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || url.pathname !== VIDEO_STREAM_PATH) return;
+  event.respondWith((async () => {
+    const source = vodUrl(url.searchParams.get('src'));
+    if (!source) return new Response('', { status: 400 });
+    const upstream = await fetch(source, { credentials: 'include' });
+    if (!upstream.ok || !/^video\//.test(upstream.headers.get('content-type') || '')) return new Response('', { status: 502 });
+    const name = (url.searchParams.get('name') || '강의') + '.mp4';
+    const headers = new Headers({ 'Content-Type': 'video/mp4',
+      'Content-Disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(name) });
+    const length = upstream.headers.get('content-length');
+    if (length) headers.set('Content-Length', length);
+    // Keep the worker busy with a cheap API call while the file streams, so it
+    // is not stopped as idle in the middle of a long lecture.
+    const reader = upstream.body.getReader();
+    const keepAlive = setInterval(() => { chrome.runtime.getPlatformInfo().catch(() => {}); }, 20000);
+    const body = new ReadableStream({
+      async pull(controller) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) { clearInterval(keepAlive); controller.close(); } else controller.enqueue(value);
+        } catch (error) { clearInterval(keepAlive); controller.error(error); }
+      },
+      cancel(reason) { clearInterval(keepAlive); return reader.cancel(reason); }
+    });
+    return new Response(body, { headers });
+  })());
+});
+
+// Downloads/아캠 플러스/<title>.mp4, the starter tab closed, and a notice if the
+// download breaks off. The downloads API exists only once the optional
+// permission is granted, so this runs at worker start and again when it is.
+function videoStreamUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.origin === self.location.origin && url.pathname === VIDEO_STREAM_PATH ? url : null;
+  } catch { return null; }
+}
+
+let videoDownloadWatch = false;
+function watchVideoDownloads() {
+  if (videoDownloadWatch || !chrome.downloads?.onDeterminingFilename) return;
+  videoDownloadWatch = true;
+  chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+    const url = videoStreamUrl(item.url);
+    if (!url) return;
+    suggest({ filename: '아캠 플러스/' + (url.searchParams.get('name') || '강의') + '.mp4', conflictAction: 'uniquify' });
+    // Each save has its own id in the address, so this closes only its own tab.
+    chrome.tabs.query({}).then(tabs => tabs.filter(tab => (tab.url || tab.pendingUrl) === item.url)
+      .forEach(tab => chrome.tabs.remove(tab.id).catch(() => {}))).catch(() => {});
+  });
+  chrome.downloads.onChanged.addListener(async delta => {
+    if (delta.state?.current !== 'interrupted' || delta.error?.current === 'USER_CANCELED') return;
+    const [item] = await chrome.downloads.search({ id: delta.id }).catch(() => []);
+    const url = item && videoStreamUrl(item.url);
+    if (!url || item.error === 'USER_CANCELED') return;
+    chrome.notifications?.create('icampus-video-' + delta.id, {
+      type: 'basic', iconUrl: 'icons/notify-lecture.png', title: '영상 다운로드가 끊겼어요',
+      message: url.searchParams.get('name') || '강의', contextMessage: '강의 화면에서 다시 눌러 주세요', priority: 1
+    }).catch(() => {});
+  });
+}
+watchVideoDownloads();
+chrome.permissions.onAdded.addListener(added => {
+  if (added.permissions?.includes('downloads')) watchVideoDownloads();
+});
+
+// Lecture titles are often internal codes (SP03-7-S01-09), so name the file after
+// the iCampus breadcrumb: course (before its first "_"), module, title, e.g.
+// "시스템프로그램 8주차 SP03-7-S01-09".
+async function lectureName(tabId) {
+  try {
+    const [read] = await chrome.scripting.executeScript({ target: { tabId }, func: () =>
+      [...document.querySelectorAll('#breadcrumbs li')].map(item => item.textContent.trim()).filter(Boolean) });
+    const crumbs = Array.isArray(read?.result) ? read.result : [];
+    if (crumbs.length < 3) return null;
+    const course = crumbs[1].split('_')[0].trim();
+    const module = crumbs.length >= 5 ? crumbs[crumbs.length - 2] : '';
+    return [course, module, crumbs[crumbs.length - 1]].filter(Boolean).join(' ');
+  } catch { return null; }
+}
+
+async function saveLectureVideo(message, sender) {
+  if (await examIsActive()) return { error: '시험 중에는 저장할 수 없어요.' };
+  if (!(await chrome.permissions.contains(VIDEO_SAVE_PERMISSIONS))) return { error: 'permission' };
+  const labels = ['강의', '화면', '카메라'];
+  const media = (Array.isArray(message.media) ? message.media : []).filter(item => vodUrl(item?.url)).slice(0, 2);
+  if (!media.length) return { error: 'no-media' };
+  const raw = await lectureName(sender.tab.id) ||
+    (typeof message.title === 'string' && message.title.trim() ? message.title : sender.tab?.title || '강의');
+  // Windows forbids \ / : * ? " < > | in names; keep it short and without trailing dots.
+  const name = raw.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120).replace(/[. ]+$/, '') || '강의';
+  watchVideoDownloads();
+  for (const item of media) {
+    // "제목.mp4" for one file, "제목 (화면).mp4" and "제목 (카메라).mp4" for two.
+    const file = name + (labels.includes(item.label) && item.label !== '강의' ? ' (' + item.label + ')' : '');
+    await chrome.tabs.create({ active: false, url: chrome.runtime.getURL(VIDEO_STREAM_PATH.slice(1)) +
+      '?src=' + encodeURIComponent(vodUrl(item.url)) + '&name=' + encodeURIComponent(file) +
+      '&id=' + crypto.randomUUID() });
+  }
+  return { ok: true, count: media.length };
 }
 
 async function openLecture(message) {
@@ -391,7 +615,7 @@ async function handlePlayerMessage(message, sender) {
     return { direct: true, muted: tab.mutedInfo?.muted === true,
       resetDefaults: defaults[DEFAULTS_DIRTY_KEY] === true };
   }
-  const current = state.queue[state.index];
+  const current = state.queue?.[0];
   if (!current) return null;
   if (message.type === 'icampus-player-ready') {
     if (message.playerVersion !== WORKER_VERSION) {
@@ -434,20 +658,23 @@ async function handlePlayerMessage(message, sender) {
     if (advanceLocks.has(state.tabId)) return { ok: true };
     advanceLocks.add(state.tabId);
     try {
-      const nextIndex = state.index + 1;
-      if (nextIndex >= state.queue.length) {
-        await saveState({ ...state, index: nextIndex, status: 'finished' });
-      } else {
-        const next = { ...state, index: nextIndex, status: 'opening', currentTime: 0, duration: 0, rate: 1,
-          soundBlocked: false };
-        await saveState(next);
-        try { await chrome.tabs.update(state.tabId, { url: next.queue[nextIndex].url }); }
-        catch (error) { await saveState({ ...next, status: 'error', error: error.message }); }
-      }
+      const rest = state.queue.slice(1);
+      if (!rest.length) await finishPlaylist(state);
+      else await openQueueHead({ ...state, queue: rest }).catch(() => {});
     } finally { advanceLocks.delete(state.tabId); }
     return { ok: true };
   }
   return null;
+}
+
+// 정지: pause the current lecture and keep the list. 재생 on any row resumes.
+async function haltPlaylist() {
+  const state = await getState();
+  if (!state?.queue?.length || INACTIVE_STATUSES.includes(state.status)) return { ok: true };
+  await saveState({ ...state, status: 'halted' });
+  try { await chrome.tabs.sendMessage(state.tabId, { type: 'icampus-playlist-stop' }); }
+  catch { /* The lecture frame may already be gone. */ }
+  return { ok: true };
 }
 
 async function stopPlaylist() {
@@ -461,18 +688,27 @@ async function stopPlaylist() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
-    'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
+  if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder',
+    'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule',
+    'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
     'icampus-exam-blocked-count', 'icampus-error-log'].includes(message.type)) return;
   // Only extension pages (the popup) may start a playlist or open a lecture.
   const extensionPage = sender.id === chrome.runtime.id &&
     sender.url?.startsWith(chrome.runtime.getURL(''));
-  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-open-lecture',
-       'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
+  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-sync',
+       'icampus-playlist-halt', 'icampus-schedule', 'icampus-open-lecture', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
       !extensionPage) return;
   if (message.type === 'exam-status' && !extensionPage &&
       !['https://lcms.skku.edu', 'https://kingoinfo.skku.edu'].some(origin => sender.url?.startsWith(origin + '/'))) return;
+  if (message.type.startsWith('icampus-video-')) {
+    // The lecture player frame only.
+    if (sender.id !== chrome.runtime.id || !sender.tab?.id || !sender.url?.startsWith('https://lcms.skku.edu/')) return;
+    const task = message.type === 'icampus-video-save' ? saveLectureVideo(message, sender)
+      : chrome.permissions.contains(VIDEO_SAVE_PERMISSIONS).then(enabled => ({ enabled }));
+    task.then(sendResponse, error => sendResponse({ error: error.message }));
+    return true;
+  }
   if (message.type === 'icampus-error-log') {
     if (sender.id !== chrome.runtime.id || !sender.url?.startsWith('https://lcms.skku.edu/')) return;
     const task = (async () => {
@@ -516,6 +752,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   const task = messageQueue.then(() => message.type === 'icampus-playlist-start' ? startPlaylist(message)
     : message.type === 'icampus-playlist-stop' ? stopPlaylist()
+    : message.type === 'icampus-playlist-reorder' ? reorderPlaylist(message)
+    : message.type === 'icampus-playlist-sync' ? syncPlaylist(message)
+    : message.type === 'icampus-playlist-halt' ? haltPlaylist()
+    : message.type === 'icampus-schedule'
+      ? queueNotify(async () => { await updateSchedule(message.result); await checkNotifications(); return { ok: true }; })
     : message.type === 'icampus-open-lecture' ? openLecture(message)
     : message.type === 'icampus-direct-mute' ? setDirectMute(message, sender)
     : handlePlayerMessage(message, sender));
@@ -541,7 +782,7 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
   const task = messageQueue.then(async () => {
     await releaseDirectMute(tabId);
     const state = await getState();
-    const playlistTab = state?.tabId === tabId && !['finished', 'stopped', 'error'].includes(state.status);
+    const playlistTab = state?.tabId === tabId && !INACTIVE_STATUSES.includes(state.status);
     const awake = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
     if (awake[tabId] && !playlistTab) await keepTabAwake(tabId, false);
   });
