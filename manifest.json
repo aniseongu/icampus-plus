@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "아캠 플러스",
-  "version": "1.8.41",
+  "version": "1.8.43",
   "description": "즐겨찾기 과목의 과제와 강의콘텐츠 마감을 확인하고, 아이캠퍼스를 읽기 좋은 다크 모드로 보여 줍니다.",
   "permissions": [
     "activeTab",

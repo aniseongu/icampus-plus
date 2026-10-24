@@ -586,6 +586,34 @@
       :is(#settings, #exam-panel) .mode-choice {
         flex: none;
       }
+      /* 바탕을 칠하지 않는다: 입력칸에는 ::before 면을 둘 수 없어서
+         웨일 웹 콘텐츠 다크 모드가 칠한 색이 그대로 남는다. 아래 면이 비친다. */
+      .token-input {
+        font: inherit;
+        color: var(--text-color);
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 6px 10px;
+        flex: 1;
+        min-width: 0;
+      }
+      /* 토큰 넣기를 누를 때만 줄 아래에 여는 입력 영역. 평소 줄은 다른 설정과 같다 */
+      .token-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 0 15px 12px;
+      }
+      .token-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      /* 설정 버튼의 display 규칙보다 우선해야 숨김이 먹는다 */
+      #settings .token-group [hidden] {
+        display: none;
+      }
       #exam-keep[aria-disabled="true"] {
         opacity: 1;
       }
@@ -694,6 +722,7 @@
       .title-link:focus-visible,
       .lecture-choice input:focus-visible,
       .exam-keep-option input:focus-visible,
+      .token-input:focus-visible,
       .playlist-action:focus-visible,
       .btn:focus-visible {
         outline: 2px solid var(--primary-color);
@@ -1845,6 +1874,69 @@
               끄기
             </button>
           </div>
+        </div>
+      </div>
+      <div class="setting-group token-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="canvas-token-label" class="setting-label"
+              >로그아웃해도 알림</span
+            >
+            <span id="canvas-token-status" class="setting-help" role="status"
+              >로그인이 풀려도 과제와 퀴즈를 확인해요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="canvas-token-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="canvas-token-editor"
+            >
+              토큰 넣기
+            </button>
+            <button
+              type="button"
+              id="canvas-token-clear"
+              class="playlist-action"
+              hidden
+            >
+              지우기
+            </button>
+          </div>
+        </div>
+        <div id="canvas-token-editor" class="token-editor" hidden>
+          <div class="token-field">
+            <input
+              type="password"
+              id="canvas-token-input"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-labelledby="canvas-token-label"
+              aria-describedby="canvas-token-help"
+              placeholder="토큰 붙여 넣기"
+            />
+            <button
+              type="button"
+              id="canvas-token-save"
+              class="playlist-action"
+            >
+              저장하기
+            </button>
+            <button
+              type="button"
+              id="canvas-token-close"
+              class="playlist-action"
+            >
+              닫기
+            </button>
+          </div>
+          <span id="canvas-token-help" class="setting-help" role="status"
+            >아이캠퍼스 계정 설정에서 새 액세스 토큰을 만들어 붙여 넣어
+            주세요</span
+          >
         </div>
       </div>
       <div class="setting-group">

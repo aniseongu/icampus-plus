@@ -1,4 +1,4 @@
-importScripts('exam.js', 'errlog.js', 'executescript.js', 'notify.js');
+importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'notify.js');
 chrome.permissions.onAdded.addListener(added => {
   if (added.permissions?.includes('nativeMessaging')) ErrorLog.flushPending();
 });
@@ -692,7 +692,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule',
     'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
-    'icampus-exam-blocked-count', 'icampus-error-log'].includes(message.type)) return;
+    'icampus-exam-blocked-count', 'icampus-error-log', 'icampus-canvas-token-status',
+    'icampus-canvas-token-set', 'icampus-canvas-token-clear'].includes(message.type)) return;
+  if (message.type.startsWith('icampus-canvas-token-')) {
+    if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('popup.html'))) return;
+    const task = message.type === 'icampus-canvas-token-status' ? CanvasToken.status() : queueNotify(async () => {
+      if (message.type === 'icampus-canvas-token-set') await CanvasToken.save(message.token);
+      else await CanvasToken.clear();
+      try { await backgroundScan(); await checkNotifications(); }
+      catch { /* The saved token remains valid; the next alarm retries the scan. */ }
+      return CanvasToken.status();
+    });
+    task.then(sendResponse, error => sendResponse({ error: error?.code || 'network' }));
+    return true;
+  }
   // Only extension pages (the popup) may start a playlist or open a lecture.
   const extensionPage = sender.id === chrome.runtime.id &&
     sender.url?.startsWith(chrome.runtime.getURL(''));
@@ -756,7 +769,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     : message.type === 'icampus-playlist-sync' ? syncPlaylist(message)
     : message.type === 'icampus-playlist-halt' ? haltPlaylist()
     : message.type === 'icampus-schedule'
-      ? queueNotify(async () => { await updateSchedule(message.result); await checkNotifications(); return { ok: true }; })
+      ? queueNotify(async () => {
+        await updateSchedule(message.result);
+        if (message.result && !message.result.fatal && Array.isArray(message.result.items)) {
+          await recordScanSuccess({ usedToken: false, rejected: false });
+        }
+        await checkNotifications();
+        return { ok: true };
+      })
     : message.type === 'icampus-open-lecture' ? openLecture(message)
     : message.type === 'icampus-direct-mute' ? setDirectMute(message, sender)
     : handlePlayerMessage(message, sender));
