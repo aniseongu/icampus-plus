@@ -973,8 +973,120 @@ document.addEventListener('DOMContentLoaded', async () => {
       const enabled = option.dataset.notify === 'true';
       showNotify(enabled);
       await chrome.storage.local.set({ notifyEnabled: enabled });
+      refreshCanvasToken();
     });
   }
+  // Canvas personal token: the worker keeps it (secrets.js) and only ever sends
+  // back a status. The field opens on demand and is cleared as soon as it is sent.
+  const tokenOpen = document.querySelector('#canvas-token-open');
+  const tokenClear = document.querySelector('#canvas-token-clear');
+  const tokenStatus = document.querySelector('#canvas-token-status');
+  const tokenEditor = document.querySelector('#canvas-token-editor');
+  const tokenInput = document.querySelector('#canvas-token-input');
+  const tokenSave = document.querySelector('#canvas-token-save');
+  const tokenClose = document.querySelector('#canvas-token-close');
+  const tokenHelp = document.querySelector('#canvas-token-help');
+  const tokenHelpText = tokenHelp.textContent.replace(/\s+/g, ' ').trim();
+  const tokenErrors = {
+    empty: '토큰을 붙여 넣어 주세요',
+    'invalid-format': '토큰만 복사해서 붙여 넣어 주세요',
+    rejected: '맞지 않는 토큰이에요. 다시 복사해서 넣어 주세요',
+    'other-account': '알림을 받는 계정에서 만든 토큰을 넣어 주세요',
+    network: '아이캠퍼스에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요'
+  };
+  let tokenBusy = false;
+  // Canvas names carry a masked student number in brackets; the name is enough here.
+  const accountName = name => String(name || '').replace(/\s*\([^)]*\)\s*$/, '') || '내';
+  function setTokenEditor(open) {
+    tokenEditor.hidden = !open;
+    tokenOpen.setAttribute('aria-expanded', String(open));
+    if (open) {
+      tokenHelp.textContent = tokenHelpText;
+      tokenInput.focus();
+    } else {
+      tokenInput.value = '';
+    }
+  }
+  function showCanvasToken(status, scan, notifyOn) {
+    const usable = Boolean(status?.set && !status.rejectedAt);
+    tokenOpen.hidden = usable;
+    tokenOpen.textContent = status?.rejectedAt ? '다시 넣기' : '토큰 넣기';
+    tokenClear.hidden = !status?.set;
+    if (usable) setTokenEditor(false);
+    const name = accountName(status?.name);
+    if (status?.rejectedAt) {
+      tokenStatus.textContent = '토큰이 맞지 않아요. 새 토큰을 넣어 주세요';
+    } else if (usable && !notifyOn) {
+      tokenStatus.textContent = '알림을 켜면 ' + name + ' 계정으로 확인해요';
+    } else if (usable) {
+      tokenStatus.textContent = name + ' 계정으로 확인하고 있어요';
+    } else if (scan?.problem === 'signed-out') {
+      tokenStatus.textContent = '토큰을 넣으면 지금처럼 로그인이 풀려도 과제를 확인해요';
+    } else {
+      tokenStatus.textContent = '로그인이 풀려도 과제와 퀴즈를 확인해요';
+    }
+  }
+  async function refreshCanvasToken() {
+    try {
+      const [status, saved] = await Promise.all([
+        chrome.runtime.sendMessage({ type: 'icampus-canvas-token-status' }),
+        chrome.storage.local.get(['icampusScanState', 'notifyEnabled'])
+      ]);
+      if (tokenBusy) return;
+      if (status?.error) throw new Error(status.error);
+      showCanvasToken(status, saved.icampusScanState, saved.notifyEnabled !== false);
+    } catch {
+      if (!tokenBusy) tokenStatus.textContent = tokenErrors.network;
+    }
+  }
+  function setTokenBusy(busy) {
+    tokenBusy = busy;
+    for (const control of [tokenOpen, tokenClear, tokenInput, tokenSave, tokenClose]) control.disabled = busy;
+  }
+  async function saveCanvasToken() {
+    if (tokenBusy) return;
+    const token = tokenInput.value.trim();
+    tokenInput.value = '';
+    if (!token) {
+      tokenHelp.textContent = tokenErrors.empty;
+      tokenInput.focus();
+      return;
+    }
+    setTokenBusy(true);
+    tokenHelp.textContent = '토큰을 확인하고 있어요';
+    let error = null;
+    try {
+      error = (await chrome.runtime.sendMessage({ type: 'icampus-canvas-token-set', token }))?.error || null;
+    } catch {
+      error = 'network';
+    } finally {
+      setTokenBusy(false);
+    }
+    if (error) {
+      tokenHelp.textContent = tokenErrors[error] || tokenErrors.network;
+      tokenInput.focus();
+    }
+    await refreshCanvasToken();
+  }
+  async function clearCanvasToken() {
+    if (tokenBusy) return;
+    setTokenBusy(true);
+    try { await chrome.runtime.sendMessage({ type: 'icampus-canvas-token-clear' }); }
+    catch { /* The status refresh below shows what is stored. */ }
+    finally { setTokenBusy(false); }
+    setTokenEditor(false);
+    await refreshCanvasToken();
+  }
+  tokenOpen.addEventListener('click', () => setTokenEditor(tokenEditor.hidden));
+  tokenClose.addEventListener('click', () => { setTokenEditor(false); tokenOpen.focus(); });
+  tokenSave.addEventListener('click', saveCanvasToken);
+  tokenClear.addEventListener('click', clearCanvasToken);
+  tokenInput.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    if (event.key === 'Enter') { event.preventDefault(); saveCanvasToken(); }
+    else if (event.key === 'Escape') { event.preventDefault(); setTokenEditor(false); tokenOpen.focus(); }
+  });
+  refreshCanvasToken();
   for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
     option.addEventListener('click', async () => {
       await chrome.storage.local.set({ examFullscreen: option.dataset.fullscreen === 'true' });
