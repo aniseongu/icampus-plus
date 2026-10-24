@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "아캠 플러스",
-  "version": "1.8.29",
+  "version": "1.8.41",
   "description": "즐겨찾기 과목의 과제와 강의콘텐츠 마감을 확인하고, 아이캠퍼스를 읽기 좋은 다크 모드로 보여 줍니다.",
   "permissions": [
     "activeTab",
@@ -25,6 +25,7 @@
       "matches": [
         "https://lcms.skku.edu/*"
       ],
+      "css": ["player-layout.css"],
       "js": [
         "errlog.js",
         "video-save-ui.js",
@@ -44,7 +45,8 @@
         "dark/sheets.css",
         "dark/instui.css",
         "dark/dark.css",
-        "dark/adapt.css"
+        "dark/adapt.css",
+        "responsive.css"
       ],
       "js": [
         "dark/color.js",
@@ -70,6 +72,17 @@
       ],
       "run_at": "document_start",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "https://canvas.skku.edu/*"
+      ],
+      "exclude_matches": [
+        "https://canvas.skku.edu/xn-sso/*"
+      ],
+      "js": ["theater.js"],
+      "run_at": "document_idle",
+      "all_frames": false
     },
     {
       "matches": [

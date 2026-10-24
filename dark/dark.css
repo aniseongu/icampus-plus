@@ -97,10 +97,21 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
     border-color: var(--icd-line);
   }
 
-  & :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='range']) {
+  & :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {
     background-color: var(--icd-raised);
     color: var(--icd-text);
     border-color: var(--icd-control-line);
+  }
+
+  /* 파일 입력은 칸이 아니라 버튼과 파일 이름이다. 버튼만 다른 버튼과 같은 면을 쓴다 */
+  & input[type='file'] {
+    color: var(--icd-text);
+  }
+
+  & input[type='file']::file-selector-button {
+    background-color: var(--icd-raised);
+    color: var(--icd-text);
+    border: 1px solid var(--icd-line-strong);
   }
 
   & ::placeholder {
@@ -1265,11 +1276,23 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
   }
 
   & .ui-dialog .ui-dialog-titlebar,
-  & .ui-widget-header,
-  & .ui-tabs .ui-tabs-nav {
+  & .ui-widget-header {
     background-color: var(--icd-raised);
     border-color: var(--icd-line);
     color: var(--icd-text);
+  }
+
+  /* 탭 줄은 바닥과 같은 면에 아래 선만 둔다(과제 파일 업로드 등). 탭 내용은 옆과 아래 선으로
+     탭 줄의 아래 선에 이어 한 상자로 보이게 하고, 위 선은 겹치므로 뺀다 */
+  & .ui-tabs .ui-tabs-nav {
+    background-color: transparent;
+    border-width: 0 0 1px;
+    border-color: var(--icd-line);
+    color: var(--icd-text);
+  }
+
+  & .ui-tabs .ui-tabs-panel {
+    border-top-width: 0;
   }
 
   & .ui-dialog .ui-dialog-buttonpane {
@@ -1655,6 +1678,11 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
   /* 과제 상세: 제출 상태 표시줄과 오른쪽 상태 */
   & :is(ul.student-assignment-overview, .student-assignment-overview li) {
     border-color: var(--icd-line);
+  }
+
+  /* 생성 시트의 테두리가 라이트에서는 테마에 덮여 보이지 않는다. 안쪽 여백 없는 상자가 되므로 라이트처럼 뺀다 */
+  & #right-side .details {
+    border-width: 0;
   }
 
   & #sidebar_content .details .header {
