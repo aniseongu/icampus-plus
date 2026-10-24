@@ -1953,3 +1953,37 @@ html[data-icd='on'][data-icd-login='true']:not(#icd-a):not(#icd-b):not(#icd-c) {
     filter: brightness(.85);
   }
 }
+
+/* 22. 삼성 패스 계정 선택 팝업: 삼성 패스 확장이 iframe 없이 body에 직접 붙이는 흰 상자다(다크 규칙 없음).
+ * html의 scrollbar-color가 상속되면 크로미움은 삼성 패스의 ::-webkit-scrollbar 꾸밈을 무시하므로, 흰 상자에 검은 스크롤바가 생겼다.
+ * 상자를 떠 있는 층(raised)으로 바꾸고 스크롤바도 그 면에 맞춘다. 위치, 크기, 글꼴은 삼성 패스 그대로 둔다. */
+html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) #spass-accounts-popup-id {
+  /* 삼성 패스 CSS가 색을 모두 !important로 박아 둬서 같은 수준으로 덮는다(docs/DESIGN.md §2-1 예외) */
+  background: var(--icd-raised) !important;
+  border-color: var(--icd-line-strong) !important;
+  color-scheme: dark;
+
+  & .spass-b-ext-list-group {
+    scrollbar-color: var(--icd-line-strong) transparent;
+  }
+
+  & :is(.spass-b-ext-list-group li, .spass-b-ext-credential-container) {
+    background: var(--icd-raised) !important;
+  }
+
+  & .spass-b-ext-credential-container::before {
+    background-color: var(--icd-line) !important;
+  }
+
+  & :is(.spass-b-ext-accounts-textContainer, .spass-b-ext-accounts-username-text) {
+    color: var(--icd-text) !important;
+  }
+
+  & .spass-b-ext-accounts-domain-text {
+    color: var(--icd-text-3) !important;
+  }
+
+  & .spass-b-ext-view-all-account button {
+    color: var(--icd-link) !important;
+  }
+}

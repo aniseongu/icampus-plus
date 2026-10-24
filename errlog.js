@@ -20,7 +20,8 @@ const ErrorLog = (() => {
       }
       catch { return '[URL]'; }
     }).replace(/\b(token|access_token|refresh_token|password|passwd|cookie|authorization|api[_-]?key)\s*[:=]\s*[^\s,;]+/gi,
-      '$1=[REDACTED]').replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]').slice(0, limit);
+      '$1=[REDACTED]').replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]')
+      .replace(/\b\d{1,12}~[A-Za-z0-9]{20,}\b/g, '[REDACTED]').slice(0, limit);
   }
 
   function cleanUrl(value) {

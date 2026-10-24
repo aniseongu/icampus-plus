@@ -7,6 +7,7 @@ const SCHEDULE_KEY = 'icampusSchedule';
 const NOTIFIED_KEY = 'icampusNotified';
 const NOTIFY_SETTING = 'notifyEnabled';
 const LINKS_KEY = 'notificationLinks';
+const SCAN_STATE_KEY = 'icampusScanState';
 const SCAN_ALARM = 'icampus-scan';
 const NOTIFY_ALARM = 'icampus-notify';
 const HOUR_MS = 60 * 60 * 1000;
@@ -82,11 +83,70 @@ async function readLearningXToken() {
 async function backgroundScan() {
   if (!(await notificationsEnabled()) || await examIsActive()) return;
   let result;
-  try { result = await icampusScan({ token: await readLearningXToken() }); }
+  let canvasToken, rejected = false;
+  try {
+    const token = await readLearningXToken();
+    canvasToken = await CanvasToken.get();
+    result = await icampusScan({ token, canvasToken });
+    if (canvasToken && result?.fatal && result.status === 401) {
+      await CanvasToken.markRejected();
+      rejected = true;
+      result = await icampusScan({ token });
+    } else if (canvasToken && result && !result.fatal) {
+      await CanvasToken.markOk();
+    }
+  }
   catch { return; }
-  // Signed out or Canvas down: keep the last schedule and stay quiet.
-  if (!result || result.fatal) return;
+  if (!result) return;
+  if (result.fatal) {
+    if (result.status !== 401 && !result.fatal.includes('로그인 만료 또는 응답 형식 변경')) return;
+    const tokenStatus = await CanvasToken.status();
+    const problem = rejected || (tokenStatus.set && tokenStatus.rejectedAt) ? 'token-rejected' : 'signed-out';
+    const old = (await chrome.storage.local.get(SCAN_STATE_KEY))[SCAN_STATE_KEY] || {};
+    const state = { lastOkAt: old.lastOkAt || null, problem, notifiedProblem: old.notifiedProblem || null };
+    if (state.notifiedProblem !== problem) {
+      await showScanProblem(problem);
+      state.notifiedProblem = problem;
+    }
+    await chrome.storage.local.set({ [SCAN_STATE_KEY]: state });
+    return;
+  }
   await updateSchedule(result);
+  await recordScanSuccess({ usedToken: Boolean(canvasToken), rejected });
+}
+
+async function recordScanSuccess({ usedToken, rejected }) {
+  const old = (await chrome.storage.local.get(SCAN_STATE_KEY))[SCAN_STATE_KEY] || {};
+  const tokenStatus = await CanvasToken.status();
+  const state = { lastOkAt: Date.now(), problem: old.problem || null,
+    notifiedProblem: old.notifiedProblem || null };
+  if (rejected || (!usedToken && tokenStatus.set && tokenStatus.rejectedAt)) {
+    state.problem = 'token-rejected';
+    if (state.notifiedProblem !== 'token-rejected') {
+      await showScanProblem('token-rejected');
+      state.notifiedProblem = 'token-rejected';
+    }
+  } else {
+    state.problem = null;
+    state.notifiedProblem = null;
+  }
+  await chrome.storage.local.set({ [SCAN_STATE_KEY]: state });
+}
+
+async function showScanProblem(problem) {
+  const rejected = problem === 'token-rejected';
+  const id = 'icampus-' + crypto.randomUUID();
+  const url = rejected ? 'https://canvas.skku.edu/profile/settings' : 'https://canvas.skku.edu/';
+  const links = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
+  links[id] = { url, lecture: false };
+  await chrome.storage.session.set({ [LINKS_KEY]: links });
+  await chrome.notifications.create(id, {
+    type: 'basic', iconUrl: 'icons/notify-assignment.png',
+    title: rejected ? '토큰이 더 이상 맞지 않아요' : '아이캠퍼스 로그인이 풀렸어요',
+    message: '새 과제와 퀴즈를 가져오지 못하고 있어요',
+    contextMessage: rejected ? '아캠 플러스 설정에서 토큰을 다시 넣어 주세요'
+      : '로그인하거나 설정에서 토큰을 넣어 주세요'
+  });
 }
 
 function remainingText(ms) {

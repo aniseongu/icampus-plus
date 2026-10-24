@@ -1,10 +1,11 @@
 // Scans the favorite courses. The popup injects this file into the signed-in
 // canvas.skku.edu tab (it runs at once, see the last line). The service worker
-// imports it and calls icampusScan itself for notifications: Canvas answers with
-// the browser's cookies, and LearningX gets a token the worker read from an open
-// tab (env.token, never stored). No credentials leave the browser.
+// imports it and calls icampusScan itself for notifications: Canvas uses a worker-only
+// personal token when set, otherwise browser cookies. LearningX gets a token the
+// worker read from an open tab (env.token, never stored). No credentials leave the browser.
 var icampusScan = async (env = {}) => {
   const inPage = typeof document !== 'undefined';
+  const canvasToken = inPage ? null : (env.canvasToken || null);
   const base = inPage ? location.origin : 'https://canvas.skku.edu';
   const now = Date.now();
   const warnings = [];
@@ -33,9 +34,12 @@ var icampusScan = async (env = {}) => {
       visited.add(url);
       const remaining = deadline - Date.now();
       if (remaining <= 0) throw new Error('조회 시간 초과');
+      const requestUrl = new URL(url);
+      const canvasApi = requestUrl.origin === base && requestUrl.pathname.startsWith('/api/v1/');
+      const bearer = canvasApi && canvasToken;
       const response = await fetch(url, {
-        credentials: 'include',
-        headers: { Accept: 'application/json', ...headers },
+        credentials: bearer ? 'omit' : 'include',
+        headers: { Accept: 'application/json', ...(bearer ? { Authorization: 'Bearer ' + canvasToken } : {}), ...headers },
         signal: AbortSignal.timeout(remaining)
       });
       if (!response.ok) throw Object.assign(new Error('HTTP ' + response.status), { status: response.status });
@@ -55,7 +59,9 @@ var icampusScan = async (env = {}) => {
   async function selfId() {
     try {
       const response = await fetch(base + '/api/v1/users/self', {
-        credentials: 'include', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000)
+        credentials: canvasToken ? 'omit' : 'include',
+        headers: { Accept: 'application/json', ...(canvasToken ? { Authorization: 'Bearer ' + canvasToken } : {}) },
+        signal: AbortSignal.timeout(5000)
       });
       if (!response.ok) return null;
       const data = JSON.parse((await response.text()).replace(/^while\(1\);\s*/, ''));
@@ -67,7 +73,7 @@ var icampusScan = async (env = {}) => {
   try {
     courses = await jsonPages('/api/v1/users/self/favorites/courses?per_page=100');
   } catch (error) {
-    return { fatal: '즐겨찾기 과목을 가져오지 못했습니다. 아이캠퍼스 로그인 상태를 확인하고 새로고침해 주세요. (' + error.message + ')', warnings };
+    return { fatal: '즐겨찾기 과목을 가져오지 못했습니다. 아이캠퍼스 로그인 상태를 확인하고 새로고침해 주세요. (' + error.message + ')', warnings, status: error.status };
   }
   courses = [...new Map(courses.filter(c => c && c.id && c.name).map(c => [String(c.id), c])).values()];
   let token = env.token || cookie('xn_api_token');
