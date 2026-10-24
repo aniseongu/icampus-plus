@@ -163,6 +163,25 @@
     });
   }
 
+  // Inline highlighters keep their hue, but need a middle luminance: visibly
+  // brighter than the page and dark enough to support the existing light text.
+  function highlight(value) {
+    const c = parse(value);
+    if (!c || c.a < 0.95) return null;
+    const o = toOklch(c);
+    if (o.C < 0.07) return null;
+    const ink = parse('#e2e5e9');
+    if (contrast(c, SURFACE) >= 3 && contrast(c, ink) >= 4.5) return format(c);
+    for (const chroma of [Math.min(o.C, 0.12), 0.08, 0.04]) {
+      for (let L = 0.7; L >= 0.4; L -= 0.005) {
+        const shade = format(fromOklch({ L, C: chroma, H: o.H }));
+        const parsed = parse(shade);
+        if (contrast(parsed, SURFACE) >= 3 && contrast(parsed, ink) >= 4.5) return shade;
+      }
+    }
+    return null;
+  }
+
   // 선 색: 밝은 선은 어두운 선으로, 강조색 선은 글자처럼 읽히게
   function border(value) {
     const c = parse(value);
@@ -185,7 +204,7 @@
   }
 
   const SURFACE_O = toOklch(SURFACE);
-  const api = { parse, luminance, contrast, composite, text, background, border, category, format, toOklch, fromOklch, SURFACE };
+  const api = { parse, luminance, contrast, composite, text, background, highlight, border, category, format, toOklch, fromOklch, SURFACE };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else globalThis.ICDColor = api;
 })();

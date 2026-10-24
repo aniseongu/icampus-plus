@@ -207,12 +207,12 @@
     return null;
   }
 
-  // 밑줄 색: 글자처럼 읽히게(밝은 무채색 옅은 밑줄은 선)
+  // 밑줄 색: 글자처럼 읽히게(밝은 무채색 밑줄도 4.5:1 이상)
   function decoration(token, ctx) {
     const c = parseToken(token);
     if (!c) return null;
     const o = oklch(c);
-    if (o.C < 0.06 && o.L > 0.6) return 'var(--icd-line)';
+    if (o.C < 0.06 && o.L > 0.6) return 'var(--icd-text-3)';
     return text(token, ctx);
   }
 
