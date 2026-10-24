@@ -16,6 +16,41 @@
   };
   await checkExam();
 
+  // In a smaller window, expand a video or PDF inside Canvas. A maximized
+  // window keeps the school's native fullscreen behavior.
+  let theaterReady = false;
+  let compactWindow = false;
+  let theaterActive = false;
+  if (window.top !== window && document.referrer.startsWith('https://canvas.skku.edu/')) {
+    window.addEventListener('message', event => {
+      if (event.origin !== 'https://canvas.skku.edu' || event.data?.type !== 'icd-theater-ready') return;
+      theaterReady = true;
+      compactWindow = event.data.compact === true;
+      const wasActive = theaterActive;
+      theaterActive = event.data.active === true;
+      if (event.data.relayout === true || wasActive !== theaterActive) {
+        // The video player and PDF viewer store pixel dimensions and
+        // recalculate them only on resize.
+        window.dispatchEvent(new Event('resize'));
+      }
+    });
+    window.top.postMessage({ type: 'icd-theater-probe' }, 'https://canvas.skku.edu');
+  }
+  document.addEventListener('click', event => {
+    if (examBlocked || !theaterReady) return;
+    if (!(event.target instanceof Element) || !event.target.closest('.vc-pctrl-fullscreen-btn')) return;
+    if (!document.querySelector('video, .player-mode-pdf')) return;
+    if (!compactWindow && !theaterActive) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.top.postMessage({ type: 'icd-theater-toggle' }, 'https://canvas.skku.edu');
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (theaterActive && event.key === 'Escape') {
+      window.top.postMessage({ type: 'icd-theater-close' }, 'https://canvas.skku.edu');
+    }
+  });
+
   const speedSources = new WeakMap();
   const speedAttempts = new WeakMap();
   let playlistKey = null;

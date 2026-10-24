@@ -7,7 +7,8 @@
   if (perf) globalThis.__icdAdaptPerf = perf;
   const publishPerf = () => { if (perf) root.dataset.icdAdaptPerf = JSON.stringify(perf); };
   const color = globalThis.ICDColor;
-  const selector = '[style*="color"], [style*="background"], [style*="border"], [style*="font-size"], [style*="opacity"], font[color], [bgcolor], .fc-event[class*="group_course_"], #context-list .context-list-toggle-box[class*="group_course_"]';
+  const selector = '[style*="color"], [style*="background"], [style*="border"], [style*="text-decoration"], [style*="text-emphasis"], [style*="font-size"], [style*="opacity"], font[color], [bgcolor], .fc-event[class*="group_course_"], #context-list .context-list-toggle-box[class*="group_course_"]';
+  const lightSelector = '[style*="color"], font[color]';
   const bodySelector = '.user_content, .description, .show-content, .discussion-section, [data-resource-type], .xn-content, .xnct-content';
   const skipSelector = '[contenteditable="true"], .tox, .mce-content-body';
   const accessibleSelector = '.screenreader-only, .sr-only, .screen-reader-only, [class*="ScreenReaderContent"], [class*="screen-reader"], [aria-hidden="false"]';
@@ -29,6 +30,7 @@
   let hiddenOffset = 0;
   let scheduled = false;
   let active = false;
+  let activeMode = null;
   let generation = 0;
 
   function inputKey(el) {
@@ -47,7 +49,10 @@
     const key = `${kind}|${value}|${background ? color.format(background) : ''}`;
     if (!converted.has(key)) {
       converted.set(key, kind === 'text' ? color.text(value, background)
-        : kind === 'background' ? color.background(value) : color.border(value));
+        : kind === 'background' ? color.background(value)
+          : kind === 'highlight' ? color.highlight(value) : color.border(value));
+      // Author supplied colors can vary without bound across a long SPA session.
+      if (converted.size > 512) converted.delete(converted.keys().next().value);
     }
     return converted.get(key);
   }
@@ -195,6 +200,7 @@
   }
 
   function adapt(el) {
+    if (root.dataset.icd === 'off') { adaptLight(el); return; }
     if (root.dataset.icd !== 'on' || el.closest(skipSelector)) return;
     const group = /\bgroup_course_\d+\b/.exec(el.className || '');
     if (group && (el.matches('.fc-event') || el.matches('#context-list .context-list-toggle-box'))) {
@@ -223,12 +229,23 @@
 
     const applied = [];
     const originalBg = el.style.getPropertyValue('background-color') || el.getAttribute('bgcolor');
-    const bg = cached('background', originalBg);
+    const highlighter = el.matches('span, mark, font') && el.closest(bodySelector) &&
+      el.textContent.trim() && originalBg ? cached('highlight', originalBg) : null;
+    const bg = highlighter || cached('background', originalBg);
     update(el, 'data-icd-bg', '--icd-inline-bg', bg, applied);
 
     const originalColor = el.style.getPropertyValue('color') || el.getAttribute('color');
     const textBg = bg ? color.parse(bg) : darkBackground(el);
-    update(el, 'data-icd-c', '--icd-inline-c', cached('text', originalColor, textBg), applied);
+    const authoredText = color.parse(originalColor);
+    const keepHighlightText = highlighter && authoredText && color.contrast(authoredText, textBg) >= 4.5;
+    update(el, 'data-icd-c', '--icd-inline-c', keepHighlightText ? null : cached('text', originalColor, textBg), applied);
+    for (const [property, attr, variable] of [
+      ['text-decoration-color', 'data-icd-decoration', '--icd-inline-decoration'],
+      ['text-emphasis-color', 'data-icd-emphasis', '--icd-inline-emphasis'],
+      ['-webkit-text-fill-color', 'data-icd-fill', '--icd-inline-fill'],
+    ]) {
+      update(el, attr, variable, cached('text', el.style.getPropertyValue(property), textBg), applied);
+    }
 
     let hasBorder = false;
     for (const side of ['top', 'right', 'bottom', 'left']) {
@@ -246,10 +263,25 @@
     keys.set(el, { key, applied });
   }
 
+  function adaptLight(el) {
+    if (el.closest(skipSelector) || !el.closest(bodySelector)) return;
+    const original = color.parse(el.style.getPropertyValue('color') || el.getAttribute('color'));
+    let background = null;
+    for (let node = el; node && !background; node = node.parentElement) {
+      const parsed = color.parse(getComputedStyle(node).backgroundColor);
+      if (parsed && parsed.a > 0.95) background = parsed;
+    }
+    background ||= color.parse('#fff');
+    const white = original && original.r >= 235 && original.g >= 235 && original.b >= 235;
+    if (white && color.contrast(original, background) < 4.5) el.setAttribute('data-icd-light-c', '');
+    else el.removeAttribute('data-icd-light-c');
+  }
+
   function addCandidates(node) {
     if (node.nodeType !== 1) return;
-    if (node.matches(selector)) work.push(node);
-    work.push(...node.querySelectorAll(selector));
+    const query = activeMode === 'off' ? lightSelector : selector;
+    if (node.matches(query)) work.push(node);
+    work.push(...node.querySelectorAll(query));
   }
 
   function queueHidden(node) {
@@ -456,8 +488,10 @@
   function queue(node, added = false) {
     if (node.nodeType !== 1) return;
     pending.add(node);
-    if (added) { discoverContainers(node); netQueue(node); }
-    queueHidden(node);
+    if (activeMode === 'on') {
+      if (added) { discoverContainers(node); netQueue(node); }
+      queueHidden(node);
+    }
     schedule();
   }
 
@@ -479,6 +513,7 @@
   function stop() {
     if (!active) return;
     active = false;
+    activeMode = null;
     generation++;
     bodyObserver.disconnect();
     for (const observer of containerObservers) observer.disconnect();
@@ -496,18 +531,23 @@
   }
 
   function start() {
-    if (root.dataset.icd !== 'on') {
+    const mode = root.dataset.icd;
+    if (mode !== 'on' && mode !== 'off') {
       stop();
       return;
     }
+    if (active && activeMode !== mode) stop();
     if (active) return;
     active = true;
+    activeMode = mode;
     if (perf) { perf.started = performance.now(); performance.mark('icd-adapt-start'); }
     bodyObserver.observe(root, { childList: true, attributes: true, attributeFilter: ['style', 'color', 'bgcolor'], subtree: true });
-    discoverContainers(root);
-    if (document.body) netQueue(document.body);
+    if (mode === 'on') {
+      discoverContainers(root);
+      if (document.body) netQueue(document.body);
+    }
     // 켤 때마다 현재 DOM을 다시 훑되, 기존 입력 키의 색 변환은 건너뛴다.
-    work.push(...document.querySelectorAll(selector));
+    work.push(...document.querySelectorAll(mode === 'on' ? selector : lightSelector));
     if (perf) { perf.candidates = work.length; perf.firstScanMs = performance.now() - perf.started; performance.mark('icd-adapt-first-scan'); performance.measure('icd-adapt-first-scan', 'icd-adapt-start', 'icd-adapt-first-scan'); publishPerf(); }
     schedule();
   }

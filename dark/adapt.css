@@ -3,6 +3,29 @@
 html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-c]:not(.icd-hidden-text) {
   color: var(--icd-inline-c) !important;
 }
+/* Author supplied inline decoration, emphasis and fill colors need the same contrast conversion as text. */
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-decoration] {
+  text-decoration-color: var(--icd-inline-decoration) !important;
+}
+/* Rich text can draw underlines from <u>, links, classes or shorthand CSS without
+   an inline text-decoration-color. Match the already readable text color so a
+   dark author line cannot disappear on the dark page. This must beat inline
+   decoration declarations from the editor. */
+html[data-icd='on']:not(#icd-a):not(#icd-b)
+  :is(.user_content, .description, .show-content, .discussion-section, .xn-content, .xnct-content)
+  * {
+  text-decoration-color: currentColor !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-emphasis] {
+  text-emphasis-color: var(--icd-inline-emphasis) !important;
+}
+html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-fill] {
+  -webkit-text-fill-color: var(--icd-inline-fill) !important;
+}
+/* A light page can contain author supplied white inline text on a light surface. */
+html[data-icd='off']:not(#icd-a):not(#icd-b) [data-icd-light-c] {
+  color: #000 !important;
+}
 html[data-icd='on']:not(#icd-a):not(#icd-b) [data-icd-bg] {
   background-color: var(--icd-inline-bg) !important;
 }

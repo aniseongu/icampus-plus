@@ -1,0 +1,78 @@
+/* Canvas shows the desktop breadcrumb at intermediate window widths.
+   Its unbounded final course item otherwise widens the whole page. */
+@media (min-width: 641px) and (max-width: 950px) {
+  .ic-app-crumbs,
+  #breadcrumbs,
+  #breadcrumbs ul {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  #breadcrumbs li:last-child {
+    max-width: min(38vw, 300px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* The grades table has a wider minimum content width. Keep its columns intact
+   and scroll only the table area when the course sidebar narrows the page. */
+@media (max-width: 950px) {
+  #grade-summary-content #assignments {
+    overflow-x: auto;
+    contain: layout;
+  }
+}
+
+/* Canvas continually writes an inline pixel height on the tool wrapper.
+   This in-window expansion must win over that host page style. */
+.tool_content_wrapper.icd-theater-wrapper {
+  height: 100vh !important;
+}
+
+/* Canvas is still taller than the viewport behind the fixed player. Its page
+   scrollbar covers the player's rightmost controls at half-window widths. */
+html.icd-theater-active,
+html.icd-theater-active body {
+  overflow: hidden !important;
+}
+
+/* LearningX positions its player with an inline transform and pixel dimensions.
+   The theater class must override those host styles while expansion is active. */
+.xnlailvc-commons-container.icd-theater-player,
+.xnpc-commons-container.icd-theater-player {
+  position: fixed !important;
+  inset: 0 !important;
+  transform: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2147483645 !important;
+  background: #000;
+}
+
+/* The PDF host adds a top margin even when its frame is fixed to the viewport. */
+.xnpc-commons-container.icd-theater-player {
+  margin: 0 !important;
+}
+
+.icd-theater-player-frame {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Assignment upload form: its link buttons keep the button side padding, so
+   their text starts right of the file button above. The label also sits above
+   the centre of the taller file input. */
+#submit_online_upload_form :is(.add_another_file_link, .toggle_uploaded_files_link) {
+  padding-inline: 0;
+}
+
+#submit_online_upload_form td:has(> #attachmentLabel) {
+  padding-top: 2px;
+}
+
+#submit_online_upload_form #attachmentLabel {
+  line-height: 38px;
+}
