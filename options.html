@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta name="color-scheme" content="only light dark" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>아캠 플러스 설정</title>
+    <script src="utils.js" defer></script>
+    <script src="exam.js" defer></script>
+    <script src="errlog.js" defer></script>
+    <script src="common.js" defer></script>
+    <script src="options.js" defer></script>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="options-page">
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <defs>
+        <filter id="nm-header" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.11764706 0 0 0 0 0.21176471 0 0 0 0 0.39607843 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-bg" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.00000000 0 0 0 0 0.00000000 0 0 0 0 0.00000000 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-accent" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 1.00000000 0 0 0 0 0.50980392 0 0 0 0 0.46666667 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-odd" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.06666667 0 0 0 0 0.07450980 0 0 0 0 0.08627451 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-even" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.09411765 0 0 0 0 0.10588235 0 0 0 0 0.12156863 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-hover" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.14117647 0 0 0 0 0.15686275 0 0 0 0 0.18039216 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-error" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.16470588 0 0 0 0 0.08235294 0 0 0 0 0.07450980 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-empty" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.06666667 0 0 0 0 0.07450980 0 0 0 0 0.08627451 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-primary" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.16470588 0 0 0 0 0.41960784 0 0 0 0 0.69019608 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-primary-hover" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.19607843 0 0 0 0 0.45490196 0 0 0 0 0.72941176 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-selected" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.07450980 0 0 0 0 0.18823529 0 0 0 0 0.30980392 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-badge-text" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.09019608 0 0 0 0 0.09019608 0 0 0 0 0.09019608 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-bg" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-header" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.11764706 0 0 0 0 0.21176471 0 0 0 0 0.39607843 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-odd" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-even" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.96078431 0 0 0 0 0.96078431 0 0 0 0 0.96078431 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-hover" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.93333333 0 0 0 0 0.94901961 0 0 0 0 0.96470588 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-selected" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.89019608 0 0 0 0 0.92156863 0 0 0 0 0.96078431 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-badge" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.82352941 0 0 0 0 0.00000000 0 0 0 0 0.10196078 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-primary" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.01176471 0 0 0 0 0.21176471 0 0 0 0 0.41176471 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-primary-hover" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.03921569 0 0 0 0 0.27843137 0 0 0 0 0.52156863 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-empty" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.96078431 0 0 0 0 0.96078431 0 0 0 0 0.96078431 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-error" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.99215686 0 0 0 0 0.92549020 0 0 0 0 0.92549020 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-text" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.26274510 0 0 0 0 0.26274510 0 0 0 0 0.26274510 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-text2" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.36078431 0 0 0 0 0.40392157 0 0 0 0 0.43921569 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-link" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.01176471 0 0 0 0 0.21176471 0 0 0 0 0.41176471 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-urgent" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.78823529 0 0 0 0 0.06274510 0 0 0 0 0.05882353 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-soon" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.63137255 0 0 0 0 0.29019608 0 0 0 0 0.02745098 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-warning" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0.49019608 0 0 0 0 0.38823529 0 0 0 0 0.00000000 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-l-white" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 0 1.00000000 0 0 0 1 0"
+          />
+        </filter>
+        <filter id="nm-line" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.16862745 0 0 0 0 0.18823529 0 0 0 0 0.21960784 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-line-strong" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.24313725 0 0 0 0 0.27058824 0 0 0 0 0.31372549 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-l-line" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.78039216 0 0 0 0 0.80392157 0 0 0 0 0.81960784 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-text" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.88627451 0 0 0 0 0.89803922 0 0 0 0 0.91372549 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-text2" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.70196078 0 0 0 0 0.72941176 0 0 0 0 0.76078431 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-text3" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.56078431 0 0 0 0 0.59607843 0 0 0 0 0.63529412 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-link" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.49803922 0 0 0 0 0.70980392 0 0 0 0 0.93725490 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-danger" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 1.00000000 0 0 0 0 0.50980392 0 0 0 0 0.46666667 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-warning" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.90196078 0 0 0 0 0.72156863 0 0 0 0 0.30980392 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-success" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.37254902 0 0 0 0 0.81176471 0 0 0 0 0.52549020 0 0 0 1 0" />
+        </filter>
+        <filter id="nm-header-text" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0 0 0 0 0.96862745 0 0 0 0 0.97647059 0 0 0 0 0.98823529 0 0 0 1 0" />
+        </filter>
+      </defs>
+    </svg>
+    <div class="header">
+      <h1>
+        <svg class="title-icon" viewBox="22 38 84 52" aria-hidden="true">
+          <g
+            transform="translate(11.09 -10.85) scale(0.1113 0.1897)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M 280,311 C 278,288 285,271 299,268 C 380,277 571,277 652,268 C 666,271 673,288 671,311 M 285,310 C 380,314 571,314 666,310"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 203,466 C 325,440 626,440 748,466 M 208,477 C 340,452 611,452 743,477"
+              vector-effect="non-scaling-stroke"
+            />
+            <path d="M 119,521 L 832,521" vector-effect="non-scaling-stroke" />
+            <path
+              d="M 201,341 C 199,326 203,317 212,317 C 259,320 303,332 335,355 C 345,365 349,374 350,382 M 205,340 C 254,344 301,354 334,376"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 116,370 C 159,367 214,368 242,377 C 259,384 270,402 275,422 M 119,377 C 158,379 220,389 256,403 C 266,409 272,417 275,425"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 206,341 L 206,370.5"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 281,311 L 282,329.4"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 275,425 C 268,438 260,451.8 254,457.8"
+              vector-effect="non-scaling-stroke"
+            />
+            <path d="M 119,377 L 119,521" vector-effect="non-scaling-stroke" />
+            <path
+              d="M 357,312.0 C 359,352.0 359,409.3 357,449.3"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 367,460.7 L 367,521"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 750,341 C 752,326 748,317 739,317 C 692,320 648,332 616,355 C 606,365 602,374 601,382 M 746,340 C 697,344 650,354 617,376"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 835,370 C 792,367 737,368 709,377 C 692,384 681,402 676,422 M 832,377 C 793,379 731,389 695,403 C 685,409 679,417 676,425"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 745,341 L 745,370.5"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 670,311 L 669,329.4"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 676,425 C 683,438 691,451.8 697,457.8"
+              vector-effect="non-scaling-stroke"
+            />
+            <path d="M 832,377 L 832,521" vector-effect="non-scaling-stroke" />
+            <path
+              d="M 594,312.0 C 592,352.0 592,409.3 594,449.3"
+              vector-effect="non-scaling-stroke"
+            />
+            <path
+              d="M 584,460.7 L 584,521"
+              vector-effect="non-scaling-stroke"
+            />
+          </g></svg
+        >아캠 플러스 설정
+      </h1>
+    </div>
+
+    <main id="settings">
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="screen-mode-label" class="setting-label">화면 모드</span>
+            <span class="setting-help">자동은 브라우저 설정을 따라요</span>
+          </div>
+          <div
+            id="screen-mode"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="screen-mode-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-mode="auto"
+            >
+              자동
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-mode="light"
+            >
+              밝게
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-mode="dark"
+            >
+              어둡게
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="notify-label" class="setting-label">알림</span>
+            <span class="setting-help"
+              >퀴즈가 열리거나 마감이 다가오면 알려요</span
+            >
+          </div>
+          <div
+            id="notify"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="notify-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-notify="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-notify="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+        <div id="lead-row" class="setting-row">
+          <div class="setting-text">
+            <span id="lead-label" class="setting-label">마감 알림 시점</span>
+            <span id="lead-status" class="setting-help" role="status"
+              >마감 하루 전, 3시간 전에 알려요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="lead-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="lead-editor"
+            >
+              바꾸기
+            </button>
+          </div>
+        </div>
+        <div id="lead-editor" class="setting-editor" hidden>
+          <div
+            id="lead-choices"
+            class="mode-choice"
+            role="group"
+            aria-labelledby="lead-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="4320"
+            >
+              3일 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="true"
+              data-lead="1440"
+            >
+              하루 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="720"
+            >
+              12시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="true"
+              data-lead="180"
+            >
+              3시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="60"
+            >
+              1시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="30"
+            >
+              30분 전
+            </button>
+          </div>
+        </div>
+        <div id="summary-row" class="setting-row">
+          <div class="setting-text">
+            <span id="summary-label" class="setting-label">매일 요약</span>
+            <span id="summary-status" class="setting-help" role="status"
+              >하루 한 번 오늘 마감을 모아서 알려요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <input
+              type="time"
+              id="summary-time"
+              class="token-input summary-time"
+              value="09:00"
+              aria-labelledby="summary-label"
+            />
+            <div
+              id="summary"
+              class="mode-choice"
+              role="radiogroup"
+              aria-labelledby="summary-label"
+            >
+              <button
+                type="button"
+                class="playlist-action"
+                role="radio"
+                aria-checked="false"
+                data-summary="true"
+              >
+                켜기
+              </button>
+              <button
+                type="button"
+                class="playlist-action"
+                role="radio"
+                aria-checked="true"
+                data-summary="false"
+              >
+                끄기
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="activity-notify-row" class="setting-row">
+          <div class="setting-text">
+            <span id="activity-notify-label" class="setting-label"
+              >공지와 성적 알림</span
+            >
+            <span class="setting-help"
+              >새 공지가 올라오거나 성적이 나오면 알려요</span
+            >
+          </div>
+          <div
+            id="activity-notify"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="activity-notify-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-activity-notify="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-activity-notify="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group token-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="canvas-token-label" class="setting-label"
+              >로그아웃해도 알림</span
+            >
+            <span id="canvas-token-status" class="setting-help" role="status"
+              >로그인이 풀려도 과제와 퀴즈를 확인해요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="canvas-token-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="canvas-token-editor"
+            >
+              토큰 넣기
+            </button>
+            <button
+              type="button"
+              id="canvas-token-clear"
+              class="playlist-action"
+              hidden
+            >
+              지우기
+            </button>
+          </div>
+        </div>
+        <div id="lecture-access-row" class="setting-row" hidden>
+          <div class="setting-text">
+            <span id="lecture-access-label" class="setting-label"
+              >강의 일정도 확인</span
+            >
+            <span id="lecture-access-status" class="setting-help" role="status"
+              >로그아웃해도 강의 마감까지 확인해요</span
+            >
+          </div>
+          <div
+            id="lecture-access"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="lecture-access-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-lecture-access="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-lecture-access="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+        <div id="canvas-token-editor" class="token-editor" hidden>
+          <div class="token-field">
+            <input
+              type="password"
+              id="canvas-token-input"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-labelledby="canvas-token-label"
+              aria-describedby="canvas-token-help"
+              placeholder="토큰 붙여 넣기"
+            />
+            <button
+              type="button"
+              id="canvas-token-save"
+              class="playlist-action"
+            >
+              저장하기
+            </button>
+            <button
+              type="button"
+              id="canvas-token-close"
+              class="playlist-action"
+            >
+              닫기
+            </button>
+          </div>
+          <span id="canvas-token-help" class="setting-help" role="status"
+            >아이캠퍼스 계정 설정에서 새 액세스 토큰을 만들어 붙여 넣어
+            주세요</span
+          >
+        </div>
+      </div>
+      <div class="setting-group gcal-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="gcal-label" class="setting-label">구글 캘린더</span>
+            <span id="gcal-status" class="setting-help" role="status"
+              >즐겨찾기 과목 일정을 구글 캘린더에 넣어요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="gcal-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="gcal-editor"
+            >
+              연결하기
+            </button>
+            <button
+              type="button"
+              id="gcal-keep"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="gcal-editor"
+              hidden
+            >
+              연결 유지
+            </button>
+            <button
+              type="button"
+              id="gcal-disconnect"
+              class="playlist-action"
+              hidden
+            >
+              연결 끊기
+            </button>
+          </div>
+        </div>
+        <div id="gcal-editor" class="setting-editor" hidden>
+          <div class="token-field gcal-fields">
+            <input
+              type="text"
+              id="gcal-client"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-labelledby="gcal-label"
+              aria-describedby="gcal-help"
+              placeholder="클라이언트 ID 붙여 넣기"
+            />
+            <button type="button" id="gcal-connect" class="playlist-action">
+              연결하기
+            </button>
+            <button type="button" id="gcal-close" class="playlist-action">
+              닫기
+            </button>
+            <input
+              type="password"
+              id="gcal-secret"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="구글 클라이언트 보안 비밀번호"
+              aria-describedby="gcal-help"
+              placeholder="보안 비밀번호 붙여 넣기, 없어도 돼요"
+            />
+          </div>
+          <span id="gcal-help" class="setting-help" role="status"
+            >보안 비밀번호까지 넣으면 구글 로그인이 풀려도 연결이 이어져요.
+            만드는 방법은 README에 있어요</span
+          >
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="video-save-label" class="setting-label">영상 저장</span>
+            <span id="video-save-status" class="setting-help" role="status"
+              >강의 영상 아래 조작 막대에 저장 버튼이 생겨요</span
+            >
+          </div>
+          <div
+            id="video-save"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="video-save-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-video-save="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-video-save="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">단축키</span>
+            <span id="shortcut-status" class="setting-help" role="status">누르면 아캠 플러스가 열려요</span>
+          </div>
+          <div class="mode-choice">
+            <button type="button" id="shortcut-change" class="playlist-action">바꾸기</button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="exam-guard-label" class="setting-label">시험 모드</span>
+            <span class="setting-help"
+              >퀴즈를 푸는 동안 다른 확장과 알림을 잠시 꺼요</span
+            >
+          </div>
+          <div
+            id="exam-guard"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="exam-guard-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-guard="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-guard="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group" id="exam-controls">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">시험 상태</span>
+            <span id="exam-status" class="setting-help" role="status"
+              >상태를 확인하는 중이에요</span
+            >
+          </div>
+          <button type="button" id="exam-action" class="playlist-action" hidden>
+            지금 시작
+          </button>
+        </div>
+      </div>
+      <div class="setting-group" id="exam-fullscreen-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="exam-fullscreen-label" class="setting-label"
+              >시험 때 전체화면</span
+            >
+            <span class="setting-help"
+              >윈도우 키도 막아요. Esc를 길게 누르면 나가요</span
+            >
+          </div>
+          <div
+            id="exam-fullscreen"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="exam-fullscreen-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-fullscreen="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-fullscreen="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+      <details id="exam-keep" class="setting-group" hidden>
+        <summary class="setting-row">
+          <span class="setting-text">
+            <span class="setting-label">시험 중에도 켤 확장</span>
+            <span class="setting-help">감독용 확장은 골라 두면 끄지 않아요</span>
+          </span>
+          <span class="playlist-action" aria-hidden="true">고르기</span>
+        </summary>
+        <div id="exam-keep-list"></div>
+        <p class="setting-note">다음 시험부터 적용돼요.</p>
+      </details>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="error-log-label" class="setting-label">오류 기록</span>
+            <span id="error-log-status" class="setting-help" role="status"
+              >기록 프로그램을 설치한 컴퓨터에서만 파일로 남아요</span
+            >
+          </div>
+          <div
+            id="error-log"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="error-log-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-error-log="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-error-log="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

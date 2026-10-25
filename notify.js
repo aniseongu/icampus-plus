@@ -403,9 +403,9 @@ async function showScanProblem(problem) {
   if (!(await notificationsEnabled())) return;
   const rejected = problem === 'token-rejected';
   const id = 'icampus-' + crypto.randomUUID();
-  const url = rejected ? 'https://canvas.skku.edu/profile/settings' : 'https://canvas.skku.edu/';
+  const url = 'https://canvas.skku.edu/';
   const links = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
-  links[id] = { url, lecture: false };
+  links[id] = { url, lecture: false, options: rejected };
   await chrome.storage.session.set({ [LINKS_KEY]: links });
   await chrome.notifications.create(id, {
     type: 'basic', iconUrl: 'icons/notify-assignment.png',
@@ -693,12 +693,22 @@ chrome.storage.onChanged.addListener((changes, area) => {
 function openFromNotification(id) {
   if (!id.startsWith('icampus-')) return;
   queueNotify(async () => {
+    if (id === 'icampus-gcal-reconnect') {
+      await chrome.notifications.clear(id);
+      await chrome.runtime.openOptionsPage();
+      return;
+    }
     const links = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
     const link = links[id];
     delete links[id];
     await chrome.storage.session.set({ [LINKS_KEY]: links });
     await chrome.notifications.clear(id);
-    if (!link || await examIsActive()) return;
+    if (!link) return;
+    if (link.options) {
+      await chrome.runtime.openOptionsPage();
+      return;
+    }
+    if (await examIsActive()) return;
     const url = canvasUrl(link.url) || 'https://canvas.skku.edu/';
     if (link.lecture) {
       try { await openLecture({ url, active: true }); return; }

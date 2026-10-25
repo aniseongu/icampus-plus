@@ -404,10 +404,19 @@ function queueItem(item) {
 
 async function startPlaylist(message) {
   if (await examIsActive()) throw new Error('시험 중에는 재생 목록을 시작할 수 없어요.');
-  const tab = await chrome.tabs.get(message.tabId);
-  if (new URL(tab.url).origin !== 'https://canvas.skku.edu') throw new Error('아이캠퍼스 탭에서 시작해 주세요.');
   const queue = Array.isArray(message.queue) ? message.queue.map(queueItem).filter(Boolean) : [];
   if (!queue.length || queue.length > 100) throw new Error('재생할 아이캠퍼스 강의를 찾지 못했습니다.');
+  // Lectures picked while a playlist exists join its end; the current lecture keeps playing.
+  const state = message.append ? await getState() : null;
+  if (state?.queue?.length) {
+    const known = new Set(state.queue.map(item => item.key));
+    const merged = [...state.queue, ...queue.filter(item => !known.has(item.key))];
+    if (merged.length > 100) throw new Error('재생 목록에는 100개까지 넣을 수 있어요.');
+    await saveState({ ...state, queue: merged });
+    return { ok: true };
+  }
+  const tab = await chrome.tabs.get(message.tabId);
+  if (new URL(tab.url).origin !== 'https://canvas.skku.edu') throw new Error('아이캠퍼스 탭에서 시작해 주세요.');
   await stopPlaylist();
   await releaseDirectMute(tab.id);
   const lectureTab = await chrome.tabs.get(tab.id);
@@ -432,6 +441,21 @@ async function reorderPlaylist(message) {
     await saveState({ ...state, queue });
   } else {
     await openQueueHead({ ...state, queue }, idle);
+  }
+  return { ok: true };
+}
+
+async function removePlaylistItem(message) {
+  if (await examIsActive()) throw new Error('시험 중에는 재생 목록을 바꿀 수 없어요.');
+  const state = await getState();
+  const index = state?.queue?.findIndex(item => item.key === message.key) ?? -1;
+  if (index < 0) throw new Error('재생 목록이 그사이 바뀌었어요. 다시 시도해 주세요.');
+  const queue = state.queue.filter((_, itemIndex) => itemIndex !== index);
+  if (!queue.length) await stopPlaylist();
+  else if (index > 0 || ['error', 'halted'].includes(state.status)) {
+    await saveState({ ...state, queue });
+  } else {
+    await openQueueHead({ ...state, queue });
   }
   return { ok: true };
 }
@@ -712,15 +736,17 @@ async function stopPlaylist() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder',
+  if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-remove',
     'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule',
     'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
     'icampus-exam-blocked-count', 'icampus-error-log', 'icampus-canvas-token-status',
     'icampus-canvas-token-set', 'icampus-canvas-token-clear',
     'icampus-gcal-status', 'icampus-gcal-prepare', 'icampus-gcal-connect', 'icampus-gcal-disconnect', 'icampus-gcal-sync'].includes(message.type)) return;
+  const settingsPage = sender.id === chrome.runtime.id &&
+    [chrome.runtime.getURL('popup.html'), chrome.runtime.getURL('options.html')].includes(sender.url);
   if (message.type.startsWith('icampus-gcal-')) {
-    if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
+    if (!settingsPage) return;
     Gcal.message(message.type, message).then(sendResponse, error => {
       reportError('gcal', '구글 캘린더 메시지 실패: ' + String(error?.message || 'unknown'),
         { stack: error?.stack });
@@ -729,7 +755,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type.startsWith('icampus-canvas-token-')) {
-    if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('popup.html'))) return;
+    if (!settingsPage) return;
     const task = message.type === 'icampus-canvas-token-status'
       ? Promise.all([CanvasToken.status(), chrome.permissions.contains({ permissions: ['cookies'] })])
         .then(([status, lectures]) => ({ ...status, lectures })) :
@@ -751,7 +777,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Only extension pages (the popup) may start a playlist or open a lecture.
   const extensionPage = sender.id === chrome.runtime.id &&
     sender.url?.startsWith(chrome.runtime.getURL(''));
-  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-sync',
+  if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-remove', 'icampus-playlist-sync',
        'icampus-playlist-halt', 'icampus-schedule', 'icampus-open-lecture', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
       !extensionPage) return;
   if (message.type === 'exam-status' && !extensionPage &&
@@ -765,10 +791,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'icampus-error-log') {
-    if (sender.id !== chrome.runtime.id || ![
+    if (sender.id !== chrome.runtime.id || !(settingsPage || [
       'https://lcms.skku.edu/', 'https://canvas.skku.edu/', 'https://kingoinfo.skku.edu/',
       'https://icampus.skku.edu/xn-sso/'
-    ].some(prefix => sender.url?.startsWith(prefix))) return;
+    ].some(prefix => sender.url?.startsWith(prefix)))) return;
     const task = (async () => {
       if (await examIsActive() || ExamMode.EXAM_URL.test(sender.tab?.url || '')) return;
       if (typeof message.source !== 'string' || typeof message.message !== 'string') return;
@@ -812,6 +838,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const task = messageQueue.then(() => message.type === 'icampus-playlist-start' ? startPlaylist(message)
     : message.type === 'icampus-playlist-stop' ? stopPlaylist()
     : message.type === 'icampus-playlist-reorder' ? reorderPlaylist(message)
+    : message.type === 'icampus-playlist-remove' ? removePlaylistItem(message)
     : message.type === 'icampus-playlist-sync' ? syncPlaylist(message)
     : message.type === 'icampus-playlist-halt' ? haltPlaylist()
     : message.type === 'icampus-schedule'
