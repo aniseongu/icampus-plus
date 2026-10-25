@@ -76,6 +76,25 @@ var icampusScan = async (env = {}) => {
     return { fatal: '즐겨찾기 과목을 가져오지 못했습니다. 아이캠퍼스 로그인 상태를 확인하고 새로고침해 주세요. (' + error.message + ')', warnings, status: error.status };
   }
   courses = [...new Map(courses.filter(c => c && c.id && c.name).map(c => [String(c.id), c])).values()];
+  const favoriteById = new Map(courses.map(course => [String(course.id), course]));
+  const announcementRequest = (async () => {
+    if (!courses.length) return [];
+    const query = new URLSearchParams({
+      start_date: new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString(),
+      end_date: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+      active_only: 'true', per_page: '50'
+    });
+    for (const course of courses) query.append('context_codes[]', 'course_' + course.id);
+    const rows = await jsonPages('/api/v1/announcements?' + query, {}, 4000);
+    return rows.flatMap(a => {
+      const course = favoriteById.get(String(a?.context_code || '').replace(/^course_/, ''));
+      let url = null;
+      try { if (a?.html_url) url = new URL(a.html_url, base); } catch { /* Skip a malformed link. */ }
+      if (!course || !a.id || !url || url.origin !== base) return [];
+      return [{ key: 'ann:' + a.id, course: course.name, title: a.title,
+        url: url.href, postedAt: a.posted_at, unread: a.read_state === 'unread' }];
+    });
+  })().catch(() => null);
   let token = env.token || cookie('xn_api_token');
   let tokenRefresh = null;
   const found = new Map();
@@ -132,6 +151,8 @@ var icampusScan = async (env = {}) => {
   }
   let assignmentSources = 0;
   let moduleSources = 0;
+  const grades = [];
+  const gradeCourses = [];
   // Courses whose source did not load; the alert schedule keeps their cached items.
   const failedAssignmentCourses = [];
   const failedModuleCourses = [];
@@ -173,7 +194,10 @@ var icampusScan = async (env = {}) => {
     const done = Boolean(submission.submitted_at || submission.excused ||
       (submission.grade !== null && submission.grade !== undefined && submission.grade !== '') ||
       ['submitted', 'graded', 'pending_review'].includes(submission.workflow_state));
-    const due = validDue(assignment.due_at || assignment.lock_at);
+    const dueAt = validDue(assignment.due_at);
+    const lockAt = validDue(assignment.lock_at);
+    const due = dueAt || lockAt;
+    const lateUntil = dueAt && lockAt && Date.parse(lockAt) > Date.parse(dueAt) ? lockAt : null;
     const key = String(course.id) + ':assignment:' + String(assignment.id);
     // Keep open tasks, including items without a due date and overdue items
     // that still accept a late submission.
@@ -185,7 +209,8 @@ var icampusScan = async (env = {}) => {
     const reason = done || previous?.done ? null : closedReason(assignment);
     if (reason) unsubmittable.add(key);
     found.set(key, {
-      key, course: course.name, title: assignment.name, type: '과제', due, ...reason,
+      key, course: course.name, title: assignment.name, type: '과제', due,
+      ...(lateUntil ? { lateUntil } : {}), ...reason,
       ...(isQuiz(assignment) ? { quiz: true, opensAt: validDue(assignment.unlock_at) } : {}),
       done: done || Boolean(previous?.done),
       url: assignment.html_url || base + '/courses/' + course.id + '/assignments/' + assignment.id
@@ -196,6 +221,8 @@ var icampusScan = async (env = {}) => {
     const info = item && item.content_data;
     if (!info || !item.title || !info.due_at) return;
     const due = validDue(info.due_at);
+    const lateAt = validDue(info.late_at);
+    const lateUntil = due && lateAt && Date.parse(lateAt) > Date.parse(due) ? lateAt : null;
     const assignmentId = item.content_id || info.id;
     // Attended lectures are not listed, but the playlist still needs their keys
     // to drop them (same key as the lecture entry below).
@@ -203,17 +230,20 @@ var icampusScan = async (env = {}) => {
       doneLectureKeys.add(String(course.id) + ':lecture:' +
         String(assignmentId || item.module_item_id || item.id || item.title + due));
     }
-    if (!due || Date.parse(due) < now) return;
+    if (!due || (Date.parse(due) < now && (!lateUntil || Date.parse(lateUntil) <= now))) return;
     const unlock = validDue(info.unlock_at);
     if (unlock && Date.parse(unlock) > now) return;
     const isAssignment = String(item.content_type || '').toLowerCase() === 'assignment';
     // Canvas already said this task cannot be submitted now; do not re-add it.
     if (isAssignment && assignmentId && unsubmittable.has(String(course.id) + ':assignment:' + String(assignmentId))) return;
-    const isLecture = Boolean(info.use_attendance) && item.attendance_status !== 'attendance';
+    const isLecture = Boolean(info.use_attendance) && item.attendance_status !== 'attendance' && !item.completed;
     if (!isAssignment && !isLecture) return;
     if (isAssignment && assignmentId && found.has(String(course.id) + ':assignment:' + String(assignmentId))) {
       const existing = found.get(String(course.id) + ':assignment:' + String(assignmentId));
       existing.done = existing.done || Boolean(item.completed);
+      if (lateUntil && (!existing.lateUntil || Date.parse(lateUntil) > Date.parse(existing.lateUntil))) {
+        existing.lateUntil = lateUntil;
+      }
       return;
     }
     if (isAssignment) {
@@ -221,6 +251,9 @@ var icampusScan = async (env = {}) => {
         existing.course === course.name && existing.title === item.title && existing.due === due);
       if (sameTask) {
         sameTask.done = sameTask.done || Boolean(item.completed);
+        if (lateUntil && (!sameTask.lateUntil || Date.parse(lateUntil) > Date.parse(sameTask.lateUntil))) {
+          sameTask.lateUntil = lateUntil;
+        }
         return;
       }
     }
@@ -231,6 +264,7 @@ var icampusScan = async (env = {}) => {
     found.set(key, {
       key, course: course.name, title: item.title,
       type: isLecture ? '강의' : '과제', due, done,
+      ...(lateUntil ? { lateUntil } : {}),
       url: base + '/courses/' + course.id + '/modules/items/' + (item.module_item_id || item.id)
     });
   }
@@ -242,7 +276,17 @@ var icampusScan = async (env = {}) => {
     const [assignmentResult, moduleResult] = await Promise.allSettled([assignmentRequest, moduleRequest]);
     if (assignmentResult.status === 'fulfilled') {
       assignmentSources++;
-      assignmentResult.value.forEach(a => addAssignment(course, a));
+      gradeCourses.push(String(course.id));
+      assignmentResult.value.forEach(a => {
+        const submission = a?.submission;
+        if (a?.id && submission && !submission.excused &&
+            typeof submission.posted_at === 'string' && typeof submission.graded_at === 'string') {
+          grades.push({ key: String(course.id) + ':' + a.id, course: course.name,
+            title: a.name, url: a.html_url || base + '/courses/' + course.id + '/assignments/' + a.id,
+            gradedAt: submission.graded_at, postedAt: submission.posted_at });
+        }
+        addAssignment(course, a);
+      });
     } else {
       failedAssignmentCourses.push(String(course.id));
       warnings.push(course.name + ': 과제 목록 조회 실패 (' + assignmentResult.reason.message + ')');
@@ -276,7 +320,6 @@ var icampusScan = async (env = {}) => {
   // TODO entries outside the favorite list are never displayed.
   if (assignmentSources < courses.length) {
     try {
-      const favoriteById = new Map(courses.map(course => [String(course.id), course]));
       const todo = await jsonPages('/api/v1/users/self/todo?per_page=100', {}, 3000);
       for (const entry of todo) {
         if (entry?.type !== 'submitting' || !entry.assignment) continue;
@@ -292,7 +335,8 @@ var icampusScan = async (env = {}) => {
     (a.due ? Date.parse(a.due) : Infinity) - (b.due ? Date.parse(b.due) : Infinity) ||
     a.course.localeCompare(b.course, 'ko'));
   return {
-    items, warnings, courseCount: courses.length, doneLectureKeys: [...doneLectureKeys],
+    items, grades, gradeCourses, announcements: await announcementRequest,
+    warnings, courseCount: courses.length, doneLectureKeys: [...doneLectureKeys],
     assignmentSources, moduleSources, failedAssignmentCourses, failedModuleCourses,
     userId: await userRequest, fetchedAt: new Date().toISOString()
   };
