@@ -9,6 +9,16 @@ var icampusScan = async (env = {}) => {
   const base = inPage ? location.origin : 'https://canvas.skku.edu';
   const now = Date.now();
   const warnings = [];
+  const logScan = (description, error) => {
+    const message = description + ': ' + String(error?.message || '알 수 없는 오류');
+    if (inPage) {
+      // The worker checks exam mode before accepting content script records.
+      try {
+        chrome.runtime.sendMessage({ type: 'icampus-error-log', source: 'notify', message,
+          stack: error?.stack }).catch(() => {});
+      } catch { /* The error recorder cannot report its own transport failure. */ }
+    } else if (typeof logScanOnce === 'function') logScanOnce(description, error);
+  };
 
   function cookie(name) {
     if (!inPage) return null;
@@ -66,13 +76,14 @@ var icampusScan = async (env = {}) => {
       if (!response.ok) return null;
       const data = JSON.parse((await response.text()).replace(/^while\(1\);\s*/, ''));
       return data && data.id ? String(data.id) : null;
-    } catch { return null; }
+    } catch (error) { logScan('계정 확인 실패', error); return null; }
   }
   const userRequest = selfId();
   let courses;
   try {
     courses = await jsonPages('/api/v1/users/self/favorites/courses?per_page=100');
   } catch (error) {
+    logScan('즐겨찾기 과목 조회 실패', error);
     return { fatal: '즐겨찾기 과목을 가져오지 못했습니다. 아이캠퍼스 로그인 상태를 확인하고 새로고침해 주세요. (' + error.message + ')', warnings, status: error.status };
   }
   courses = [...new Map(courses.filter(c => c && c.id && c.name).map(c => [String(c.id), c])).values()];
@@ -94,7 +105,7 @@ var icampusScan = async (env = {}) => {
       return [{ key: 'ann:' + a.id, course: course.name, title: a.title,
         url: url.href, postedAt: a.posted_at, unread: a.read_state === 'unread' }];
     });
-  })().catch(() => null);
+  })().catch(error => { logScan('공지 조회 실패', error); return null; });
   let token = env.token || cookie('xn_api_token');
   let tokenRefresh = null;
   const found = new Map();
@@ -289,6 +300,7 @@ var icampusScan = async (env = {}) => {
       });
     } else {
       failedAssignmentCourses.push(String(course.id));
+      logScan('과제 목록 조회 실패', assignmentResult.reason);
       warnings.push(course.name + ': 과제 목록 조회 실패 (' + assignmentResult.reason.message + ')');
     }
     if (moduleResult.status === 'fulfilled' && moduleResult.value) {
@@ -299,6 +311,7 @@ var icampusScan = async (env = {}) => {
     } else {
       failedModuleCourses.push(String(course.id));
       if (moduleResult.status === 'rejected') {
+        logScan('강의콘텐츠 조회 실패', moduleResult.reason);
         const reason = moduleResult.reason.message;
         moduleFailures.set(reason, [...(moduleFailures.get(reason) || []), course.name]);
       }
@@ -327,6 +340,7 @@ var icampusScan = async (env = {}) => {
         if (course) addAssignment(course, entry.assignment);
       }
     } catch (error) {
+      logScan('보조 할 일 조회 실패', error);
       warnings.push('보조 할 일 조회 실패 (' + error.message + ')');
     }
   }

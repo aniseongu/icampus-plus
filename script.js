@@ -8,6 +8,9 @@ window.addEventListener('unhandledrejection', event => {
   reportError('popup', String(event.reason?.message || event.reason || '처리되지 않은 오류'),
     { stack: event.reason?.stack });
 });
+// Handled failures still go to the error log; the popup keeps working.
+const logPopup = description => error => reportError('popup', description + ': ' +
+  String(error?.message || error || '알 수 없는 오류'), { stack: error?.stack });
 let activeTab = null;
 let loading = false;
 // 화면 모드는 팝업과 아이캠퍼스 페이지(dark/boot.js)가 같이 쓴다: 'auto'(브라우저 설정) | 'light' | 'dark'
@@ -19,7 +22,6 @@ let examKeepSaving = false;
 let errorLogEnabled = false;
 const colorMedia = matchMedia('(prefers-color-scheme: dark)');
 let lastResult = null;
-let selectingLectures = false;
 // 'open': only tasks that can be submitted now (default), 'all': every unfinished task.
 let assignmentView = 'open';
 const selectedLectureKeys = new Set();
@@ -85,7 +87,7 @@ function applyTheme() {
 function setScreenMode(mode) {
   screenMode = mode;
   applyTheme();
-  chrome.storage.local.set({ screenMode: mode }).catch(() => {});
+  chrome.storage.local.set({ screenMode: mode }).catch(logPopup('화면 모드 저장 실패'));
 }
 
 async function renderExamKeepList() {
@@ -302,8 +304,9 @@ function showLoading() {
   document.querySelector('#sync-status').replaceChildren();
 }
 
-function showError(message) {
-  reportError('popup', message);
+// record: false for guidance that is not a failure, so it never fills the log.
+function showError(message, record = true) {
+  if (record) reportError('popup', message);
   document.querySelector('#completed').hidden = true;
   document.querySelector('#lecture').replaceChildren();
   document.querySelector('#assignment').replaceChildren(element('div', 'error-message', message));
@@ -321,6 +324,15 @@ function displayDate(value) {
 }
 
 // A narrow column wraps between the date and "오후 3:15", never inside either.
+// Course names stop at two lines so every row keeps the same height; the full name is the tooltip.
+function courseCell(item) {
+  const course = replaceUnderbar(item.course);
+  const cell = element('td');
+  cell.append(element('div', 'cell-clamp', course.replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim() || course));
+  cell.title = course;
+  return cell;
+}
+
 function appendDateParts(parent, text) {
   text.split(/ (?=오[전후] )/).forEach((part, index) => {
     if (index) parent.append(' ');
@@ -358,9 +370,9 @@ async function openItem(item, background = false) {
         type: 'icampus-open-lecture', url, active: !background, openerTabId
       });
       if (response?.ok) return;
-    } catch { /* Fall back to a plain tab. */ }
+    } catch (error) { logPopup('강의 탭 열기 요청 실패')(error); /* Falls back to a plain tab. */ }
   }
-  chrome.tabs.create({ url, active: !background, ...(openerTabId ? { openerTabId } : {}) }).catch(() => {});
+  chrome.tabs.create({ url, active: !background, ...(openerTabId ? { openerTabId } : {}) }).catch(logPopup('탭 열기 실패'));
 }
 
 function makeTitleLink(node, item) {
@@ -416,12 +428,9 @@ function createTable(items, captionText, type, captionExtra) {
   const body = element('tbody');
   items.forEach(item => {
     const row = element('tr');
-    const course = replaceUnderbar(item.course);
-    const courseCell = element('td', '', course.replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim() || course);
-    courseCell.title = course;
-    row.append(courseCell);
+    row.append(courseCell(item));
     const title = element('td', 'title');
-    if (type === 'lecture' && selectingLectures) {
+    if (type === 'lecture') {
       // The checkbox selects; the title still opens the lecture. A click
       // anywhere else on the row also selects, for a larger target.
       const choice = element('div', 'lecture-choice');
@@ -495,7 +504,7 @@ function assignmentViewToggle() {
   toggle.setAttribute('aria-pressed', String(assignmentView === 'all'));
   toggle.addEventListener('click', () => {
     assignmentView = assignmentView === 'all' ? 'open' : 'all';
-    chrome.storage.local.set({ assignmentView }).catch(() => {});
+    chrome.storage.local.set({ assignmentView }).catch(logPopup('과제 보기 저장 실패'));
     if (lastResult) render(lastResult);
     document.querySelector('#assignment .caption-toggle')?.focus();
   });
@@ -511,40 +520,26 @@ function playlistToolbar() {
     toolbar.append(control);
     return control;
   };
-  if (selectingLectures) {
-    const count = element('span', 'playlist-toolbar-label');
-    count.id = 'playlist-selected-count';
-    toolbar.append(count);
-    const all = button('모두 고르기', 'playlist-secondary', () => {
-      const checks = [...document.querySelectorAll('table.lecture input[type="checkbox"]')];
-      const target = !checks.every(check => check.checked);
-      checks.forEach(check => {
-        if (check.checked !== target) { check.checked = target; check.dispatchEvent(new Event('change', { bubbles: true })); }
-      });
+  // The lecture table is always ready to pick from; there is no mode to open or close.
+  const count = element('span', 'playlist-toolbar-label');
+  count.id = 'playlist-selected-count';
+  toolbar.append(count);
+  const all = button('모두 고르기', 'playlist-secondary', () => {
+    const checks = [...document.querySelectorAll('table.lecture input[type="checkbox"]')];
+    const target = !checks.every(check => check.checked);
+    checks.forEach(check => {
+      if (check.checked !== target) { check.checked = target; check.dispatchEvent(new Event('change', { bubbles: true })); }
     });
-    all.id = 'playlist-select-all';
-    button('닫기', 'playlist-secondary', () => {
-      selectingLectures = false;
-      selectedLectureKeys.clear();
-      persistPlaylistSelection();
-      render(lastResult);
-    });
-    const play = button('', 'playlist-primary', startPlaylist);
-    play.id = 'playlist-start';
-    queueMicrotask(updatePlaylistSelection);
-  } else {
-    button('재생 목록 만들기', 'playlist-primary', () => {
-      selectingLectures = true;
-      selectedLectureKeys.clear();
-      persistPlaylistSelection();
-      render(lastResult);
-    });
-  }
+  });
+  all.id = 'playlist-select-all';
+  const play = button('', 'playlist-primary', startPlaylist);
+  play.id = 'playlist-start';
+  queueMicrotask(updatePlaylistSelection);
   return toolbar;
 }
 
 function persistPlaylistSelection() {
-  chrome.storage.local.set({ icampusPlaylistDraft: { selecting: selectingLectures, keys: [...selectedLectureKeys] } }).catch(() => {});
+  chrome.storage.local.set({ icampusPlaylistDraft: { keys: [...selectedLectureKeys] } }).catch(logPopup('강의 선택 저장 실패'));
 }
 
 function updatePlaylistSelection() {
@@ -648,8 +643,7 @@ function renderPlaylistStatus(state) {
   stop.addEventListener('click', async () => {
     stop.disabled = true;
     try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-stop' }); }
-    catch { stop.disabled = false; return; }
-    selectingLectures = false;
+    catch (error) { logPopup('재생 목록 지우기 실패')(error); stop.disabled = false; return; }
     selectedLectureKeys.clear();
     persistPlaylistSelection();
     if (lastResult) render(lastResult);
@@ -665,9 +659,6 @@ function renderPlaylistStatus(state) {
   const body = element('tbody');
   queue.forEach((item, index) => {
     const row = element('tr', index === 0 ? 'playlist-current' : '');
-    const course = replaceUnderbar(item.course);
-    const courseCell = element('td', '', course.replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim() || course);
-    courseCell.title = course;
     const titleCell = element('td', 'playlist-title-cell');
     titleCell.append(element('div', 'playlist-lecture-title', replaceUnderbar(item.title)));
     titleCell.title = replaceUnderbar(item.title);
@@ -713,7 +704,7 @@ function renderPlaylistStatus(state) {
     });
     actions.append(play);
     orderCell.append(actions);
-    row.append(courseCell, titleCell, timeCell, orderCell);
+    row.append(courseCell(item), titleCell, timeCell, orderCell);
     body.append(row);
   });
   table.append(caption, head, body);
@@ -767,7 +758,7 @@ async function syncPlaylist(result) {
     ...(Array.isArray(result.doneLectureKeys) ? result.doneLectureKeys : [])];
   if (!doneKeys.length) return;
   try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-sync', doneKeys }); }
-  catch { /* The worker cleans up on the next scan. */ }
+  catch (error) { logPopup('재생목록 정리 요청 실패')(error); /* The worker cleans up on the next scan. */ }
 }
 
 async function refreshPlaylistStatus() {
@@ -783,7 +774,6 @@ function render(result) {
   const pending = result.items.filter(item => !item.done);
   const pendingKeys = new Set(pending.filter(item => item.type === '강의').map(item => item.key));
   for (const key of selectedLectureKeys) if (!pendingKeys.has(key)) selectedLectureKeys.delete(key);
-  if (!pendingKeys.size) selectingLectures = false;
   const completed = result.items.filter(item => item.done);
   const lectures = pending.filter(item => item.type === '강의');
   document.querySelector('#lecture').replaceChildren(
@@ -839,7 +829,7 @@ async function load() {
       failedAssignmentCourses: result.failedAssignmentCourses, failedModuleCourses: result.failedModuleCourses,
       courseCount: result.courseCount, grades: result.grades, gradeCourses: result.gradeCourses,
       announcements: result.announcements
-    } }).catch(() => {});
+    } }).catch(logPopup('일정 저장 실패'));
   } catch (error) {
     const closedTab = /No tab with id|tab was closed|No tab with given id/i.test(String(error?.message));
     showError(closedTab
@@ -899,7 +889,6 @@ async function startPlaylist() {
       type: 'icampus-playlist-start', tabId: activeTab.id, queue
     });
     if (!response?.ok) throw new Error(response?.error || '재생 목록을 시작하지 못했어요.');
-    selectingLectures = false;
     selectedLectureKeys.clear();
     render(lastResult);
   } catch (error) {
@@ -945,11 +934,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.permissions.onAdded.addListener(refreshErrorLogPermission);
   chrome.permissions.onRemoved.addListener(refreshErrorLogPermission);
   // Do not let the optional error-log row block the rest of the popup.
-  refreshErrorLogPermission().catch(() => {});
+  refreshErrorLogPermission().catch(logPopup('오류 기록 권한 확인 실패'));
   document.querySelector('#exam-keep').addEventListener('toggle', event => {
     const keep = event.currentTarget;
     keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '고르기';
-    if (keep.open) renderExamKeepList().catch(() => {});
+    if (keep.open) renderExamKeepList().catch(logPopup('시험 중 켤 확장 목록 실패'));
   });
   // Shortcut: manifest commands._execute_action (suggested Alt+Shift+K). Users
   // change it on the browser's extension shortcuts page.
@@ -958,9 +947,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const key = commands.find(command => command.name === '_execute_action')?.shortcut;
     shortcutStatus.textContent = key ? key.replace(/\+/g, ' + ') + ' 키로 열어요'
       : '단축키가 없어요. 바꾸기에서 정할 수 있어요';
-  }).catch(() => {});
+  }).catch(logPopup('단축키 조회 실패'));
   document.querySelector('#shortcut-change').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }).catch(() => {});
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }).catch(logPopup('단축키 화면 열기 실패'));
   });
   // 영상 저장: the optional permissions are the switch (D-019, same set as background.js).
   const videoPermissions = { permissions: ['downloads'], origins: ['https://vod.skku.edu/*'] };
@@ -973,7 +962,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       option.setAttribute('aria-checked', String((option.dataset.videoSave === 'true') === enabled)));
     return enabled;
   }
-  refreshVideoSave().catch(() => {});
+  refreshVideoSave().catch(logPopup('영상 저장 상태 확인 실패'));
   for (const option of videoOptions) {
     option.addEventListener('click', async () => {
       const enable = option.dataset.videoSave === 'true';
@@ -1047,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.local.get(['alertLeadMinutes', 'dailySummaryTime', 'dailySummaryClock']).then(saved => {
     showLeads(savedLeads(saved.alertLeadMinutes));
     showSummary(Boolean(saved.dailySummaryTime), validClock(saved.dailySummaryTime || saved.dailySummaryClock));
-  }).catch(() => {});
+  }).catch(logPopup('알림 시점 설정 읽기 실패'));
   leadOpen.addEventListener('click', () => setLeadEditor(leadEditor.hidden));
   for (const option of leadOptions) {
     option.addEventListener('click', async () => {
@@ -1073,9 +1062,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   const showActivityNotify = enabled => activityOptions.forEach(option =>
     option.setAttribute('aria-checked', String((option.dataset.activityNotify === 'true') === enabled)));
-  chrome.storage.local.get('notifyEnabled').then(saved => showNotify(saved.notifyEnabled !== false)).catch(() => {});
+  chrome.storage.local.get('notifyEnabled').then(saved => showNotify(saved.notifyEnabled !== false)).catch(logPopup('알림 설정 읽기 실패'));
   chrome.storage.local.get('activityNotifyEnabled').then(saved =>
-    showActivityNotify(saved.activityNotifyEnabled !== false)).catch(() => {});
+    showActivityNotify(saved.activityNotifyEnabled !== false)).catch(logPopup('공지 알림 설정 읽기 실패'));
   for (const option of notifyOptions) {
     option.addEventListener('click', async () => {
       const enabled = option.dataset.notify === 'true';
@@ -1141,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     lectureStatus.textContent = message || (on ? '로그아웃해도 강의 마감을 같이 확인하고 있어요'
       : '로그아웃해도 강의 마감까지 확인해요');
   };
-  chrome.permissions.contains(cookiePermission).then(on => showLectureAccess(on)).catch(() => {});
+  chrome.permissions.contains(cookiePermission).then(on => showLectureAccess(on)).catch(logPopup('쿠키 권한 확인 실패'));
   for (const option of lectureOptions) {
     option.addEventListener('click', async () => {
       const on = option.dataset.lectureAccess === 'true';
@@ -1150,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           : !(await chrome.permissions.remove(cookiePermission));
         showLectureAccess(granted, on && !granted ? '권한을 허용해야 강의 일정도 확인할 수 있어요' : '');
       } catch {
-        showLectureAccess(await chrome.permissions.contains(cookiePermission).catch(() => false),
+        showLectureAccess(await chrome.permissions.contains(cookiePermission).catch(error => { logPopup('쿠키 권한 확인 실패')(error); return false; }),
           '설정을 바꾸지 못했어요. 다시 눌러 주세요');
       }
     });
@@ -1222,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tokenBusy) return;
     setTokenBusy(true);
     try { await tokenMessage({ type: 'icampus-canvas-token-clear' }, 15000); }
-    catch { /* The status refresh below shows what is stored. */ }
+    catch (error) { logPopup('Canvas 토큰 지우기 실패')(error); /* The status refresh below shows what is stored. */ }
     finally { setTokenBusy(false); }
     setTokenEditor(false);
     await refreshCanvasToken();
@@ -1238,12 +1227,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   refreshCanvasToken();
   // Google Calendar: the worker signs in and syncs (gcal.js); the popup only
-  // keeps the user's own OAuth client ID and asks for the optional permissions.
+  // hands over the user's own OAuth client and asks for the optional permissions.
   const gcalOpen = document.querySelector('#gcal-open');
+  const gcalKeep = document.querySelector('#gcal-keep');
   const gcalDisconnect = document.querySelector('#gcal-disconnect');
   const gcalStatus = document.querySelector('#gcal-status');
   const gcalEditor = document.querySelector('#gcal-editor');
   const gcalClient = document.querySelector('#gcal-client');
+  const gcalSecret = document.querySelector('#gcal-secret');
   const gcalConnect = document.querySelector('#gcal-connect');
   const gcalClose = document.querySelector('#gcal-close');
   const gcalHelp = document.querySelector('#gcal-help');
@@ -1251,72 +1242,147 @@ document.addEventListener('DOMContentLoaded', async () => {
     origins: ['https://www.googleapis.com/*', 'https://oauth2.googleapis.com/*'] };
   const gcalErrors = {
     cancelled: '연결을 취소했어요', client: '클라이언트 ID를 다시 확인해 주세요',
+    secret: '보안 비밀번호를 다시 확인해 주세요',
     permission: '권한을 허용해야 연결할 수 있어요', network: '연결하지 못했어요. 다시 눌러 주세요'
   };
+  // Why the worker gave up; each names what the user can do about it.
+  const gcalLost = {
+    'google-login': '구글 로그인이 풀려서 끊겼어요. 다시 연결해 주세요',
+    'account-choice': '구글 계정을 고를 수 없어 끊겼어요. 다시 연결해 주세요',
+    consent: '구글 권한 동의가 필요해요. 다시 연결해 주세요',
+    'token-revoked': '구글에서 연결이 해제됐어요. 다시 연결해 주세요',
+    'client-secret': '보안 비밀번호가 맞지 않아요. 연결 유지에서 다시 넣어 주세요',
+    'testing-expired': '구글 클라우드 앱이 테스트 상태라 7일마다 끊겨요. 게시 상태를 프로덕션으로 바꿔 주세요'
+  };
+  const gcalHelpText = '보안 비밀번호까지 넣으면 구글 로그인이 풀려도 연결이 이어져요. 만드는 방법은 README에 있어요';
   let gcalHasClient = false;
-  function setGcalEditor(open) {
+  let gcalPermitted = false;
+  let gcalWaiting = false;
+  function setGcalEditor(open, from = gcalOpen) {
     gcalEditor.hidden = !open;
-    gcalOpen.setAttribute('aria-expanded', String(open));
-    if (open) gcalClient.focus();
+    for (const control of [gcalOpen, gcalKeep]) control.setAttribute('aria-expanded', String(open && control === from));
+    if (open) {
+      gcalHelp.textContent = gcalHelpText;
+      (gcalHasClient ? gcalSecret : gcalClient).focus();
+    }
+  }
+  function gcalTime(ms) {
+    const at = new Date(ms);
+    const day = at.toDateString() === new Date().toDateString() ? '' : (at.getMonth() + 1) + '월 ' + at.getDate() + '일 ';
+    return day + at.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
   }
   function showGcal(status) {
     gcalHasClient = Boolean(status?.hasClientId);
+    gcalClient.placeholder = gcalHasClient ? '저장된 클라이언트 ID 그대로 쓰기' : '클라이언트 ID 붙여 넣기';
     const connected = Boolean(status?.enabled);
     const lost = connected && status.problem === 'reconnect';
-    gcalOpen.hidden = connected && !lost;
-    gcalOpen.textContent = lost ? '다시 연결' : '연결하기';
+    // An old connection without the calendar-list grant reconnects to merge duplicates.
+    const relink = lost || connected && Boolean(status.needsListConsent);
+    gcalOpen.hidden = connected && !relink;
+    gcalOpen.textContent = relink ? '다시 연결' : '연결하기';
+    gcalKeep.hidden = !connected || (relink && status.reason !== 'client-secret') || Boolean(status.offline) && status.reason !== 'client-secret';
     gcalDisconnect.hidden = !connected;
-    if (connected) setGcalEditor(false);
-    gcalStatus.textContent = lost ? '연결이 끊겼어요. 다시 연결해 주세요'
-      : connected ? '아캠 플러스 캘린더에 일정 ' + (status.count || 0) + '개를 맞추고 있어요'
-        : '즐겨찾기 과목 일정을 구글 캘린더에 넣어요';
+    if (gcalWaiting) return;
+    gcalStatus.textContent = status?.connectError ? gcalErrors[status.connectError] || gcalErrors.network
+      : lost ? gcalLost[status.reason] || '연결이 끊겼어요. 다시 연결해 주세요'
+        : connected && status.problem === 'network' ? '지금은 구글에 닿지 않아요. 1시간 안에 다시 맞출게요'
+          : connected && status.needsListConsent ? '다시 연결하면 아캠 플러스 캘린더를 하나로 합쳐요'
+          : connected && status.lastSyncAt ? gcalTime(status.lastSyncAt) + '에 일정 ' + (status.count || 0) + '개를 맞췄어요'
+            + (status.merged ? '. 겹친 캘린더 ' + status.merged + '개를 정리했어요' : '')
+            : connected ? '아캠 플러스 캘린더에 일정을 넣는 중이에요'
+              : '즐겨찾기 과목 일정을 구글 캘린더에 넣어요';
   }
   async function refreshGcal() {
-    try { showGcal(await tokenMessage({ type: 'icampus-gcal-status' }, 5000)); } catch { /* Keep the default text. */ }
+    try { showGcal(await tokenMessage({ type: 'icampus-gcal-status' }, 5000)); }
+    catch (error) { logPopup('구글 캘린더 상태 확인 실패')(error); /* Keeps the default text. */ }
   }
-  // The permission prompt must come straight from the click, before any other await.
-  async function connectGcal(clientId) {
-    let granted = false;
-    try { granted = await chrome.permissions.request(gcalPermission); } catch { /* Shown below. */ }
-    if (!granted) { gcalHelp.textContent = gcalStatus.textContent = gcalErrors.permission; return; }
-    if (clientId) await chrome.storage.local.set({ gcalClientId: clientId });
+  function gcalDone(text) {
+    gcalWaiting = false;
+    for (const control of [gcalOpen, gcalKeep, gcalConnect]) control.disabled = false;
+    if (text) gcalStatus.textContent = gcalHelp.textContent = text;
+  }
+  // Called straight from the click: permissions.request needs the user gesture,
+  // so nothing is awaited before it. The prompt can close the popup; the worker
+  // then sees the new permission and opens the Google sign-in by itself.
+  function connectGcal(clientId, clientSecret) {
+    const prepared = tokenMessage({ type: 'icampus-gcal-prepare',
+      ...(clientId ? { clientId } : {}), ...(clientSecret ? { clientSecret } : {}) }, 10000)
+      .catch(error => { logPopup('구글 캘린더 준비 요청 실패')(error); return { error: 'network' }; });
+    const permitted = gcalPermitted;
+    const granted = permitted ? Promise.resolve(true) : chrome.permissions.request(gcalPermission)
+      .catch(error => { logPopup('구글 캘린더 권한 요청 실패')(error); return false; });
+    gcalWaiting = true;
+    for (const control of [gcalOpen, gcalKeep, gcalConnect]) control.disabled = true;
     gcalStatus.textContent = '구글 로그인 창에서 계속해 주세요';
-    for (const control of [gcalOpen, gcalConnect]) control.disabled = true;
-    try {
-      const result = await tokenMessage({ type: 'icampus-gcal-connect' }, 180000);
-      if (result?.error) gcalStatus.textContent = gcalHelp.textContent = gcalErrors[result.error] || gcalErrors.network;
-      else await refreshGcal();
-    } catch {
-      gcalStatus.textContent = gcalErrors.network;
-    } finally {
-      for (const control of [gcalOpen, gcalConnect]) control.disabled = false;
-    }
+    (async () => {
+      const ready = await prepared;
+      if (!(await granted)) return gcalDone(gcalErrors.permission);
+      if (ready?.error) return gcalDone(gcalErrors[ready.error] || gcalErrors.network);
+      gcalPermitted = true;
+      // A new grant: the worker already started; storage changes refresh the status.
+      if (!permitted) {
+        setTimeout(() => { if (gcalWaiting) { gcalDone(); refreshGcal(); } }, 180000);
+        return;
+      }
+      try {
+        const result = await tokenMessage({ type: 'icampus-gcal-connect' }, 180000);
+        if (result?.error) return gcalDone(gcalErrors[result.error] || gcalErrors.network);
+        gcalDone();
+        setGcalEditor(false);
+        await refreshGcal();
+      } catch (error) { logPopup('구글 캘린더 연결 요청 실패')(error); gcalDone(gcalErrors.network); }
+    })();
   }
   gcalOpen.addEventListener('click', () => {
-    if (gcalHasClient) connectGcal(null);
-    else setGcalEditor(gcalEditor.hidden);
+    if (gcalHasClient) connectGcal(null, null);
+    else setGcalEditor(gcalEditor.hidden, gcalOpen);
   });
+  gcalKeep.addEventListener('click', () => setGcalEditor(gcalEditor.hidden, gcalKeep));
   gcalConnect.addEventListener('click', () => {
     const clientId = gcalClient.value.trim();
-    if (!/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+    const clientSecret = gcalSecret.value.trim();
+    if (clientId && !/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId) || !clientId && !gcalHasClient) {
       gcalHelp.textContent = '숫자로 시작하고 .apps.googleusercontent.com으로 끝나는 ID예요';
       gcalClient.focus();
       return;
     }
-    connectGcal(clientId);
+    if (clientSecret && !/^[\x21-\x7e]{10,200}$/.test(clientSecret)) {
+      gcalHelp.textContent = gcalErrors.secret;
+      gcalSecret.focus();
+      return;
+    }
+    gcalSecret.value = '';
+    connectGcal(clientId || null, clientSecret || null);
   });
-  gcalClose.addEventListener('click', () => { setGcalEditor(false); gcalOpen.focus(); });
-  gcalClient.addEventListener('keydown', event => {
-    if (event.isComposing) return;
-    if (event.key === 'Enter') { event.preventDefault(); gcalConnect.click(); }
-    else if (event.key === 'Escape') { event.preventDefault(); setGcalEditor(false); gcalOpen.focus(); }
+  gcalClose.addEventListener('click', () => {
+    const from = gcalKeep.getAttribute('aria-expanded') === 'true' ? gcalKeep : gcalOpen;
+    setGcalEditor(false);
+    from.focus();
   });
+  for (const input of [gcalClient, gcalSecret]) {
+    input.addEventListener('keydown', event => {
+      if (event.isComposing) return;
+      if (event.key === 'Enter') { event.preventDefault(); gcalConnect.click(); }
+      else if (event.key === 'Escape') { event.preventDefault(); gcalClose.click(); }
+    });
+  }
   gcalDisconnect.addEventListener('click', async () => {
     gcalDisconnect.disabled = true;
-    try { await tokenMessage({ type: 'icampus-gcal-disconnect' }, 10000); } catch { /* Refresh shows the state. */ }
+    try { await tokenMessage({ type: 'icampus-gcal-disconnect' }, 10000); }
+    catch (error) { logPopup('구글 캘린더 연결 끊기 실패')(error); /* Refresh shows the state. */ }
     gcalDisconnect.disabled = false;
     await refreshGcal();
   });
+  // The worker finishes a sign-in begun before a permission prompt, and syncs hourly.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !(changes.gcalEnabled || changes.gcalState)) return;
+    if (gcalWaiting && (changes.gcalEnabled?.newValue === true || changes.gcalState?.newValue?.connectError)) {
+      gcalDone();
+      if (changes.gcalEnabled?.newValue === true) setGcalEditor(false);
+    }
+    refreshGcal();
+  });
+  chrome.permissions.contains(gcalPermission).then(value => { gcalPermitted = value; }, logPopup('구글 캘린더 권한 확인 실패'));
   refreshGcal();
   for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
     option.addEventListener('click', async () => {
@@ -1365,19 +1431,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (area === 'session' && (changes.examTabs || changes.examBlockedCount ||
         changes.examDisabledIds || changes.examRestoreManualIds)) {
-      refreshExamPresentation().catch(() => {});
+      refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
     }
     if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen ||
         changes.examDisabledIds || changes.examRestorePending || changes.examRestoreManual ||
         changes.examNotificationsBlocked)) {
-      refreshExamPresentation().catch(() => {});
+      refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
     }
   });
   try {
     const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme', 'icampusPlaylistDraft', 'assignmentView']);
     if (saved.assignmentView === 'all') assignmentView = 'all';
     if (saved.icampusPlaylistDraft) {
-      selectingLectures = Boolean(saved.icampusPlaylistDraft.selecting);
       for (const key of saved.icampusPlaylistDraft.keys || []) selectedLectureKeys.add(key);
     }
     if (['auto', 'light', 'dark'].includes(saved.screenMode)) screenMode = saved.screenMode;
@@ -1391,7 +1456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       await chrome.storage.local.remove(['darkMode', 'icampusTheme']);
     }
-  } catch { /* Keep automatic color when storage is unavailable. */ }
+  } catch (error) { logPopup('화면 모드 읽기 실패')(error); /* Keeps automatic color. */ }
   document.querySelector('#theme-toggle').addEventListener('click', () => {
     setScreenMode(darkMode() ? 'light' : 'dark');
   });
@@ -1419,7 +1484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (!activeTab || new URL(activeTab.url).origin !== CANVAS_ORIGIN) throw new Error();
   } catch {
-    showError('canvas.skku.edu에 로그인한 탭에서 확장을 열어 주세요.');
+    showError('canvas.skku.edu에 로그인한 탭에서 확장을 열어 주세요.', false);
     document.querySelector('#refresh-button').disabled = true;
     return;
   }

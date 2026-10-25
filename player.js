@@ -6,13 +6,20 @@
   const PLAYER_VERSION = chrome.runtime.getManifest().version;
   if (window.__icampusCheckPlayer) return;
   window.__icampusCheckPlayer = true;
+  const logPlayer = (description, error) => {
+    const message = String(error?.message || '알 수 없는 오류');
+    // Navigation, user cancellation and extension reload are expected here.
+    if (error?.name === 'AbortError' ||
+        /No tab with id|Frame with ID|Extension context invalidated/i.test(message)) return;
+    reportError('player', description + ': ' + message, { stack: error?.stack });
+  };
   let examBlocked = true;
   const checkExam = async () => {
     try {
       const status = await chrome.runtime.sendMessage({ type: 'exam-status' });
       if (typeof status?.guard !== 'boolean') throw new Error('시험 상태를 확인하지 못함');
       examBlocked = status.guard && (status.manual || status.examTabs > 0);
-    } catch { examBlocked = true; }
+    } catch (error) { examBlocked = true; logPlayer('시험 상태 확인 실패', error); }
   };
   await checkExam();
 
@@ -123,7 +130,8 @@
 
   function sendState(state) {
     if (!playlistKey) return;
-    chrome.runtime.sendMessage({ type: 'icampus-player-state', key: playlistKey, state }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'icampus-player-state', key: playlistKey, state })
+      .catch(error => logPlayer('재생 상태 전달 실패', error));
   }
 
   function reportMutedFallback(element) {
@@ -150,14 +158,15 @@
         Promise.resolve(playPromise).then(() => true, () => false),
         new Promise(resolve => { timeout = setTimeout(() => resolve(false), 1200); })
       ]);
-    } catch { return false; }
+    } catch { /* Autoplay rejection is an expected permission decision. */ return false; }
     finally { clearTimeout(timeout); }
   }
 
   // Silent means muted or volume 0. The school player's mute button sets volume 0.
   const silent = element => element.muted || element.volume === 0;
   const markPlaylistDefaultsDirty = () => {
-    chrome.storage.local.set({ playerDefaultsDirty: true }).catch(() => {});
+    chrome.storage.local.set({ playerDefaultsDirty: true })
+      .catch(error => logPlayer('재생 기본값 저장 실패', error));
   };
 
   // Without a click (or the AutoplayAllowlist policy) Whale only autoplays a silent
@@ -224,7 +233,7 @@
       if (!directTabMuted || !element || silent(element) || examBlocked) return;
       chrome.runtime.sendMessage({ type: 'icampus-direct-mute', muted: false })
         .then(response => { if (typeof response?.muted === 'boolean') directTabMuted = response.muted; })
-        .catch(() => {});
+        .catch(error => logPlayer('직접 재생 음소거 해제 실패', error));
     }, 400);
   }
   document.addEventListener('pointerdown', noteDirectInput, true);
@@ -254,7 +263,7 @@
       if (directTabMuted) {
         chrome.runtime.sendMessage({ type: 'icampus-direct-mute', muted: false })
           .then(response => { if (typeof response?.muted === 'boolean') directTabMuted = response.muted; })
-          .catch(() => {});
+          .catch(error => logPlayer('직접 재생 음소거 처리 실패', error));
       }
       return;
     }
@@ -273,7 +282,7 @@
       if (typeof response?.muted === 'boolean') directTabMuted = response.muted;
       else if (!examBlocked) element.volume = 0;
       if (element.paused && !examBlocked) await playWithin(element);
-    } catch { if (!examBlocked) element.volume = 0; }
+    } catch (error) { logPlayer('직접 재생 음소거 처리 실패', error); if (!examBlocked) element.volume = 0; }
     finally { directMutePending.delete(element); }
   }
   document.addEventListener('volumechange', handleDirectMute, true);
@@ -286,7 +295,8 @@
     if (element.playbackRate !== 1) element.playbackRate = 1;
     if (element.volume === 0) element.volume = 1;
     directResetDefaults = false;
-    chrome.storage.local.set({ playerDefaultsDirty: false }).catch(() => {});
+    chrome.storage.local.set({ playerDefaultsDirty: false })
+      .catch(error => logPlayer('재생 기본값 복원 기록 실패', error));
   }
   document.addEventListener('playing', event => {
     if (!(event.target instanceof HTMLVideoElement)) return;
@@ -429,7 +439,7 @@
       currentTime: Number.isFinite(element.currentTime) ? element.currentTime : 0,
       duration: Number.isFinite(element.duration) ? element.duration : 0,
       rate: element.playbackRate, paused: element.paused
-    }).catch(() => {});
+    }).catch(error => logPlayer('재생 진행 상태 전달 실패', error));
   }
 
   function watchProgress(element) {
@@ -581,7 +591,7 @@
         }
         if (!response?.start) { readyRequested = false; return; }
         startPlaylist(response);
-      }).catch(() => { readyRequested = false; });
+      }).catch(error => { readyRequested = false; logPlayer('재생목록 연결 실패', error); });
     return true;
   }
 
@@ -646,7 +656,8 @@
         if (element && !isIntro(element)) {
           // Native media speed is a fallback if the school's menu changed.
           // Never set a rate above the school's stated 2x ceiling.
-          try { markPlaylistDefaultsDirty(); element.playbackRate = 2; } catch { /* Restricted player. */ }
+          try { markPlaylistDefaultsDirty(); element.playbackRate = 2; }
+          catch (error) { logPlayer('재생 속도 적용 실패', error); }
           if (element.playbackRate >= 1.99 && element.playbackRate <= 2.01) sendState('speed-2x');
           else sendState('speed-unavailable');
         }
@@ -665,8 +676,9 @@
     if (!id) return [];
     const response = await fetch('/viewer/ssplayer/uniplayer_support/content.php?content_id=' + encodeURIComponent(id),
       { credentials: 'include' });
-    if (!response.ok) return [];
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     const xml = new DOMParser().parseFromString(await response.text(), 'text/xml');
+    if (xml.querySelector('parsererror')) throw new Error('영상 목록 XML 파싱 실패');
     const uri = name => xml.querySelector(name + ' > desktop > html5 > media_uri')?.textContent.trim() || '';
     const files = [['sub', uri('sub_media')], ['main', uri('main_media')]]
       .filter(([, url]) => /^https:\/\/[a-z0-9.-]+\.skku\.edu\/\S+\.mp4$/i.test(url));
@@ -676,7 +688,7 @@
   async function videoSaveEnabled() {
     if (examBlocked) return false;
     try { return (await chrome.runtime.sendMessage({ type: 'icampus-video-save-status' }))?.enabled === true; }
-    catch { return false; }
+    catch (error) { logPlayer('영상 저장 권한 확인 실패', error); return false; }
   }
 
   const mediaFound = () => lectureMedia().then(media => ({ media, title: document.title }));
@@ -687,7 +699,7 @@
     if (!(await videoSaveEnabled())) return;
     // Look the files up once now, so a click starts the download at once; a
     // failed lookup is tried again on the click.
-    let ready = mediaFound().catch(() => null);
+    let ready = mediaFound().catch(error => { logPlayer('영상 주소 조회 실패', error); return null; });
     const getMedia = async () => (await ready)?.media?.length ? ready : (ready = mediaFound());
     const place = () => {
       const fullscreen = document.querySelector('.vc-pctrl-buttons-bar > .vc-pctrl-fullscreen-btn');

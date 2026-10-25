@@ -9,7 +9,7 @@
   const T = globalThis.ICDTransform;
   if (!T) return;
   let perfEnabled = location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.name);
-  try { perfEnabled ||= window.parent !== window && (window.parent.location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.parent.name)); } catch (e) {}
+  try { perfEnabled ||= window.parent !== window && (window.parent.location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.parent.name)); } catch (e) { /* 다른 출처 부모의 성능 옵션은 읽지 않는다. */ }
   const perf = perfEnabled ? { scans: 0, rules: 0, converted: 0, ms: 0, firstMs: 0, polls: 0 } : null;
   const publishPerf = () => { if (perf) root.dataset.icdStylesPerf = JSON.stringify(perf); };
 
@@ -54,7 +54,9 @@
   };
 
   function insert(target, rule) {
-    try { target.insertRule(rule, target.cssRules.length); } catch (e) { /* 이 브라우저가 못 읽는 선택자는 건너뛴다 */ }
+    try { target.insertRule(rule, target.cssRules.length); } catch (e) {
+      globalThis.icdLogError?.('dark', '다크 스타일 규칙 적용 실패', e);
+    }
   }
 
   function convertStyleRule(rule, target) {
@@ -88,7 +90,7 @@
         try {
           const index = target.insertRule(`${head} {}`, target.cssRules.length);
           queue.push({ rules: rule.cssRules, index: 0, target: target.cssRules[index] });
-        } catch (e) { /* 조건을 못 읽으면 건너뜀 */ }
+        } catch (e) { globalThis.icdLogError?.('dark', '다크 스타일 조건 적용 실패', e); }
       }
       // 한 번에 8ms 넘게 붙잡지 않는다(긴 작업 방지). 남은 규칙은 다음 유휴 시간에 이어서 한다
       if (n % 20 === 0 && performance.now() - sliceStart > SLICE_MS) { i++; break; }
@@ -115,7 +117,10 @@
     let changed = false;
     for (const sheet of candidateSheets()) {
       let rules;
-      try { rules = sheet.cssRules; } catch (e) { continue; }
+      try { rules = sheet.cssRules; } catch (e) {
+        // Cross-origin stylesheets deliberately deny cssRules access.
+        continue;
+      }
       if (lengths.get(sheet) === rules.length && !queue.some((q) => q.rules === rules)) continue;
       lengths.set(sheet, rules.length);
       queue.push({ rules, index: 0, source: sheet });
