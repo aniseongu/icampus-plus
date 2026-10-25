@@ -320,9 +320,23 @@ function displayDate(value) {
   return value ? dateToLocaleString(value) : '기한 없음';
 }
 
-function remainingTime(value, cell) {
+// A narrow column wraps between the date and "오후 3:15", never inside either.
+function appendDateParts(parent, text) {
+  text.split(/ (?=오[전후] )/).forEach((part, index) => {
+    if (index) parent.append(' ');
+    parent.append(element('span', 'nowrap', part));
+  });
+}
+
+// Past the deadline but still accepting late work: count down to that instead.
+function remainingTime(value, cell, lateUntil) {
   if (!value) return '기한 없음';
   const remaining = Date.parse(value) - Date.now();
+  const lateLeft = lateUntil ? Date.parse(lateUntil) - Date.now() : NaN;
+  if (remaining < 0 && lateLeft > 0) {
+    cell.classList.add('urgent');
+    return '지각 ' + msToTime(lateLeft);
+  }
   if (remaining < 0) {
     cell.classList.add('urgent');
     return '마감 지남';
@@ -436,13 +450,24 @@ function createTable(items, captionText, type, captionExtra) {
       makeTitleLink(title, item);
     }
     row.append(title);
-    row.append(element('td', '', displayDate(item.due)));
+    const dateCell = element('td');
+    appendDateParts(dateCell, displayDate(item.due));
+    if (item.lateUntil && !item.closed) {
+      // A short line under the deadline; the full sentence is the tooltip.
+      const late = new Date(item.lateUntil);
+      const lateLine = element('span', 'setting-help late-until');
+      appendDateParts(lateLine, '지각 ' + (late.getMonth() + 1) + '월 ' + late.getDate() + '일 ' +
+        late.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }));
+      lateLine.title = '지각 제출은 ' + displayDate(item.lateUntil) + '까지 받아요';
+      dateCell.append(lateLine);
+    }
+    row.append(dateCell);
     const timeCell = element('td');
     if (item.closed) {
       row.classList.add('closed-task');
       timeCell.textContent = closedText(item);
     } else {
-      timeCell.textContent = remainingTime(item.due, timeCell);
+      timeCell.textContent = remainingTime(item.due, timeCell, item.lateUntil);
     }
     row.append(timeCell);
     body.append(row);
@@ -648,7 +673,7 @@ function renderPlaylistStatus(state) {
     titleCell.title = replaceUnderbar(item.title);
     if (index === 0) titleCell.append(element('div', 'playlist-state', playlistStatusText(state)));
     const timeCell = element('td');
-    timeCell.textContent = remainingTime(item.due, timeCell);
+    timeCell.textContent = remainingTime(item.due, timeCell, item.lateUntil);
     const orderCell = element('td', 'playlist-order');
     // Every row has a grip. Whatever ends up first plays now, so dragging a lecture
     // to the top (or pressing ArrowUp on the second row) switches to it.
@@ -811,7 +836,9 @@ async function load() {
     chrome.runtime.sendMessage({ type: 'icampus-schedule', result: {
       items: result.items, doneLectureKeys: result.doneLectureKeys, userId: result.userId,
       assignmentSources: result.assignmentSources, moduleSources: result.moduleSources,
-      failedAssignmentCourses: result.failedAssignmentCourses, failedModuleCourses: result.failedModuleCourses
+      failedAssignmentCourses: result.failedAssignmentCourses, failedModuleCourses: result.failedModuleCourses,
+      courseCount: result.courseCount, grades: result.grades, gradeCourses: result.gradeCourses,
+      announcements: result.announcements
     } }).catch(() => {});
   } catch (error) {
     const closedTab = /No tab with id|tab was closed|No tab with given id/i.test(String(error?.message));
@@ -965,15 +992,103 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // Alerts: on by default. The worker reacts to the stored value (notify.js).
   const notifyOptions = [...document.querySelectorAll('#notify [data-notify]')];
-  const showNotify = enabled => notifyOptions.forEach(option =>
-    option.setAttribute('aria-checked', String((option.dataset.notify === 'true') === enabled)));
+  // New announcements and released grades follow the main switch: the row
+  // hides while alerts are off, like the exam rows under exam mode.
+  const activityRow = document.querySelector('#activity-notify-row');
+  const activityOptions = [...document.querySelectorAll('#activity-notify [data-activity-notify]')];
+  const leadRow = document.querySelector('#lead-row');
+  const leadOpen = document.querySelector('#lead-open');
+  const leadEditor = document.querySelector('#lead-editor');
+  const leadStatus = document.querySelector('#lead-status');
+  const leadOptions = [...document.querySelectorAll('#lead-choices [data-lead]')];
+  const summaryRow = document.querySelector('#summary-row');
+  const summaryTime = document.querySelector('#summary-time');
+  const summaryStatus = document.querySelector('#summary-status');
+  const summaryOptions = [...document.querySelectorAll('#summary [data-summary]')];
+  const setLeadEditor = open => {
+    leadEditor.hidden = !open;
+    leadOpen.setAttribute('aria-expanded', String(open));
+    leadOpen.textContent = open ? '닫기' : '바꾸기';
+  };
+  const showNotify = enabled => {
+    notifyOptions.forEach(option =>
+      option.setAttribute('aria-checked', String((option.dataset.notify === 'true') === enabled)));
+    for (const row of [leadRow, summaryRow, activityRow]) row.hidden = !enabled;
+    if (!enabled) setLeadEditor(false);
+  };
+  // Deadline alert moments: any of the six, saved on each tap (notify.js reads
+  // alertLeadMinutes). Nothing chosen means no deadline alerts.
+  const leadName = minutes => minutes >= 1440 ? (minutes === 1440 ? '하루' : minutes / 1440 + '일')
+    : minutes >= 60 ? minutes / 60 + '시간' : minutes + '분';
+  const showLeads = leads => {
+    leadOptions.forEach(option => option.setAttribute('aria-checked', String(leads.includes(Number(option.dataset.lead)))));
+    leadStatus.textContent = leads.length
+      ? '마감 ' + leads.map(lead => leadName(lead) + ' 전').join(', ') + '에 알려요'
+      : '마감 알림을 보내지 않아요';
+  };
+  const savedLeads = value => Array.isArray(value) && value.every(Number.isInteger)
+    ? [...new Set(value)].sort((a, b) => b - a) : [1440, 180];
+  // Daily summary: the time stays in the field while it is off, so turning it
+  // on uses the time shown (dailySummaryClock); dailySummaryTime is set only while on.
+  const clockText = value => {
+    const [hour, minute] = value.split(':').map(Number);
+    return (hour < 12 ? '오전 ' : '오후 ') + (hour % 12 || 12) + '시' + (minute ? ' ' + minute + '분' : '');
+  };
+  const showSummary = (on, clock) => {
+    summaryTime.value = clock;
+    summaryOptions.forEach(option =>
+      option.setAttribute('aria-checked', String((option.dataset.summary === 'true') === on)));
+    // From 18:00 the summary covers tomorrow too (notify.js), and says so.
+    const range = Number(clock.split(':')[0]) >= 18 ? '내일까지' : '오늘';
+    summaryStatus.textContent = on ? '매일 ' + clockText(clock) + '에 ' + range + ' 마감을 알려요'
+      : '하루 한 번 오늘 마감을 모아서 알려요';
+  };
+  const validClock = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : '09:00';
+  chrome.storage.local.get(['alertLeadMinutes', 'dailySummaryTime', 'dailySummaryClock']).then(saved => {
+    showLeads(savedLeads(saved.alertLeadMinutes));
+    showSummary(Boolean(saved.dailySummaryTime), validClock(saved.dailySummaryTime || saved.dailySummaryClock));
+  }).catch(() => {});
+  leadOpen.addEventListener('click', () => setLeadEditor(leadEditor.hidden));
+  for (const option of leadOptions) {
+    option.addEventListener('click', async () => {
+      option.setAttribute('aria-checked', String(option.getAttribute('aria-checked') !== 'true'));
+      const leads = leadOptions.filter(item => item.getAttribute('aria-checked') === 'true')
+        .map(item => Number(item.dataset.lead));
+      showLeads(leads);
+      await chrome.storage.local.set({ alertLeadMinutes: leads });
+    });
+  }
+  const saveSummary = async on => {
+    const clock = validClock(summaryTime.value);
+    showSummary(on, clock);
+    await chrome.storage.local.set({ dailySummaryClock: clock, dailySummaryTime: on ? clock : null });
+  };
+  for (const option of summaryOptions) {
+    option.addEventListener('click', () => saveSummary(option.dataset.summary === 'true'));
+  }
+  summaryTime.addEventListener('change', () => {
+    if (!summaryTime.value) return;
+    saveSummary(summaryOptions.some(option => option.dataset.summary === 'true' &&
+      option.getAttribute('aria-checked') === 'true'));
+  });
+  const showActivityNotify = enabled => activityOptions.forEach(option =>
+    option.setAttribute('aria-checked', String((option.dataset.activityNotify === 'true') === enabled)));
   chrome.storage.local.get('notifyEnabled').then(saved => showNotify(saved.notifyEnabled !== false)).catch(() => {});
+  chrome.storage.local.get('activityNotifyEnabled').then(saved =>
+    showActivityNotify(saved.activityNotifyEnabled !== false)).catch(() => {});
   for (const option of notifyOptions) {
     option.addEventListener('click', async () => {
       const enabled = option.dataset.notify === 'true';
       showNotify(enabled);
       await chrome.storage.local.set({ notifyEnabled: enabled });
       refreshCanvasToken();
+    });
+  }
+  for (const option of activityOptions) {
+    option.addEventListener('click', async () => {
+      const enabled = option.dataset.activityNotify === 'true';
+      showActivityNotify(enabled);
+      await chrome.storage.local.set({ activityNotifyEnabled: enabled });
     });
   }
   // Canvas personal token: the worker keeps it (secrets.js) and only ever sends
@@ -992,9 +1107,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     'invalid-format': '토큰만 복사해서 붙여 넣어 주세요',
     rejected: '맞지 않는 토큰이에요. 다시 복사해서 넣어 주세요',
     'other-account': '알림을 받는 계정에서 만든 토큰을 넣어 주세요',
-    network: '아이캠퍼스에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요'
+    network: '아이캠퍼스에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요',
+    slow: '확인이 늦어지고 있어요. 잠시 뒤 팝업을 다시 열어 주세요'
   };
   let tokenBusy = false;
+  // The worker answers token messages without waiting for the scan, but a busy or
+  // just-woken worker can still be slow; the popup never waits on it forever.
+  const tokenMessage = (message, ms) => Promise.race([
+    chrome.runtime.sendMessage(message),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), ms))
+  ]);
   // Canvas names carry a masked student number in brackets; the name is enough here.
   const accountName = name => String(name || '').replace(/\s*\([^)]*\)\s*$/, '') || '내';
   function setTokenEditor(open) {
@@ -1007,11 +1129,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       tokenInput.value = '';
     }
   }
+  // Lecture schedule while signed out needs the optional cookies permission:
+  // the worker reads the LearningX cookie instead of a tab (notify.js).
+  const lectureRow = document.querySelector('#lecture-access-row');
+  const lectureStatus = document.querySelector('#lecture-access-status');
+  const lectureOptions = [...document.querySelectorAll('#lecture-access [data-lecture-access]')];
+  const cookiePermission = { permissions: ['cookies'] };
+  const showLectureAccess = (on, message) => {
+    lectureOptions.forEach(option =>
+      option.setAttribute('aria-checked', String((option.dataset.lectureAccess === 'true') === on)));
+    lectureStatus.textContent = message || (on ? '로그아웃해도 강의 마감을 같이 확인하고 있어요'
+      : '로그아웃해도 강의 마감까지 확인해요');
+  };
+  chrome.permissions.contains(cookiePermission).then(on => showLectureAccess(on)).catch(() => {});
+  for (const option of lectureOptions) {
+    option.addEventListener('click', async () => {
+      const on = option.dataset.lectureAccess === 'true';
+      try {
+        const granted = on ? await chrome.permissions.request(cookiePermission)
+          : !(await chrome.permissions.remove(cookiePermission));
+        showLectureAccess(granted, on && !granted ? '권한을 허용해야 강의 일정도 확인할 수 있어요' : '');
+      } catch {
+        showLectureAccess(await chrome.permissions.contains(cookiePermission).catch(() => false),
+          '설정을 바꾸지 못했어요. 다시 눌러 주세요');
+      }
+    });
+  }
   function showCanvasToken(status, scan, notifyOn) {
     const usable = Boolean(status?.set && !status.rejectedAt);
     tokenOpen.hidden = usable;
     tokenOpen.textContent = status?.rejectedAt ? '다시 넣기' : '토큰 넣기';
     tokenClear.hidden = !status?.set;
+    lectureRow.hidden = !usable;
     if (usable) setTokenEditor(false);
     const name = accountName(status?.name);
     if (status?.rejectedAt) {
@@ -1029,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function refreshCanvasToken() {
     try {
       const [status, saved] = await Promise.all([
-        chrome.runtime.sendMessage({ type: 'icampus-canvas-token-status' }),
+        tokenMessage({ type: 'icampus-canvas-token-status' }, 5000),
         chrome.storage.local.get(['icampusScanState', 'notifyEnabled'])
       ]);
       if (tokenBusy) return;
@@ -1056,22 +1205,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     tokenHelp.textContent = '토큰을 확인하고 있어요';
     let error = null;
     try {
-      error = (await chrome.runtime.sendMessage({ type: 'icampus-canvas-token-set', token }))?.error || null;
-    } catch {
-      error = 'network';
+      error = (await tokenMessage({ type: 'icampus-canvas-token-set', token }, 15000))?.error || null;
+    } catch (failure) {
+      error = failure?.message === 'slow' ? 'slow' : 'network';
     } finally {
       setTokenBusy(false);
     }
+    // A slow save may still have landed; the status read below closes the field if so.
     if (error) {
       tokenHelp.textContent = tokenErrors[error] || tokenErrors.network;
-      tokenInput.focus();
+      if (error !== 'slow') tokenInput.focus();
     }
     await refreshCanvasToken();
   }
   async function clearCanvasToken() {
     if (tokenBusy) return;
     setTokenBusy(true);
-    try { await chrome.runtime.sendMessage({ type: 'icampus-canvas-token-clear' }); }
+    try { await tokenMessage({ type: 'icampus-canvas-token-clear' }, 15000); }
     catch { /* The status refresh below shows what is stored. */ }
     finally { setTokenBusy(false); }
     setTokenEditor(false);
@@ -1087,6 +1237,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (event.key === 'Escape') { event.preventDefault(); setTokenEditor(false); tokenOpen.focus(); }
   });
   refreshCanvasToken();
+  // Google Calendar: the worker signs in and syncs (gcal.js); the popup only
+  // keeps the user's own OAuth client ID and asks for the optional permissions.
+  const gcalOpen = document.querySelector('#gcal-open');
+  const gcalDisconnect = document.querySelector('#gcal-disconnect');
+  const gcalStatus = document.querySelector('#gcal-status');
+  const gcalEditor = document.querySelector('#gcal-editor');
+  const gcalClient = document.querySelector('#gcal-client');
+  const gcalConnect = document.querySelector('#gcal-connect');
+  const gcalClose = document.querySelector('#gcal-close');
+  const gcalHelp = document.querySelector('#gcal-help');
+  const gcalPermission = { permissions: ['identity'],
+    origins: ['https://www.googleapis.com/*', 'https://oauth2.googleapis.com/*'] };
+  const gcalErrors = {
+    cancelled: '연결을 취소했어요', client: '클라이언트 ID를 다시 확인해 주세요',
+    permission: '권한을 허용해야 연결할 수 있어요', network: '연결하지 못했어요. 다시 눌러 주세요'
+  };
+  let gcalHasClient = false;
+  function setGcalEditor(open) {
+    gcalEditor.hidden = !open;
+    gcalOpen.setAttribute('aria-expanded', String(open));
+    if (open) gcalClient.focus();
+  }
+  function showGcal(status) {
+    gcalHasClient = Boolean(status?.hasClientId);
+    const connected = Boolean(status?.enabled);
+    const lost = connected && status.problem === 'reconnect';
+    gcalOpen.hidden = connected && !lost;
+    gcalOpen.textContent = lost ? '다시 연결' : '연결하기';
+    gcalDisconnect.hidden = !connected;
+    if (connected) setGcalEditor(false);
+    gcalStatus.textContent = lost ? '연결이 끊겼어요. 다시 연결해 주세요'
+      : connected ? '아캠 플러스 캘린더에 일정 ' + (status.count || 0) + '개를 맞추고 있어요'
+        : '즐겨찾기 과목 일정을 구글 캘린더에 넣어요';
+  }
+  async function refreshGcal() {
+    try { showGcal(await tokenMessage({ type: 'icampus-gcal-status' }, 5000)); } catch { /* Keep the default text. */ }
+  }
+  // The permission prompt must come straight from the click, before any other await.
+  async function connectGcal(clientId) {
+    let granted = false;
+    try { granted = await chrome.permissions.request(gcalPermission); } catch { /* Shown below. */ }
+    if (!granted) { gcalHelp.textContent = gcalStatus.textContent = gcalErrors.permission; return; }
+    if (clientId) await chrome.storage.local.set({ gcalClientId: clientId });
+    gcalStatus.textContent = '구글 로그인 창에서 계속해 주세요';
+    for (const control of [gcalOpen, gcalConnect]) control.disabled = true;
+    try {
+      const result = await tokenMessage({ type: 'icampus-gcal-connect' }, 180000);
+      if (result?.error) gcalStatus.textContent = gcalHelp.textContent = gcalErrors[result.error] || gcalErrors.network;
+      else await refreshGcal();
+    } catch {
+      gcalStatus.textContent = gcalErrors.network;
+    } finally {
+      for (const control of [gcalOpen, gcalConnect]) control.disabled = false;
+    }
+  }
+  gcalOpen.addEventListener('click', () => {
+    if (gcalHasClient) connectGcal(null);
+    else setGcalEditor(gcalEditor.hidden);
+  });
+  gcalConnect.addEventListener('click', () => {
+    const clientId = gcalClient.value.trim();
+    if (!/^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+      gcalHelp.textContent = '숫자로 시작하고 .apps.googleusercontent.com으로 끝나는 ID예요';
+      gcalClient.focus();
+      return;
+    }
+    connectGcal(clientId);
+  });
+  gcalClose.addEventListener('click', () => { setGcalEditor(false); gcalOpen.focus(); });
+  gcalClient.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    if (event.key === 'Enter') { event.preventDefault(); gcalConnect.click(); }
+    else if (event.key === 'Escape') { event.preventDefault(); setGcalEditor(false); gcalOpen.focus(); }
+  });
+  gcalDisconnect.addEventListener('click', async () => {
+    gcalDisconnect.disabled = true;
+    try { await tokenMessage({ type: 'icampus-gcal-disconnect' }, 10000); } catch { /* Refresh shows the state. */ }
+    gcalDisconnect.disabled = false;
+    await refreshGcal();
+  });
+  refreshGcal();
   for (const option of document.querySelectorAll('#exam-fullscreen [data-fullscreen]')) {
     option.addEventListener('click', async () => {
       await chrome.storage.local.set({ examFullscreen: option.dataset.fullscreen === 'true' });

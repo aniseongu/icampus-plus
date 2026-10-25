@@ -1,4 +1,4 @@
-importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'notify.js');
+importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'gcal.js', 'notify.js');
 chrome.permissions.onAdded.addListener(added => {
   if (added.permissions?.includes('nativeMessaging')) ErrorLog.flushPending();
 });
@@ -693,16 +693,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
     'icampus-exam-blocked-count', 'icampus-error-log', 'icampus-canvas-token-status',
-    'icampus-canvas-token-set', 'icampus-canvas-token-clear'].includes(message.type)) return;
+    'icampus-canvas-token-set', 'icampus-canvas-token-clear',
+    'icampus-gcal-status', 'icampus-gcal-connect', 'icampus-gcal-disconnect', 'icampus-gcal-sync'].includes(message.type)) return;
+  if (message.type.startsWith('icampus-gcal-')) {
+    if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
+    Gcal.message(message.type).then(sendResponse, () => sendResponse({ error: 'network' }));
+    return true;
+  }
   if (message.type.startsWith('icampus-canvas-token-')) {
     if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('popup.html'))) return;
-    const task = message.type === 'icampus-canvas-token-status' ? CanvasToken.status() : queueNotify(async () => {
-      if (message.type === 'icampus-canvas-token-set') await CanvasToken.save(message.token);
-      else await CanvasToken.clear();
-      try { await backgroundScan(); await checkNotifications(); }
-      catch { /* The saved token remains valid; the next alarm retries the scan. */ }
-      return CanvasToken.status();
-    });
+    const task = message.type === 'icampus-canvas-token-status'
+      ? Promise.all([CanvasToken.status(), chrome.permissions.contains({ permissions: ['cookies'] })])
+        .then(([status, lectures]) => ({ ...status, lectures })) :
+      (message.type === 'icampus-canvas-token-set' ? CanvasToken.save(message.token) : CanvasToken.clear())
+        .then(status => {
+          queueNotify(async () => {
+            try { await backgroundScan(); await checkNotifications(); }
+            catch { /* The saved token remains valid; the next alarm retries the scan. */ }
+          });
+          return status;
+        });
     task.then(sendResponse, error => sendResponse({ error: error?.code || 'network' }));
     return true;
   }
@@ -771,7 +781,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     : message.type === 'icampus-schedule'
       ? queueNotify(async () => {
         await updateSchedule(message.result);
+        if (message.result && !message.result.fatal && Array.isArray(message.result.items)) await Gcal.syncIfEnabled();
         if (message.result && !message.result.fatal && Array.isArray(message.result.items)) {
+          await updateActivity(message.result);
           await recordScanSuccess({ usedToken: false, rejected: false });
         }
         await checkNotifications();
