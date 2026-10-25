@@ -1,6 +1,11 @@
 importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'gcal.js', 'notify.js');
 chrome.permissions.onAdded.addListener(added => {
   if (added.permissions?.includes('nativeMessaging')) ErrorLog.flushPending();
+  if (added.permissions?.includes('identity') ||
+      added.origins?.some(origin => Gcal.PERMISSIONS.origins.includes(origin))) {
+    Gcal.permissionAdded().catch(error => reportError('gcal', '구글 캘린더 권한 처리 실패: ' +
+      String(error?.message || 'unknown'), { stack: error?.stack }));
+  }
 });
 self.addEventListener('error', event => {
   reportError('worker', event.message || '알 수 없는 오류', { stack: event.error?.stack });
@@ -10,6 +15,12 @@ self.addEventListener('unhandledrejection', event => {
     { stack: event.reason?.stack });
 });
 const examSessionReady = chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+function logWorker(description, error, source = 'worker') {
+  const message = String(error?.message || error || '알 수 없는 오류');
+  // Closed tabs, absent frames and invalidated extension contexts are expected races.
+  if (/No tab with id|Frame with ID|Extension context invalidated|Receiving end does not exist/i.test(message)) return;
+  reportError(source, description + ': ' + message, { stack: error?.stack });
+}
 // Keep the playlist in the existing iCampus tab. The worker may be suspended
 // between videos, so chrome.storage.session is the source of truth.
 const STATE_KEY = 'icampusPlaylistState';
@@ -36,7 +47,7 @@ function queueExam(task) {
     await examSessionReady;
     return task();
   });
-  examQueue = next.catch(() => {});
+  examQueue = next.catch(() => {}); // Callers report the failed exam task.
   return next;
 }
 
@@ -125,26 +136,27 @@ async function notifyExamState() {
       const awake = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
       for (const tabId of Object.keys(awake)) await keepTabAwake(Number(tabId), false);
     });
-    messageQueue = task.catch(() => {});
+    messageQueue = task.catch(error => logWorker('시험 상태 정리 실패', error));
     await task;
   }
   for (const tab of tabs) {
-    chrome.tabs.sendMessage(tab.id, { type: 'icampus-exam-blocked', blocked }).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, { type: 'icampus-exam-blocked', blocked })
+      .catch(error => logWorker('시험 상태 전달 실패', error));
   }
 }
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.url === undefined && change.status !== 'complete') return;
-  queueExam(() => updateExamTab(tabId, change.url || tab.url)).catch(() => {});
+  queueExam(() => updateExamTab(tabId, change.url || tab.url)).catch(error => logWorker('시험 탭 갱신 실패', error));
 });
 chrome.tabs.onRemoved.addListener(tabId => {
-  queueExam(() => updateExamTab(tabId, null)).catch(() => {});
+  queueExam(() => updateExamTab(tabId, null)).catch(error => logWorker('시험 탭 제거 실패', error));
 });
-chrome.runtime.onStartup.addListener(() => { queueExam(reconcileExamTabs).catch(() => {}); });
-chrome.runtime.onInstalled.addListener(() => { queueExam(reconcileExamTabs).catch(() => {}); });
+chrome.runtime.onStartup.addListener(() => { queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 복원 실패', error)); });
+chrome.runtime.onInstalled.addListener(() => { queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 초기화 실패', error)); });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.examGuard || changes.examModeManual)) {
-    queueExam(notifyExamState).catch(() => {});
+    queueExam(notifyExamState).catch(error => logWorker('시험 상태 알림 실패', error));
   }
 });
 
@@ -158,7 +170,7 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
       if (old) await chrome.storage.local.set({ screenMode: old });
     }
     await chrome.storage.local.remove(['darkMode', 'icampusTheme']);
-  })().catch(() => {});
+  })().catch(error => logWorker('설정 마이그레이션 실패', error));
 });
 
 // 확장이 설치·업데이트·다시 로드되거나 웨일이 시작할 때, 이미 열려 있는 아이캠퍼스 탭에는 콘텐츠 스크립트가 들어가지 않는다(새로고침 전까지).
@@ -186,7 +198,7 @@ async function injectDarkIntoOpenTabs() {
   for (const tab of tabs) {
     if (!tab.id || tab.discarded || !tab.url) continue;
     if (new URL(tab.url).pathname.startsWith('/xn-sso/')) {
-      try { await injectDarkIntoLoginTab(tab); } catch (e) { /* 새로고침하면 manifest 주입이 한다 */ }
+      try { await injectDarkIntoLoginTab(tab); } catch (e) { logWorker('로그인 다크 모드 주입 실패', e, 'dark'); }
       continue;
     }
     try {
@@ -196,18 +208,18 @@ async function injectDarkIntoOpenTabs() {
       await chrome.scripting.insertCSS({ target: { tabId: tab.id, frameIds }, files: DARK_CSS });
       await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds }, files: DARK_JS });
     } catch (e) {
-      /* 접근할 수 없는 프레임이나 닫힌 탭은 건너뛴다. 새로고침하면 manifest 주입이 한다 */
+      logWorker('다크 모드 주입 실패', e, 'dark');
     }
   }
 }
-chrome.runtime.onInstalled.addListener(() => { injectDarkIntoOpenTabs(); });
-chrome.runtime.onStartup.addListener(() => { injectDarkIntoOpenTabs(); });
+chrome.runtime.onInstalled.addListener(() => { injectDarkIntoOpenTabs().catch(error => logWorker('열린 탭 다크 모드 주입 실패', error, 'dark')); });
+chrome.runtime.onStartup.addListener(() => { injectDarkIntoOpenTabs().catch(error => logWorker('시작 시 다크 모드 주입 실패', error, 'dark')); });
 
 function canvasUrl(value) {
   try {
     const url = new URL(value);
     return url.origin === 'https://canvas.skku.edu' ? url.href : null;
-  } catch { return null; }
+  } catch { /* Invalid external URLs are rejected by validation. */ return null; }
 }
 
 async function getState() {
@@ -227,13 +239,14 @@ async function keepTabAwake(tabId, awake) {
   if (awake) saved[tabId] = true; else delete saved[tabId];
   await chrome.storage.local.set({ [AWAKE_KEY]: saved });
   try { await chrome.tabs.update(tabId, { autoDiscardable: !awake }); }
-  catch { /* The tab may already be closed. */ }
+  catch (error) { logWorker('탭 절전 설정 실패', error); }
 }
 
 async function releasePlaylistMute(tabId) {
   const owned = (await chrome.storage.local.get(PLAYLIST_MUTED_KEY))[PLAYLIST_MUTED_KEY] || {};
   if (!owned[tabId]) return;
-  try { await chrome.tabs.update(tabId, { muted: false }); } catch { /* Closed tab. */ }
+  try { await chrome.tabs.update(tabId, { muted: false }); }
+  catch (error) { logWorker('재생목록 탭 음소거 해제 실패', error); }
   delete owned[tabId];
   await chrome.storage.local.set({ [PLAYLIST_MUTED_KEY]: owned });
 }
@@ -250,7 +263,7 @@ function canvasLectureUrl(url) {
     const parsed = new URL(url);
     return parsed.origin === 'https://canvas.skku.edu' &&
       /^\/courses\/\d+\/(?:modules\/items|external_tools)\/\d+(?:\/|$)/.test(parsed.pathname);
-  } catch { return false; }
+  } catch { /* Invalid lecture URLs are rejected by validation. */ return false; }
 }
 
 async function releaseDirectMute(tabId, closed = false) {
@@ -259,7 +272,7 @@ async function releaseDirectMute(tabId, closed = false) {
   if (!tabs[tabId]) return;
   if (!closed) {
     try { await chrome.tabs.update(tabId, { muted: false }); }
-    catch { /* Closed tab. */ }
+    catch (error) { logWorker('직접 재생 탭 음소거 해제 실패', error); }
   }
   delete tabs[tabId];
   await chrome.storage.local.set({ [DIRECT_MUTED_KEY]: tabs });
@@ -297,10 +310,12 @@ async function reconcileOwnedTabs(startup = false) {
     // Only lecture tabs: after a browser restart a reused id may belong to another tab.
     if (tab && canvasLectureUrl(tab.url) && !playlist && !directPlaying) {
       if (owned[DIRECT_MUTED_KEY][id] || owned[PLAYLIST_MUTED_KEY][id]) {
-        try { await chrome.tabs.update(tab.id, { muted: false }); } catch { /* Tab changed. */ }
+        try { await chrome.tabs.update(tab.id, { muted: false }); }
+        catch (error) { logWorker('탭 음소거 복원 실패', error); }
       }
       if (owned[AWAKE_KEY][id]) {
-        try { await chrome.tabs.update(tab.id, { autoDiscardable: true }); } catch { /* Tab changed. */ }
+        try { await chrome.tabs.update(tab.id, { autoDiscardable: true }); }
+        catch (error) { logWorker('탭 절전 복원 실패', error); }
       }
     }
     // A lecture still playing after a reload keeps our mute; hand it to the direct
@@ -366,7 +381,8 @@ async function openQueueHead(state, claim = false) {
     const tab = await chrome.tabs.get(next.tabId);
     if (tab.url === next.queue[0].url) await chrome.tabs.reload(next.tabId);
     else await chrome.tabs.update(next.tabId, { url: next.queue[0].url });
-    chrome.tabs.sendMessage(next.tabId, { type: 'icampus-playlist-probe' }).catch(() => {});
+    chrome.tabs.sendMessage(next.tabId, { type: 'icampus-playlist-probe' })
+      .catch(error => logWorker('재생목록 확인 실패', error));
   } catch (error) {
     await saveState({ ...next, status: 'error', error: error.message });
     throw error;
@@ -475,8 +491,13 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const source = vodUrl(url.searchParams.get('src'));
     if (!source) return new Response('', { status: 400 });
-    const upstream = await fetch(source, { credentials: 'include' });
-    if (!upstream.ok || !/^video\//.test(upstream.headers.get('content-type') || '')) return new Response('', { status: 502 });
+    let upstream;
+    try { upstream = await fetch(source, { credentials: 'include' }); }
+    catch (error) { logWorker('영상 다운로드 연결 실패', error); return new Response('', { status: 502 }); }
+    if (!upstream.ok || !/^video\//.test(upstream.headers.get('content-type') || '')) {
+      reportError('worker', '영상 다운로드 응답 실패: HTTP ' + upstream.status);
+      return new Response('', { status: 502 });
+    }
     const name = (url.searchParams.get('name') || '강의') + '.mp4';
     const headers = new Headers({ 'Content-Type': 'video/mp4',
       'Content-Disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(name) });
@@ -485,13 +506,14 @@ self.addEventListener('fetch', event => {
     // Keep the worker busy with a cheap API call while the file streams, so it
     // is not stopped as idle in the middle of a long lecture.
     const reader = upstream.body.getReader();
-    const keepAlive = setInterval(() => { chrome.runtime.getPlatformInfo().catch(() => {}); }, 20000);
+    const keepAlive = setInterval(() => { chrome.runtime.getPlatformInfo()
+      .catch(error => logWorker('영상 다운로드 워커 유지 실패', error)); }, 20000);
     const body = new ReadableStream({
       async pull(controller) {
         try {
           const { done, value } = await reader.read();
           if (done) { clearInterval(keepAlive); controller.close(); } else controller.enqueue(value);
-        } catch (error) { clearInterval(keepAlive); controller.error(error); }
+        } catch (error) { clearInterval(keepAlive); logWorker('영상 스트림 읽기 실패', error); controller.error(error); }
       },
       cancel(reason) { clearInterval(keepAlive); return reader.cancel(reason); }
     });
@@ -519,17 +541,19 @@ function watchVideoDownloads() {
     suggest({ filename: '아캠 플러스/' + (url.searchParams.get('name') || '강의') + '.mp4', conflictAction: 'uniquify' });
     // Each save has its own id in the address, so this closes only its own tab.
     chrome.tabs.query({}).then(tabs => tabs.filter(tab => (tab.url || tab.pendingUrl) === item.url)
-      .forEach(tab => chrome.tabs.remove(tab.id).catch(() => {}))).catch(() => {});
+      .forEach(tab => chrome.tabs.remove(tab.id).catch(error => logWorker('영상 저장 탭 닫기 실패', error))))
+      .catch(error => logWorker('영상 저장 탭 조회 실패', error));
   });
   chrome.downloads.onChanged.addListener(async delta => {
     if (delta.state?.current !== 'interrupted' || delta.error?.current === 'USER_CANCELED') return;
-    const [item] = await chrome.downloads.search({ id: delta.id }).catch(() => []);
+    const [item] = await chrome.downloads.search({ id: delta.id })
+      .catch(error => { logWorker('영상 다운로드 상태 조회 실패', error); return []; });
     const url = item && videoStreamUrl(item.url);
     if (!url || item.error === 'USER_CANCELED') return;
     chrome.notifications?.create('icampus-video-' + delta.id, {
       type: 'basic', iconUrl: 'icons/notify-lecture.png', title: '영상 다운로드가 끊겼어요',
       message: url.searchParams.get('name') || '강의', contextMessage: '강의 화면에서 다시 눌러 주세요', priority: 1
-    }).catch(() => {});
+    }).catch(error => logWorker('영상 다운로드 알림 실패', error));
   });
 }
 watchVideoDownloads();
@@ -549,7 +573,7 @@ async function lectureName(tabId) {
     const course = crumbs[1].split('_')[0].trim();
     const module = crumbs.length >= 5 ? crumbs[crumbs.length - 2] : '';
     return [course, module, crumbs[crumbs.length - 1]].filter(Boolean).join(' ');
-  } catch { return null; }
+  } catch (error) { logWorker('강의 이름 조회 실패', error); return null; }
 }
 
 async function saveLectureVideo(message, sender) {
@@ -581,11 +605,11 @@ async function openLecture(message) {
   if (Number.isInteger(message.openerTabId)) options.openerTabId = message.openerTabId;
   let tab;
   try { tab = await chrome.tabs.create(options); }
-  catch { tab = await chrome.tabs.create({ url, active: options.active }); }
+  catch (error) { logWorker('강의 탭 열기 옵션 실패', error); tab = await chrome.tabs.create({ url, active: options.active }); }
   try {
     const saved = await chrome.storage.session.get(DIRECT_KEY);
     await chrome.storage.session.set({ [DIRECT_KEY]: { ...(saved[DIRECT_KEY] || {}), [tab.id]: Date.now() } });
-  } catch { /* The tab is open; only the launch-button help is skipped. */ }
+  } catch (error) { logWorker('강의 탭 연결 기록 실패', error); }
   return { ok: true };
 }
 
@@ -660,7 +684,7 @@ async function handlePlayerMessage(message, sender) {
     try {
       const rest = state.queue.slice(1);
       if (!rest.length) await finishPlaylist(state);
-      else await openQueueHead({ ...state, queue: rest }).catch(() => {});
+      else await openQueueHead({ ...state, queue: rest }).catch(() => {}); // saveState already recorded the failure.
     } finally { advanceLocks.delete(state.tabId); }
     return { ok: true };
   }
@@ -694,10 +718,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
     'icampus-exam-blocked-count', 'icampus-error-log', 'icampus-canvas-token-status',
     'icampus-canvas-token-set', 'icampus-canvas-token-clear',
-    'icampus-gcal-status', 'icampus-gcal-connect', 'icampus-gcal-disconnect', 'icampus-gcal-sync'].includes(message.type)) return;
+    'icampus-gcal-status', 'icampus-gcal-prepare', 'icampus-gcal-connect', 'icampus-gcal-disconnect', 'icampus-gcal-sync'].includes(message.type)) return;
   if (message.type.startsWith('icampus-gcal-')) {
     if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return;
-    Gcal.message(message.type).then(sendResponse, () => sendResponse({ error: 'network' }));
+    Gcal.message(message.type, message).then(sendResponse, error => {
+      reportError('gcal', '구글 캘린더 메시지 실패: ' + String(error?.message || 'unknown'),
+        { stack: error?.stack });
+      sendResponse({ error: 'network' });
+    });
     return true;
   }
   if (message.type.startsWith('icampus-canvas-token-')) {
@@ -709,11 +737,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(status => {
           queueNotify(async () => {
             try { await backgroundScan(); await checkNotifications(); }
-            catch { /* The saved token remains valid; the next alarm retries the scan. */ }
+            catch (error) { logWorker('토큰 저장 후 일정 조회 실패', error, 'notify'); }
           });
           return status;
         });
-    task.then(sendResponse, error => sendResponse({ error: error?.code || 'network' }));
+    task.then(sendResponse, error => {
+      if (!['invalid-format', 'rejected', 'other-account'].includes(error?.code))
+        logWorker('Canvas 토큰 메시지 실패', error);
+      sendResponse({ error: error?.code || 'network' });
+    });
     return true;
   }
   // Only extension pages (the popup) may start a playlist or open a lecture.
@@ -729,11 +761,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender.id !== chrome.runtime.id || !sender.tab?.id || !sender.url?.startsWith('https://lcms.skku.edu/')) return;
     const task = message.type === 'icampus-video-save' ? saveLectureVideo(message, sender)
       : chrome.permissions.contains(VIDEO_SAVE_PERMISSIONS).then(enabled => ({ enabled }));
-    task.then(sendResponse, error => sendResponse({ error: error.message }));
+    task.then(sendResponse, error => { logWorker('영상 저장 메시지 실패', error); sendResponse({ error: error.message }); });
     return true;
   }
   if (message.type === 'icampus-error-log') {
-    if (sender.id !== chrome.runtime.id || !sender.url?.startsWith('https://lcms.skku.edu/')) return;
+    if (sender.id !== chrome.runtime.id || ![
+      'https://lcms.skku.edu/', 'https://canvas.skku.edu/', 'https://kingoinfo.skku.edu/',
+      'https://icampus.skku.edu/xn-sso/'
+    ].some(prefix => sender.url?.startsWith(prefix))) return;
     const task = (async () => {
       if (await examIsActive() || ExamMode.EXAM_URL.test(sender.tab?.url || '')) return;
       if (typeof message.source !== 'string' || typeof message.message !== 'string') return;
@@ -741,6 +776,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         url: sender.url, stack: typeof message.stack === 'string' ? message.stack : undefined
       });
     })();
+    // The error recorder cannot report its own failure without recursion.
     task.then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }));
     return true;
   }
@@ -770,7 +806,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       return examStatus();
     });
-    task.then(sendResponse, error => sendResponse({ error: error.message }));
+    task.then(sendResponse, error => { logWorker('시험 메시지 실패', error, 'exam'); sendResponse({ error: error.message }); });
     return true;
   }
   const task = messageQueue.then(() => message.type === 'icampus-playlist-start' ? startPlaylist(message)
@@ -792,8 +828,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     : message.type === 'icampus-open-lecture' ? openLecture(message)
     : message.type === 'icampus-direct-mute' ? setDirectMute(message, sender)
     : handlePlayerMessage(message, sender));
-  messageQueue = task.catch(() => {});
-  task.then(result => sendResponse(result), error => sendResponse({ error: error.message }));
+  messageQueue = task.catch(() => {}); // The response handler below records task failure.
+  task.then(result => sendResponse(result), error => {
+    logWorker('메시지 처리 실패', error);
+    sendResponse({ error: error.message });
+  });
   return true;
 });
 
@@ -805,7 +844,7 @@ chrome.tabs.onRemoved.addListener(tabId => {
     await releasePlaylistMute(tabId);
     await keepTabAwake(tabId, false);
   });
-  messageQueue = task.catch(() => {});
+  messageQueue = task.catch(error => logWorker('닫힌 탭 정리 실패', error));
   return task;
 });
 
@@ -818,7 +857,7 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
     const awake = (await chrome.storage.local.get(AWAKE_KEY))[AWAKE_KEY] || {};
     if (awake[tabId] && !playlistTab) await keepTabAwake(tabId, false);
   });
-  messageQueue = task.catch(() => {});
+  messageQueue = task.catch(error => logWorker('탭 이동 정리 실패', error));
 });
 
 async function autoLaunchCanvasTool(waitMs = 0) {
@@ -853,7 +892,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     // One launch visit per title click; later navigation in that tab is the user's.
     return await takeDirectTab(tabId) ? 'direct' : null;
   });
-  messageQueue = task.catch(() => {});
+  messageQueue = task.catch(error => logWorker('강의 도구 주입 준비 실패', error));
   // Run outside the queue so a short wait for the button never delays player messages.
   task.then(async kind => {
     if (!kind) return;
@@ -862,16 +901,17 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
       await chrome.scripting.executeScript({
         target: { tabId }, func: autoLaunchCanvasTool, args: [kind === 'direct' ? 5000 : 0]
       });
-      if (kind === 'playlist') chrome.tabs.sendMessage(tabId, { type: 'icampus-playlist-probe' }).catch(() => {});
-    } catch { /* The tab may have moved to its lecture frame already. */ }
-  }).catch(() => {});
+      if (kind === 'playlist') chrome.tabs.sendMessage(tabId, { type: 'icampus-playlist-probe' })
+        .catch(error => logWorker('재생목록 확인 실패', error));
+    } catch (error) { logWorker('강의 도구 주입 실패', error); }
+  }).catch(error => logWorker('강의 도구 처리 실패', error));
 });
 
 let startupOwnershipCleanup = false;
 function queueOwnershipCleanup(startup = false) {
   if (startup) startupOwnershipCleanup = true;
   const task = messageQueue.then(() => reconcileOwnedTabs(startup));
-  messageQueue = task.catch(() => {});
+  messageQueue = task.catch(error => logWorker('재생 탭 소유권 정리 실패', error));
 }
 chrome.runtime.onInstalled.addListener(() => queueOwnershipCleanup());
 chrome.runtime.onStartup.addListener(() => queueOwnershipCleanup(true));

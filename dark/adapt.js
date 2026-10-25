@@ -2,7 +2,7 @@
 (() => {
   const root = document.documentElement;
   let perfEnabled = location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.name);
-  try { perfEnabled ||= window.parent !== window && (window.parent.location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.parent.name)); } catch (e) {}
+  try { perfEnabled ||= window.parent !== window && (window.parent.location.search.includes('icdperf=') || /^icdperf-(light|dark)$/.test(window.parent.name)); } catch (e) { /* 다른 출처 부모의 성능 옵션은 읽지 않는다. */ }
   const perf = perfEnabled ? { candidates: 0, processed: 0, firstScanMs: 0, totalMs: 0, observerMs: 0, flushMs: 0, netMs: 0, netVisited: 0, netHits: 0, netFixed: 0 } : null;
   if (perf) globalThis.__icdAdaptPerf = perf;
   const publishPerf = () => { if (perf) root.dataset.icdAdaptPerf = JSON.stringify(perf); };

@@ -1,6 +1,7 @@
 // Fullscreen is requested only from a real input on the top-level Canvas page.
 (() => {
   if (window.top !== window) return;
+  const log = (description, error) => globalThis.icdLogError?.('exam', description, error);
   const EXAM_URL = /^https:\/\/canvas\.skku\.edu\/courses\/\d+\/quizzes\/\d+\/take(?:[/?#]|$)/;
   let guard = true;
   let manual = false;
@@ -11,7 +12,8 @@
   let lockPending = false;
   let keyboardLocked = false;
   const countBlocked = () => {
-    chrome.runtime.sendMessage({ type: 'icampus-exam-blocked-count' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'icampus-exam-blocked-count' })
+      .catch(error => log('시험 차단 횟수 전달 실패', error));
   };
 
   const blocksShortcut = event => {
@@ -42,7 +44,8 @@
   };
 
   const unlock = () => {
-    try { navigator.keyboard?.unlock?.(); } catch { /* Unsupported keyboard lock. */ }
+    try { navigator.keyboard?.unlock?.(); }
+    catch (error) { log('시험 키보드 잠금 해제 실패', error); }
     keyboardLocked = false;
     lockPending = false;
   };
@@ -52,14 +55,14 @@
     lockPending = true;
     try {
       Promise.resolve(navigator.keyboard.lock())
-        .catch(() => navigator.keyboard.lock(['MetaLeft', 'MetaRight']))
+        .catch(() => navigator.keyboard.lock(['MetaLeft', 'MetaRight'])) // Full lock rejection triggers a narrower fallback.
         .then(() => {
           keyboardLocked = true;
           if (!fullscreenActive) unlock();
         })
-        .catch(() => {})
+        .catch(error => log('시험 키보드 잠금 실패', error))
         .finally(() => { lockPending = false; });
-    } catch { lockPending = false; }
+    } catch (error) { lockPending = false; log('시험 키보드 잠금 실패', error); }
   };
 
   const onInput = () => {
@@ -75,11 +78,12 @@
       Promise.resolve(document.documentElement.requestFullscreen({ navigationUI: 'hide' }))
         .then(() => {
           if (fullscreenActive) lockKeyboard();
-          else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+          else if (document.fullscreenElement) document.exitFullscreen()
+            .catch(error => log('시험 전체화면 해제 실패', error));
         })
-        .catch(() => {})
+        .catch(error => log('시험 전체화면 시작 실패', error))
         .finally(() => { requestPending = false; });
-    } catch { requestPending = false; }
+    } catch (error) { requestPending = false; log('시험 전체화면 시작 실패', error); }
   };
 
   const onFullscreenChange = () => {
@@ -124,7 +128,8 @@
       window.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       unlock();
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      if (document.fullscreenElement) document.exitFullscreen()
+        .catch(error => log('시험 전체화면 해제 실패', error));
     }
   };
 
@@ -133,7 +138,7 @@
     manual = saved.examModeManual === true;
     fullscreen = saved.examFullscreen !== false;
     sync();
-  }).catch(() => {});
+  }).catch(error => log('시험 설정 읽기 실패', error));
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (changes.examGuard) guard = changes.examGuard.newValue !== false;

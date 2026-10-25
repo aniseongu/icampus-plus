@@ -127,7 +127,8 @@
       });
     }
     if (!/\/learningx\/lti\/lecture_attendance\/items\/view\//.test((() => {
-      try { return frame.contentWindow.location.pathname; } catch { return ''; }
+      try { return frame.contentWindow.location.pathname; }
+      catch { /* 다른 출처 프레임의 주소는 읽을 수 없다. */ return ''; }
     })())) return false;
     if (!frame.closest('.tool_content_wrapper')) return false;
     if (!watchedDocuments.has(frame.contentDocument)) {
