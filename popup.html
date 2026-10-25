@@ -543,6 +543,10 @@
         border-top: 1px solid var(--border-color);
         border-bottom: 1px solid var(--border-color);
       }
+      #activity-notify-row[hidden],
+      #lead-row[hidden],
+      #lead-editor[hidden],
+      #summary-row[hidden],
       #exam-controls[hidden],
       #exam-fullscreen-group[hidden],
       #exam-action[hidden],
@@ -599,11 +603,25 @@
         min-width: 0;
       }
       /* 토큰 넣기를 누를 때만 줄 아래에 여는 입력 영역. 평소 줄은 다른 설정과 같다 */
-      .token-editor {
+      .token-editor,
+      .setting-editor {
         display: flex;
         flex-direction: column;
         gap: 6px;
         padding: 0 15px 12px;
+      }
+      /* 매일 요약 시각: 켜기, 끄기 왼쪽에 두어 버튼 열은 다른 줄과 맞춘다 */
+      .summary-time {
+        flex: none;
+        width: 140px;
+      }
+      /* 지각 제출 기한: 마감 칸 아래 작은 줄 */
+      .late-until {
+        display: block;
+        margin-top: 2px;
+      }
+      .nowrap {
+        white-space: nowrap;
       }
       .token-field {
         display: flex;
@@ -611,7 +629,8 @@
         gap: 6px;
       }
       /* 설정 버튼의 display 규칙보다 우선해야 숨김이 먹는다 */
-      #settings .token-group [hidden] {
+      #settings .token-group [hidden],
+      #settings .gcal-group [hidden] {
         display: none;
       }
       #exam-keep[aria-disabled="true"] {
@@ -1875,6 +1894,165 @@
             </button>
           </div>
         </div>
+        <div id="lead-row" class="setting-row">
+          <div class="setting-text">
+            <span id="lead-label" class="setting-label">마감 알림 시점</span>
+            <span id="lead-status" class="setting-help" role="status"
+              >마감 하루 전, 3시간 전에 알려요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="lead-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="lead-editor"
+            >
+              바꾸기
+            </button>
+          </div>
+        </div>
+        <div id="lead-editor" class="setting-editor" hidden>
+          <div
+            id="lead-choices"
+            class="mode-choice"
+            role="group"
+            aria-labelledby="lead-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="4320"
+            >
+              3일 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="true"
+              data-lead="1440"
+            >
+              하루 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="720"
+            >
+              12시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="true"
+              data-lead="180"
+            >
+              3시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="60"
+            >
+              1시간 전
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="checkbox"
+              aria-checked="false"
+              data-lead="30"
+            >
+              30분 전
+            </button>
+          </div>
+        </div>
+        <div id="summary-row" class="setting-row">
+          <div class="setting-text">
+            <span id="summary-label" class="setting-label">매일 요약</span>
+            <span id="summary-status" class="setting-help" role="status"
+              >하루 한 번 오늘 마감을 모아서 알려요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <input
+              type="time"
+              id="summary-time"
+              class="token-input summary-time"
+              value="09:00"
+              aria-labelledby="summary-label"
+            />
+            <div
+              id="summary"
+              class="mode-choice"
+              role="radiogroup"
+              aria-labelledby="summary-label"
+            >
+              <button
+                type="button"
+                class="playlist-action"
+                role="radio"
+                aria-checked="false"
+                data-summary="true"
+              >
+                켜기
+              </button>
+              <button
+                type="button"
+                class="playlist-action"
+                role="radio"
+                aria-checked="true"
+                data-summary="false"
+              >
+                끄기
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="activity-notify-row" class="setting-row">
+          <div class="setting-text">
+            <span id="activity-notify-label" class="setting-label"
+              >공지와 성적 알림</span
+            >
+            <span class="setting-help"
+              >새 공지가 올라오거나 성적이 나오면 알려요</span
+            >
+          </div>
+          <div
+            id="activity-notify"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="activity-notify-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-activity-notify="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-activity-notify="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
       </div>
       <div class="setting-group token-group">
         <div class="setting-row">
@@ -1903,6 +2081,41 @@
               hidden
             >
               지우기
+            </button>
+          </div>
+        </div>
+        <div id="lecture-access-row" class="setting-row" hidden>
+          <div class="setting-text">
+            <span id="lecture-access-label" class="setting-label"
+              >강의 일정도 확인</span
+            >
+            <span id="lecture-access-status" class="setting-help" role="status"
+              >로그아웃해도 강의 마감까지 확인해요</span
+            >
+          </div>
+          <div
+            id="lecture-access"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="lecture-access-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-lecture-access="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-lecture-access="false"
+            >
+              끄기
             </button>
           </div>
         </div>
@@ -1936,6 +2149,59 @@
           <span id="canvas-token-help" class="setting-help" role="status"
             >아이캠퍼스 계정 설정에서 새 액세스 토큰을 만들어 붙여 넣어
             주세요</span
+          >
+        </div>
+      </div>
+      <div class="setting-group gcal-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="gcal-label" class="setting-label">구글 캘린더</span>
+            <span id="gcal-status" class="setting-help" role="status"
+              >즐겨찾기 과목 일정을 구글 캘린더에 넣어요</span
+            >
+          </div>
+          <div class="mode-choice">
+            <button
+              type="button"
+              id="gcal-open"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="gcal-editor"
+            >
+              연결하기
+            </button>
+            <button
+              type="button"
+              id="gcal-disconnect"
+              class="playlist-action"
+              hidden
+            >
+              연결 끊기
+            </button>
+          </div>
+        </div>
+        <div id="gcal-editor" class="setting-editor" hidden>
+          <div class="token-field">
+            <input
+              type="text"
+              id="gcal-client"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-labelledby="gcal-label"
+              aria-describedby="gcal-help"
+              placeholder="클라이언트 ID 붙여 넣기"
+            />
+            <button type="button" id="gcal-connect" class="playlist-action">
+              연결하기
+            </button>
+            <button type="button" id="gcal-close" class="playlist-action">
+              닫기
+            </button>
+          </div>
+          <span id="gcal-help" class="setting-help" role="status"
+            >구글 클라우드에서 만든 OAuth 클라이언트 ID를 붙여 넣어 주세요.
+            만드는 방법은 README에 있어요</span
           >
         </div>
       </div>
