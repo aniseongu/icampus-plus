@@ -1,5 +1,9 @@
 // Shared by the service worker and popup. Keep the URL rule in sync with dark/boot.js.
 const ExamMode = (() => {
+  function logExam(description, error) {
+    if (typeof reportError === 'function') reportError('exam', description + ': ' +
+      String(error?.message || '알 수 없는 오류'), { stack: error?.stack });
+  }
   const EXAM_URL = /^https:\/\/canvas\.skku\.edu\/courses\/\d+\/quizzes\/\d+\/take(?:[/?#]|$)/;
   const IDS_KEY = 'examDisabledIds';
   const MAX_RESTORE_AGE = 7 * 24 * 60 * 60 * 1000;
@@ -41,8 +45,10 @@ const ExamMode = (() => {
       await chrome.contentSettings.notifications.set({ primaryPattern: '<all_urls>', setting: 'block' });
       await chrome.storage.local.set({ examNotificationsBlocked: true });
       return true;
-    } catch {
-      try { await chrome.contentSettings.notifications.clear({}); } catch { /* Retry on exit. */ }
+    } catch (error) {
+      logExam('시험 알림 차단 실패', error);
+      try { await chrome.contentSettings.notifications.clear({}); }
+      catch (clearError) { logExam('시험 알림 차단 복구 실패', clearError); }
       return false;
     }
   }
@@ -56,7 +62,7 @@ const ExamMode = (() => {
       // clear() removes only rules set by this extension.
       await chrome.contentSettings.notifications.clear({});
       await chrome.storage.local.set({ examNotificationsBlocked: false });
-    } catch { /* Keep the flag so a later restore can retry. */ }
+    } catch (error) { logExam('시험 알림 설정 복원 실패', error); }
   }
 
   async function enterExamMode(reason) {
@@ -81,7 +87,10 @@ const ExamMode = (() => {
           try {
             const item = await chrome.management.get(id);
             if (item.type === 'extension' && item.enabled === false && id !== chrome.runtime.id) verified.push(id);
-          } catch { /* Removed extensions are no longer restorable. */ }
+          } catch (error) {
+            if (!/No extension with id/i.test(String(error?.message || '')))
+              logExam('시험 중 확장 상태 확인 실패', error);
+          }
         }
         existing = new Set(verified);
         await chrome.storage.session.set({ [IDS_KEY]: verified });
@@ -97,7 +106,8 @@ const ExamMode = (() => {
     let failed = 0;
     let extensions;
     try { extensions = await chrome.management.getAll(); }
-    catch {
+    catch (error) {
+      logExam('확장 목록 조회 실패', error);
       await blockNotifications();
       await chrome.storage.local.set({ examDisableFailures: 1 });
       return { disabledCount: existing.size, failed: 1 };
@@ -111,7 +121,7 @@ const ExamMode = (() => {
         // Session is authoritative; local is only a restart backup.
         await chrome.storage.session.set({ [IDS_KEY]: [...existing] });
         await chrome.storage.local.set({ [IDS_KEY]: [...existing] });
-      } catch { failed++; }
+      } catch (error) { failed++; logExam('시험 중 확장 끄기 실패', error); }
     }
     await blockNotifications();
     await chrome.storage.local.set({ examRestorePending: false, examDisableFailures: failed });
@@ -142,10 +152,14 @@ const ExamMode = (() => {
     for (const id of ids) {
       let item;
       try { item = await chrome.management.get(id); }
-      catch { continue; } // Removed extensions no longer need restoring.
+      catch (error) {
+        if (!/No extension with id/i.test(String(error?.message || '')))
+          logExam('시험 후 확장 상태 확인 실패', error);
+        continue;
+      }
       if (item.type !== 'extension' || item.id === chrome.runtime.id || item.enabled !== false) continue;
       try { await chrome.management.setEnabled(id, true); }
-      catch { remaining.push(id); }
+      catch (error) { remaining.push(id); logExam('시험 후 확장 복원 실패', error); }
     }
     const nextNormal = restoringManual ? state.ids : remaining;
     const nextManual = restoringManual ? remaining : manualIds;

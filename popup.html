@@ -487,6 +487,17 @@
         vertical-align: middle;
         border-top: 1px solid var(--border-color);
       }
+      /* 행 높이는 두 줄 기준 하나로 맞춘다. 과목명은 두 줄까지만, 전체 이름은 title로 본다 */
+      table tbody td {
+        /* border-box라 위아래 여백(12px씩)을 더하고, 두 줄 칸의 소수점 반올림 차이를 덮게 2px 여유를 둔다 */
+        height: calc(2lh + 26px);
+      }
+      .cell-clamp {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
 
       .title {
         position: relative;
@@ -576,18 +587,18 @@
         padding: 0 15px 12px;
         word-break: keep-all;
       }
-      :is(#settings, #exam-panel) .setting-group + .setting-group {
+      #settings .setting-group + .setting-group {
         border-top: 1px solid var(--border-color);
       }
-      :is(#settings, #exam-panel) .setting-row {
+      #settings .setting-row {
         min-height: 64px;
         border: 0;
       }
-      :is(#settings, #exam-panel) .setting-text {
+      #settings .setting-text {
         flex: 1;
         min-width: 0;
       }
-      :is(#settings, #exam-panel) .mode-choice {
+      #settings .mode-choice {
         flex: none;
       }
       /* 바탕을 칠하지 않는다: 입력칸에는 ::before 면을 둘 수 없어서
@@ -618,7 +629,6 @@
       /* 지각 제출 기한: 마감 칸 아래 작은 줄 */
       .late-until {
         display: block;
-        margin-top: 2px;
       }
       .nowrap {
         white-space: nowrap;
@@ -628,6 +638,14 @@
         align-items: center;
         gap: 6px;
       }
+      /* 구글 캘린더 입력: 보안 비밀번호 칸을 클라이언트 ID 칸 바로 아래 같은 폭으로 둔다 */
+      .gcal-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+      .gcal-fields #gcal-secret {
+        grid-column: 1;
+      }
       /* 설정 버튼의 display 규칙보다 우선해야 숨김이 먹는다 */
       #settings .token-group [hidden],
       #settings .gcal-group [hidden] {
@@ -636,11 +654,11 @@
       #exam-keep[aria-disabled="true"] {
         opacity: 1;
       }
-      :is(#settings, #exam-panel) #exam-keep > summary {
+      #settings #exam-keep > summary {
         list-style: none;
         cursor: pointer;
       }
-      :is(#settings, #exam-panel) #exam-keep > summary::-webkit-details-marker {
+      #settings #exam-keep > summary::-webkit-details-marker {
         display: none;
       }
       #exam-keep > summary:focus-visible {
@@ -665,7 +683,7 @@
         padding: 5px 0;
         cursor: pointer;
       }
-      #exam-panel + .footer {
+      #settings + .footer {
         margin-top: 0;
         border-top: 0;
       }
@@ -676,7 +694,7 @@
       }
       /* 설정 안의 버튼은 모두 같은 크기와 평면 모양으로 맞춘다 */
       /* 설정 버튼은 모두 같은 폭이라 줄이 바뀌어도 버튼 열이 맞는다 */
-      :is(#settings, #exam-panel) .playlist-action {
+      #settings .playlist-action {
         display: inline-block;
         width: 80px;
         padding-left: 0;
@@ -1349,7 +1367,7 @@
       .error-message,
       #sync-status details,
       .setting-row,
-      :is(#settings, #exam-panel) .setting-group + .setting-group,
+      #settings .setting-group + .setting-group,
       .footer {
         border-color: transparent;
       }
@@ -1360,7 +1378,7 @@
       .error-message,
       #sync-status details,
       .setting-row,
-      :is(#settings, #exam-panel) .setting-group + .setting-group,
+      #settings .setting-group + .setting-group,
       .footer {
         position: relative;
       }
@@ -1371,7 +1389,7 @@
       .error-message::after,
       #sync-status details::after,
       .setting-row::after,
-      :is(#settings, #exam-panel) .setting-group + .setting-group::after,
+      #settings .setting-group + .setting-group::after,
       .footer::after {
         content: "";
         position: absolute;
@@ -1389,7 +1407,7 @@
       .dark-mode .error-message::after,
       .dark-mode #sync-status details::after,
       .dark-mode .setting-row::after,
-      .dark-mode :is(#settings, #exam-panel) .setting-group + .setting-group::after,
+      .dark-mode #settings .setting-group + .setting-group::after,
       .dark-mode .footer::after {
         filter: url(#nm-line);
       }
@@ -1434,14 +1452,14 @@
         border-top-width: 1px;
         border-bottom-width: 1px;
       }
-      :is(#settings, #exam-panel) .setting-row::after {
+      #settings .setting-row::after {
         display: none;
       }
-      :is(#settings, #exam-panel) .setting-group + .setting-group::after,
+      #settings .setting-group + .setting-group::after,
       .footer::after {
         border-top-width: 1px;
       }
-      #exam-panel + .footer::after {
+      #settings + .footer::after {
         display: none;
       }
 
@@ -2172,6 +2190,16 @@
             </button>
             <button
               type="button"
+              id="gcal-keep"
+              class="playlist-action"
+              aria-expanded="false"
+              aria-controls="gcal-editor"
+              hidden
+            >
+              연결 유지
+            </button>
+            <button
+              type="button"
               id="gcal-disconnect"
               class="playlist-action"
               hidden
@@ -2181,7 +2209,7 @@
           </div>
         </div>
         <div id="gcal-editor" class="setting-editor" hidden>
-          <div class="token-field">
+          <div class="token-field gcal-fields">
             <input
               type="text"
               id="gcal-client"
@@ -2198,9 +2226,19 @@
             <button type="button" id="gcal-close" class="playlist-action">
               닫기
             </button>
+            <input
+              type="password"
+              id="gcal-secret"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="구글 클라이언트 보안 비밀번호"
+              aria-describedby="gcal-help"
+              placeholder="보안 비밀번호 붙여 넣기, 없어도 돼요"
+            />
           </div>
           <span id="gcal-help" class="setting-help" role="status"
-            >구글 클라우드에서 만든 OAuth 클라이언트 ID를 붙여 넣어 주세요.
+            >보안 비밀번호까지 넣으면 구글 로그인이 풀려도 연결이 이어져요.
             만드는 방법은 README에 있어요</span
           >
         </div>
@@ -2251,44 +2289,6 @@
           </div>
         </div>
       </div>
-      <div class="setting-group">
-        <div class="setting-row">
-          <div class="setting-text">
-            <span id="error-log-label" class="setting-label">오류 기록</span>
-            <span id="error-log-status" class="setting-help" role="status"
-              >기록 프로그램을 설치한 컴퓨터에서만 파일로 남아요</span
-            >
-          </div>
-          <div
-            id="error-log"
-            class="mode-choice"
-            role="radiogroup"
-            aria-labelledby="error-log-label"
-          >
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="false"
-              data-error-log="true"
-            >
-              켜기
-            </button>
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="true"
-              data-error-log="false"
-            >
-              끄기
-            </button>
-          </div>
-        </div>
-      </div>
-    </details>
-    <details id="exam-panel" class="completed-panel">
-      <summary>시험</summary>
       <div class="setting-group">
         <div class="setting-row">
           <div class="setting-text">
@@ -2385,6 +2385,41 @@
         <div id="exam-keep-list"></div>
         <p class="setting-note">다음 시험부터 적용돼요.</p>
       </details>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="error-log-label" class="setting-label">오류 기록</span>
+            <span id="error-log-status" class="setting-help" role="status"
+              >기록 프로그램을 설치한 컴퓨터에서만 파일로 남아요</span
+            >
+          </div>
+          <div
+            id="error-log"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="error-log-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-error-log="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-error-log="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
     </details>
 
     <!-- 크레딧 푸터 -->

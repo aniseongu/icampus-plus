@@ -78,7 +78,7 @@ globalThis.ICDVideoSave = globalThis.ICDVideoSave || (() => {
       button.disabled = true;
       let response = null;
       try { response = await chrome.runtime.sendMessage({ type: 'icampus-video-save', media: [item], title }); }
-      catch { /* Reported below. */ }
+      catch (error) { response = { error: String(error?.message || '워커 응답 없음') }; }
       button.disabled = false;
       if (response?.ok) show(CHECK, '다운로드를 시작했어요');
       else {
@@ -114,7 +114,8 @@ globalThis.ICDVideoSave = globalThis.ICDVideoSave || (() => {
     onActivate(button, async () => {
       if (!menu.hidden) { menu.hidden = true; return; }
       let found = null;
-      try { found = await getMedia(); } catch { /* Reported below. */ }
+      try { found = await getMedia(); }
+      catch (error) { logFailure('영상 주소 조회 실패: ' + String(error?.message || '알 수 없는 오류')); }
       const media = found?.media || [];
       if (!media.length) {
         show(DOWNLOAD, '강의 영상을 찾지 못했어요. 새로고침해 주세요');

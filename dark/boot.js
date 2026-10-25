@@ -3,6 +3,15 @@
 // 정본은 chrome.storage.local의 screenMode('auto' | 'light' | 'dark')이고, auto는 브라우저 테마(prefers-color-scheme)를 따른다.
 // 팝업(script.js)도 같은 값을 쓴다.
 (() => {
+  globalThis.icdLogError ||= (source, description, error) => {
+    const message = String(error?.message || error || '알 수 없는 오류');
+    // An invalidated extension context cannot send a log message.
+    if (/Extension context invalidated/i.test(message)) return;
+    try {
+      chrome.runtime.sendMessage({ type: 'icampus-error-log', source,
+        message: description + ': ' + message, stack: error?.stack }).catch(() => {});
+    } catch { /* Error recorder transport cannot report itself. */ }
+  };
   const CACHE_KEY = 'icampus-manager-screen-mode';
   const GUARD_CACHE_KEY = 'icampus-manager-exam-guard';
   const MANUAL_CACHE_KEY = 'icampus-manager-exam-manual';
@@ -11,8 +20,8 @@
   const media = matchMedia('(prefers-color-scheme: dark)');
   let perfMode = new URLSearchParams(location.search).get('icdperf');
   if (!perfMode && /^icdperf-(light|dark)$/.test(window.name)) perfMode = window.name.slice(8);
-  try { if (!perfMode && window.parent !== window) perfMode = new URLSearchParams(window.parent.location.search).get('icdperf'); } catch (e) {}
-  try { if (!perfMode && window.parent !== window && /^icdperf-(light|dark)$/.test(window.parent.name)) perfMode = window.parent.name.slice(8); } catch (e) {}
+  try { if (!perfMode && window.parent !== window) perfMode = new URLSearchParams(window.parent.location.search).get('icdperf'); } catch (e) { /* 다른 출처 부모의 성능 옵션은 읽지 않는다. */ }
+  try { if (!perfMode && window.parent !== window && /^icdperf-(light|dark)$/.test(window.parent.name)) perfMode = window.parent.name.slice(8); } catch (e) { /* 다른 출처 부모의 이름은 읽지 않는다. */ }
   if (perfMode !== 'light' && perfMode !== 'dark') perfMode = null;
   let mode = 'auto';
   let examGuard = true;
@@ -23,7 +32,7 @@
     examGuard = localStorage.getItem(GUARD_CACHE_KEY) !== 'false';
     examModeManual = localStorage.getItem(MANUAL_CACHE_KEY) === 'true';
   } catch (e) {
-    /* 저장소를 막은 환경이면 auto로 시작한다 */
+    globalThis.icdLogError('dark', '화면 모드 캐시 읽기 실패', e);
   }
   if (location.href === 'about:blank' && window.parent !== window) {
     try {
@@ -47,7 +56,7 @@
   const cache = (key, value) => {
     // 실제 응시 주소에는 페이지 저장소 흔적을 남기지 않는다. 일반 페이지는 수동 모드 캐시를 갱신한다.
     if (examPage()) return;
-    try { localStorage.setItem(key, value); } catch (e) { /* 캐시는 없어도 동작한다 */ }
+    try { localStorage.setItem(key, value); } catch (e) { globalThis.icdLogError('dark', '화면 모드 캐시 저장 실패', e); }
   };
 
   const apply = () => {
@@ -92,7 +101,7 @@
     apply();
     cache(GUARD_CACHE_KEY, String(examGuard));
     cache(MANUAL_CACHE_KEY, String(examModeManual));
-  });
+  }).catch(e => globalThis.icdLogError('dark', '화면 모드 설정 읽기 실패', e));
   chrome.storage.onChanged.addListener((changes, area) => {
     if (!perfMode && area === 'local' && changes.screenMode) setMode(changes.screenMode.newValue);
     if (area !== 'local') return;

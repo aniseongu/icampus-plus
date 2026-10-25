@@ -27,6 +27,19 @@ const NOTIFIED_TTL_MS = 30 * 24 * HOUR_MS;
 const ACTIVITY_TTL_MS = 60 * 24 * HOUR_MS;
 const ACTIVITY_RECENT_MS = 7 * 24 * HOUR_MS;
 let notifyQueue = Promise.resolve();
+let scanLogQueue = Promise.resolve();
+function logScanOnce(description, error) {
+  const key = String(error?.name || error?.status || 'error');
+  const task = scanLogQueue.then(async () => {
+    const saved = (await chrome.storage.session.get('icampusScanErrorKeys')).icampusScanErrorKeys || {};
+    if (saved[description] === key) return;
+    await chrome.storage.session.set({ icampusScanErrorKeys: { ...saved, [description]: key } });
+    reportError('notify', description + ': ' + String(error?.message || '알 수 없는 오류'),
+      { stack: error?.stack });
+  });
+  scanLogQueue = task.catch(() => {}); // Logging failure must not interrupt or recursively log the scan.
+  return scanLogQueue;
+}
 
 function withNotifyTimeout(promise, ms, fallback) {
   let timer;
@@ -37,7 +50,7 @@ function withNotifyTimeout(promise, ms, fallback) {
 
 function queueNotify(task) {
   const next = notifyQueue.then(task);
-  notifyQueue = next.catch(() => {});
+  notifyQueue = next.catch(error => logScanOnce('알림 작업 실패', error));
   return next;
 }
 
@@ -196,23 +209,25 @@ async function readLearningXToken() {
         } }), 3000, () => []);
         if (expired) return null;
         if (read?.result) return read.result;
-      } catch { /* Try the next tab. */ }
+      } catch (error) { await logScanOnce('LearningX 탭 인증 읽기 실패', error); }
     }
     return null;
   };
-  return withNotifyTimeout(readTabs(), 8000, () => { expired = true; return null; });
+  const result = await withNotifyTimeout(readTabs(), 8000, () => { expired = true; return null; });
+  if (expired) await logScanOnce('LearningX 탭 인증 시간 초과', new Error('timeout'));
+  return result;
 }
 
 async function cookiesAllowed() {
   try { return await chrome.permissions.contains({ permissions: ['cookies'] }); }
-  catch { return false; }
+  catch (error) { await logScanOnce('쿠키 권한 확인 실패', error); return false; }
 }
 
 async function learningXCookie() {
   try {
     const value = (await chrome.cookies.get({ url: 'https://canvas.skku.edu/', name: 'xn_api_token' }))?.value;
     return value ? decodeURIComponent(value) : null;
-  } catch { return null; }
+  } catch (error) { await logScanOnce('LearningX 쿠키 읽기 실패', error); return null; }
 }
 
 async function canvasTokenJson(path, token) {
@@ -221,7 +236,7 @@ async function canvasTokenJson(path, token) {
     headers: { Accept: 'application/json', Authorization: 'Bearer ' + token },
     signal: AbortSignal.timeout(8000)
   });
-  if (!response.ok) throw new Error('Canvas request failed');
+  if (!response.ok) throw new Error('Canvas HTTP ' + response.status);
   return JSON.parse((await response.text()).replace(/^while\(1\);\s*/, ''));
 }
 
@@ -281,7 +296,8 @@ async function launchLearningX(canvasToken) {
     const url = new URL(launch?.url);
     if (url.origin !== 'https://canvas.skku.edu' || await examIsActive()) return null;
     const page = await fetch(url.href, { credentials: 'include', signal: AbortSignal.timeout(8000) });
-    if (!page.ok || new URL(page.url).origin !== url.origin) return null;
+    if (!page.ok) { await logScanOnce('LearningX 도구 페이지 실패', new Error('HTTP ' + page.status)); return null; }
+    if (new URL(page.url).origin !== url.origin) return null; // A redirect to login has no usable tool form.
     const html = await page.text();
     const form = html.match(/<form\b[^>]*>([\s\S]*?)<\/form\s*>/i);
     if (!form) return null;
@@ -296,9 +312,9 @@ async function launchLearningX(canvasToken) {
     const posted = await fetch(action.href, {
       method: 'POST', credentials: 'include', body, signal: AbortSignal.timeout(8000)
     });
-    if (!posted.ok) return null;
+    if (!posted.ok) { await logScanOnce('LearningX 도구 제출 실패', new Error('HTTP ' + posted.status)); return null; }
     return learningXCookie();
-  } catch { return null; }
+  } catch (error) { await logScanOnce('LearningX 도구 실행 실패', error); return null; }
 }
 
 async function backgroundScan() {
@@ -329,13 +345,14 @@ async function backgroundScan() {
           try {
             const retried = await icampusScan({ token, canvasToken });
             if (retried && !retried.fatal) result = retried;
-          } catch { /* Keep the first scan and its cached lectures. */ }
+          } catch (error) { await logScanOnce('LearningX 재조회 실패', error); }
         }
       }
     }
-    catch { return; }
+    catch (error) { await logScanOnce('정기 일정 조회 실패', error); return; }
     if (expired || !result) return;
     if (result.fatal) {
+      await logScanOnce('정기 일정 응답 실패', { name: String(result.status || 'fatal'), message: result.fatal });
       if (result.status !== 401 && !result.fatal.includes('로그인 만료 또는 응답 형식 변경')) return;
       const tokenStatus = await CanvasToken.status();
       const problem = rejected || (tokenStatus.set && tokenStatus.rejectedAt) ? 'token-rejected' : 'signed-out';
@@ -350,6 +367,7 @@ async function backgroundScan() {
       return;
     }
     if (expired) return;
+    await chrome.storage.session.remove('icampusScanErrorKeys');
     await updateSchedule(result);
     if (expired) return;
     await Gcal.syncIfEnabled();
@@ -358,7 +376,9 @@ async function backgroundScan() {
     if (expired) return;
     await recordScanSuccess({ usedToken: Boolean(canvasToken), rejected });
   };
-  return withNotifyTimeout(scan(), 90000, () => { expired = true; });
+  const result = await withNotifyTimeout(scan(), 90000, () => { expired = true; });
+  if (expired) await logScanOnce('정기 일정 조회 시간 초과', new Error('timeout'));
+  return result;
 }
 
 async function recordScanSuccess({ usedToken, rejected }) {
@@ -682,10 +702,11 @@ function openFromNotification(id) {
     const url = canvasUrl(link.url) || 'https://canvas.skku.edu/';
     if (link.lecture) {
       try { await openLecture({ url, active: true }); return; }
-      catch { /* Fall back to a plain tab. */ }
+      catch (error) { logWorker('알림에서 강의 열기 실패', error, 'notify'); }
     }
     const tab = await chrome.tabs.create({ url, active: true });
-    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch { /* No window to raise. */ }
+    try { await chrome.windows.update(tab.windowId, { focused: true }); }
+    catch (error) { logWorker('알림 탭 포커스 실패', error, 'notify'); }
   });
 }
 chrome.notifications.onClicked.addListener(openFromNotification);
