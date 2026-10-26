@@ -293,7 +293,7 @@ function closedText(item) {
 // be submitted now (locked, not open yet, or nothing to submit online). Off lists
 // what can be submitted; on is the pre-1.8.11 list with the reason in each row.
 function assignmentViewToggle() {
-  const toggle = element('button', 'playlist-action caption-toggle', '전체 보기');
+  const toggle = element('button', 'playlist-action caption-toggle', '모두 보기');
   toggle.type = 'button';
   toggle.setAttribute('aria-pressed', String(assignmentView === 'all'));
   toggle.addEventListener('click', () => {
@@ -318,7 +318,7 @@ function playlistControls() {
   };
   const count = element('span', 'setting-help caption-help');
   count.id = 'playlist-selected-count';
-  const all = button('모두 고르기', 'playlist-secondary', () => {
+  const all = button('모두 선택', 'playlist-secondary', () => {
     const checks = [...document.querySelectorAll('table.lecture input[type="checkbox"]')];
     const target = !checks.every(check => check.checked);
     checks.forEach(check => {
@@ -332,8 +332,24 @@ function playlistControls() {
   return [actions, count];
 }
 
+// Every render and every box of 모두 선택 lands here. One write per task, and only
+// when the picks changed.
+let savedPlaylistDraft = null;
+let playlistDraftQueued = false;
 function persistPlaylistSelection() {
-  chrome.storage.local.set({ icampusPlaylistDraft: { keys: [...selectedLectureKeys] } }).catch(logPopup('강의 선택 저장 실패'));
+  if (playlistDraftQueued) return;
+  playlistDraftQueued = true;
+  queueMicrotask(() => {
+    playlistDraftQueued = false;
+    const keys = [...selectedLectureKeys];
+    const signature = keys.join('\n');
+    if (signature === savedPlaylistDraft) return;
+    savedPlaylistDraft = signature;
+    chrome.storage.local.set({ icampusPlaylistDraft: { keys } }).catch(error => {
+      savedPlaylistDraft = null;
+      logPopup('강의 선택 저장 실패')(error);
+    });
+  });
 }
 
 function updatePlaylistSelection() {
@@ -346,7 +362,7 @@ function updatePlaylistSelection() {
   // While a playlist exists, picked lectures are added to it instead of replacing it.
   const adding = playlistKeys.size > 0;
   if (count) count.textContent = size ? size + '개 골랐어요' : adding ? '재생 목록에 추가할 강의를 골라 주세요' : '재생할 강의를 골라 주세요';
-  if (all) all.textContent = checks.length && checks.every(check => check.checked) ? '모두 빼기' : '모두 고르기';
+  if (all) all.textContent = checks.length && checks.every(check => check.checked) ? '선택 해제' : '모두 선택';
   if (play && !play.dataset.busy) {
     play.disabled = size === 0;
     play.textContent = adding ? (size ? size + '개 추가하기' : '재생 목록에 추가하기') : (size ? size + '개 재생하기' : '강의 재생하기');
@@ -364,11 +380,11 @@ function playlistStatusText(state) {
   if (state.status === 'blocked') return '강의 화면을 한 번 눌러 재생해 주세요';
   if (state.status === 'ended-unconfirmed') return '영상이 끝났어요. 아이캠퍼스에서 완료 표시를 확인해 주세요';
   if (state.status === 'error') return '강의를 열지 못했어요. ' + (state.error || '다시 시도해 주세요');
-  if (state.status === 'halted') return '정지했어요. 재생을 누르면 이어서 들어요';
+  if (state.status === 'halted') return '일시중지했어요. 재생을 누르면 이어서 들어요';
   const progress = formatPlaybackTime(state.currentTime) +
     (state.duration > 0 ? ' / ' + formatPlaybackTime(state.duration) : '');
-  const rate = state.rate > 0 ? Number(state.rate).toString() + '배속으로 ' : '';
-  return rate + (state.status === 'playing' ? '재생 중이에요 ' : '일시정지했어요 ') + progress;
+  const rate = state.rate > 0 ? Number(state.rate).toString() + '배속 ' : '';
+  return rate + (state.status === 'playing' ? '재생 중 ' : '일시중지 ') + progress;
 }
 
 let playlistFocus = null;
@@ -376,6 +392,9 @@ let playlistSortable = null;
 let playlistDragging = false;
 let playlistPending;
 let playlistSignature = '';
+// Keys this popup took out itself (삭제, 모두 삭제, already-done sync). Their leaving needs
+// no rescan; only a lecture that finished playing does.
+const expectedPlaylistLeaves = new Set();
 
 // Six-dot grip. Drag it (SortableJS) or focus it and press the arrow keys.
 function gripIcon() {
@@ -397,12 +416,14 @@ async function removeFromPlaylist(key, focusKey) {
   for (const control of document.querySelectorAll('#playlist-status button')) control.disabled = true;
   playlistFocus = focusKey ? { key: focusKey } : null;
   playlistPending = undefined;
+  expectedPlaylistLeaves.add(key);
   try {
     const response = await chrome.runtime.sendMessage({ type: 'icampus-playlist-remove', key });
     if (!response?.ok) throw new Error(response?.error || '강의를 빼지 못했어요.');
     playlistKeys.delete(key);
     if (lastResult && !examNoticeShown) render(lastResult);
   } catch (error) {
+    expectedPlaylistLeaves.delete(key);
     playlistFocus = null;
     playlistSignature = '';
     document.querySelector('#sync-status').replaceChildren(
@@ -442,7 +463,7 @@ function renderPlaylistStatus(state) {
   const stateCell = container.querySelector('.playlist-current .playlist-state');
   // Progress ticks only change the current lecture's line; keep focus and the table as they are.
   if (signature && signature === playlistSignature && stateCell) {
-    stateCell.textContent = playlistStatusText(state);
+    stateCell.textContent = stateCell.title = playlistStatusText(state);
     return;
   }
   playlistSignature = signature;
@@ -463,8 +484,14 @@ function renderPlaylistStatus(state) {
   stop.type = 'button';
   stop.addEventListener('click', async () => {
     stop.disabled = true;
+    for (const key of keys) expectedPlaylistLeaves.add(key);
     try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-stop' }); }
-    catch (error) { logPopup('재생 목록 지우기 실패')(error); stop.disabled = false; return; }
+    catch (error) {
+      logPopup('재생 목록 지우기 실패')(error);
+      for (const key of keys) expectedPlaylistLeaves.delete(key);
+      stop.disabled = false;
+      return;
+    }
     selectedLectureKeys.clear();
     persistPlaylistSelection();
     renderPlaylistStatus(null);
@@ -486,7 +513,11 @@ function renderPlaylistStatus(state) {
     const titleCell = element('td', 'playlist-title-cell');
     titleCell.append(element('div', 'playlist-lecture-title', replaceUnderbar(item.title)));
     titleCell.title = replaceUnderbar(item.title);
-    if (index === 0) titleCell.append(element('div', 'playlist-state', playlistStatusText(state)));
+    if (index === 0) {
+      const stateLine = element('div', 'playlist-state', playlistStatusText(state));
+      stateLine.title = stateLine.textContent;
+      titleCell.append(stateLine);
+    }
     const timeCell = element('td');
     timeCell.textContent = remainingTime(item.due, timeCell, item.lateUntil);
     const orderCell = element('td', 'playlist-order');
@@ -512,21 +543,23 @@ function renderPlaylistStatus(state) {
       reorderPlaylist(next, { key: item.key });
     });
     actions.append(grip);
-    // The current row toggles 정지 and 재생. Other rows take 삭제: dragging one to
+    // The current row toggles 일시중지 and 재생. Other rows take 삭제: dragging one to
     // the top already plays it (Spotify's "Remove from this playlist" does the same job).
     if (index === 0) {
       const playing = !['error', 'halted'].includes(state.status);
-      const play = element('button', 'playlist-action playlist-now-button', playing ? '정지' : '재생');
+      const play = element('button', 'playlist-action playlist-now-button', playing ? '일시중지' : '재생');
       play.type = 'button';
-      play.setAttribute('aria-label', name + (playing ? ' 정지' : ' 재생'));
+      play.setAttribute('aria-label', name + (playing ? ' 일시중지' : ' 재생'));
       play.addEventListener('click', async () => {
         if (!playing) {
           reorderPlaylist(keys, null);
           return;
         }
         play.disabled = true;
-        try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-halt' }); }
-        catch { play.disabled = false; }
+        try {
+          const response = await chrome.runtime.sendMessage({ type: 'icampus-playlist-halt' });
+          if (response && !response.ok) throw new Error(response.error || '일시중지하지 못했어요.');
+        } catch (error) { logPopup('재생 목록 일시중지 실패')(error); play.disabled = false; }
       });
       actions.append(play);
     } else {
@@ -587,6 +620,8 @@ async function syncPlaylist(result) {
   const doneKeys = [...result.items.filter(item => item.type === '강의' && item.done).map(item => item.key),
     ...(Array.isArray(result.doneLectureKeys) ? result.doneLectureKeys : [])];
   if (!doneKeys.length) return;
+  // This scan already knows they are done; their leaving needs no second scan.
+  for (const key of doneKeys) if (playlistKeys.has(key)) expectedPlaylistLeaves.add(key);
   try { await chrome.runtime.sendMessage({ type: 'icampus-playlist-sync', doneKeys }); }
   catch (error) { logPopup('재생목록 정리 요청 실패')(error); /* The worker cleans up on the next scan. */ }
 }
@@ -638,6 +673,27 @@ function render(result) {
   }
 }
 
+// Resolves on the tab's next finished load, or after the timeout.
+function nextTabLoad(tabId, timeout = 20000) {
+  return new Promise(resolve => {
+    const done = () => {
+      clearTimeout(timer);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    };
+    const listener = (id, change) => { if (id === tabId && change.status === 'complete') done(); };
+    const timer = setTimeout(done, timeout);
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+}
+
+async function scanActiveTab() {
+  const injected = await chrome.scripting.executeScript({
+    target: { tabId: activeTab.id }, files: ['executescript.js']
+  });
+  return injected[0]?.result;
+}
+
 async function load() {
   if (!activeTab || loading) return;
   if (await examBlocksPopup()) { showExamNotice(); return; }
@@ -646,10 +702,17 @@ async function load() {
   const button = document.querySelector('#refresh-button');
   button.disabled = true;
   try {
-    const injected = await chrome.scripting.executeScript({
-      target: { tabId: activeTab.id }, files: ['executescript.js']
+    let result = await scanActiveTab().catch(error => {
+      if (/Frame with ID|frame was removed|was removed|navigat/i.test(String(error?.message))) return null;
+      throw error;
     });
-    const result = injected[0]?.result;
+    // The tab left the page mid-scan (the playlist opening a lecture there, or a
+    // click): the scan returns nothing. Scan once more after the new page loads.
+    if (!result) {
+      const tab = await chrome.tabs.get(activeTab.id);
+      if (tab.status !== 'complete') await nextTabLoad(activeTab.id);
+      result = await scanActiveTab();
+    }
     if (!result || result.fatal) throw new Error(result?.fatal || '응답이 없습니다.');
     render(result);
     syncPlaylist(result);
@@ -738,6 +801,10 @@ async function startPlaylist() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   observeLightInk();
+  // Color first: the exam status below waits for the worker to wake up.
+  await loadScreenMode();
+  colorMedia.addEventListener('change', applyTheme);
+  applyTheme();
   document.querySelector('#exam-banner-action').addEventListener('click', async () => {
     const button = document.querySelector('#exam-banner-action');
     if (button.disabled || !examStatus) return;
@@ -758,10 +825,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.onChanged?.addListener((changes, area) => {
     if (area === 'session' && changes.icampusPlaylistState) {
       if (!examNoticeShown) renderPlaylistStatus(changes.icampusPlaylistState.newValue);
-      // A lecture left the playlist: rescan so the lecture table shows it as done.
-      const before = changes.icampusPlaylistState.oldValue?.queue?.length || 0;
-      const after = changes.icampusPlaylistState.newValue?.queue?.length || 0;
-      if (after < before && lastResult && !examNoticeShown) load();
+      // A lecture finished and left the playlist: rescan so the lecture table shows it as done.
+      // Lectures the popup removed itself are already back in the table.
+      const after = new Set(changes.icampusPlaylistState.newValue?.queue?.map(item => item.key) || []);
+      let finished = false;
+      for (const item of changes.icampusPlaylistState.oldValue?.queue || []) {
+        if (after.has(item.key)) continue;
+        if (!expectedPlaylistLeaves.delete(item.key)) finished = true;
+      }
+      if (finished && lastResult && !examNoticeShown) {
+        // The worker saves 'opening' and then sends this same tab to the next lecture.
+        // Scanning now would be cut off by that navigation; wait for the new page.
+        const next = changes.icampusPlaylistState.newValue;
+        if (next?.status === 'opening' && next.tabId === activeTab?.id) nextTabLoad(activeTab.id).then(load);
+        else load();
+      }
     }
     if (area === 'session' && (changes.examTabs || changes.examBlockedCount ||
         changes.examDisabledIds || changes.examRestoreManualIds)) {
@@ -773,29 +851,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
     }
   });
-  await loadScreenMode();
   try {
     const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView']);
     if (saved.assignmentView === 'all') assignmentView = 'all';
     if (saved.icampusPlaylistDraft) {
       for (const key of saved.icampusPlaylistDraft.keys || []) selectedLectureKeys.add(key);
     }
+    savedPlaylistDraft = [...selectedLectureKeys].join('\n');
   } catch (error) { logPopup('팝업 상태 읽기 실패')(error); }
   document.querySelector('#theme-toggle').addEventListener('click', () => {
     setScreenMode(darkMode() ? 'light' : 'dark');
   });
-  colorMedia.addEventListener('change', applyTheme);
-  applyTheme();
   // Settings live in their own tab (options.html): a popup closes on any outside
   // click, which lost pasted tokens and permission prompts.
   document.querySelector('#settings-button').addEventListener('click', () => {
     chrome.runtime.openOptionsPage().catch(logPopup('설정 열기 실패'));
   });
   document.querySelector('#refresh-button').addEventListener('click', () => {
+    // No spin: motion is off by default (docs/DESIGN.md §1). The loading box shows progress.
     if (examNoticeShown) return;
-    const button = document.querySelector('#refresh-button');
-    button.style.animation = 'spin 1s ease-in-out';
-    setTimeout(() => { button.style.animation = ''; }, 1000);
     load();
   });
   try {

@@ -340,14 +340,17 @@ table.lecture tbody tr.selected-lecture {
   color: var(--primary-color);
   font-weight: 600;
 }
+/* 재생 상태는 한 줄로 둬 첫 행도 다른 행과 같은 높이를 지킨다. 넘치면 말줄임, 전체 문구는 title로 본다 */
 .playlist-status-table .playlist-state {
   margin-top: 2px;
   color: var(--text-light);
   font-size: 0.85em;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .playlist-status-table .playlist-order {
-  width: 128px;
+  width: 136px;
 }
 .playlist-status-table tbody tr.playlist-current {
   background: var(--table-selected, var(--table-hover));
@@ -365,9 +368,9 @@ table.lecture tbody tr.selected-lecture {
   font-size: 0.85rem;
   box-shadow: none;
 }
-/* 정지와 재생이 바뀌어도 버튼 폭이 같다 */
+/* 일시중지, 재생, 삭제가 모두 같은 폭이다 */
 .playlist-order-actions .playlist-now-button {
-  width: 56px;
+  width: 64px;
   padding: 0;
 }
 .playlist-order-actions .playlist-icon-button {
@@ -691,7 +694,7 @@ table tbody td {
 /* 설정 버튼은 모두 같은 폭이라 줄이 바뀌어도 버튼 열이 맞는다 */
 #settings .playlist-action {
   display: inline-block;
-  width: 80px;
+  width: 96px;
   padding-left: 0;
   padding-right: 0;
   text-align: center;
@@ -1488,7 +1491,7 @@ table td.urgent,
    팝업 설정 행을 그대로 쓰고, 넓은 탭에서는 가운데 한 열로 둔다 */
 body.options-page {
   width: auto;
-  max-width: 640px;
+  max-width: 680px;
   margin: 0 auto;
   padding: 24px 16px 40px;
 }

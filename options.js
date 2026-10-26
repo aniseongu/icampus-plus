@@ -35,7 +35,8 @@ async function renderExamKeepList() {
         for (const input of list.querySelectorAll('input')) input.disabled = true;
         try {
           await chrome.storage.local.set({ examKeepIds: [...examKeepIds] });
-        } catch {
+        } catch (error) {
+          logPopup('시험 중 켤 확장 저장 실패')(error);
           examKeepIds = before;
           check.checked = before.has(item.id);
           document.querySelector('#exam-status').textContent = '선택을 저장하지 못했어요. 다시 골라 주세요';
@@ -48,7 +49,8 @@ async function renderExamKeepList() {
       return row;
     });
     list.replaceChildren(...rows);
-  } catch {
+  } catch (error) {
+    logPopup('확장 목록 읽기 실패')(error);
     list.replaceChildren(element('p', 'setting-help', '확장 목록을 불러오지 못했어요. 다시 열어 주세요'));
   }
 }
@@ -97,7 +99,8 @@ async function refreshExamSettings() {
       if (!status.manual && status.disableFailures > 0) action.textContent = '다시 시도';
       action.hidden = status.manual || (active && status.disableFailures === 0);
     }
-  } catch {
+  } catch (error) {
+    logPopup('시험 상태 확인 실패')(error);
     document.querySelector('#exam-status').textContent = '상태를 확인하지 못했어요. 다시 열어 주세요';
   }
 }
@@ -123,7 +126,8 @@ async function handleExamAction() {
       await chrome.storage.local.set({ examModeManual: true });
       await ExamMode.enterExamMode('manual');
     }
-  } catch {
+  } catch (error) {
+    logPopup('시험 모드 전환 실패')(error);
     document.querySelector('#exam-status').textContent = '확장 상태를 바꾸지 못했어요. 다시 눌러 주세요';
   } finally {
     button.disabled = false;
@@ -158,7 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         else await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
         errorLogStatus.textContent = errorLogHelp;
         await refreshErrorLogPermission();
-      } catch {
+      } catch (error) {
+        logPopup('오류 기록 권한 변경 실패')(error);
         errorLogStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
       } finally {
         errorLogOptions.forEach(control => { control.disabled = false; });
@@ -171,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshErrorLogPermission().catch(logPopup('오류 기록 권한 확인 실패'));
   document.querySelector('#exam-keep').addEventListener('toggle', event => {
     const keep = event.currentTarget;
-    keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '고르기';
+    keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '펼치기';
     if (keep.open) renderExamKeepList().catch(logPopup('시험 중 켤 확장 목록 실패'));
   });
   // Shortcut: manifest commands._execute_action (suggested Alt+Shift+K). Users
@@ -206,7 +211,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         else await chrome.permissions.remove(videoPermissions);
         const on = await refreshVideoSave();
         videoStatus.textContent = on ? '켜졌어요. 강의 화면을 새로고침하면 버튼이 보여요' : videoHelp;
-      } catch {
+      } catch (error) {
+        logPopup('영상 저장 권한 변경 실패')(error);
         videoStatus.textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
       } finally {
         videoOptions.forEach(control => { control.disabled = false; });
@@ -372,7 +378,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const granted = on ? await chrome.permissions.request(cookiePermission)
           : !(await chrome.permissions.remove(cookiePermission));
         showLectureAccess(granted, on && !granted ? '권한을 허용해야 강의 일정도 확인할 수 있어요' : '');
-      } catch {
+      } catch (error) {
+        logPopup('쿠키 권한 변경 실패')(error);
         showLectureAccess(await chrome.permissions.contains(cookiePermission).catch(error => { logPopup('쿠키 권한 확인 실패')(error); return false; }),
           '설정을 바꾸지 못했어요. 다시 눌러 주세요');
       }
@@ -407,7 +414,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tokenBusy) return;
       if (status?.error) throw new Error(status.error);
       showCanvasToken(status, saved.icampusScanState, saved.notifyEnabled !== false);
-    } catch {
+    } catch (error) {
+      logPopup('토큰 상태 확인 실패')(error);
       if (!tokenBusy) tokenStatus.textContent = tokenErrors.network;
     }
   }
@@ -485,7 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'account-choice': '구글 계정을 고를 수 없어 끊겼어요. 다시 연결해 주세요',
     consent: '구글 권한 동의가 필요해요. 다시 연결해 주세요',
     'token-revoked': '구글에서 연결이 해제됐어요. 다시 연결해 주세요',
-    'client-secret': '보안 비밀번호가 맞지 않아요. 연결 유지에서 다시 넣어 주세요',
+    'client-secret': '보안 비밀번호가 맞지 않아요. 비밀번호 넣기에서 다시 넣어 주세요',
     'testing-expired': '구글 클라우드 앱이 테스트 상태라 7일마다 끊겨요. 게시 상태를 프로덕션으로 바꿔 주세요'
   };
   const gcalHelpText = '보안 비밀번호까지 넣으면 구글 로그인이 풀려도 연결이 이어져요. 만드는 방법은 README에 있어요';
@@ -522,7 +530,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         : connected && status.problem === 'network' ? '지금은 구글에 닿지 않아요. 1시간 안에 다시 맞출게요'
           : connected && status.needsListConsent ? '다시 연결하면 아캠 플러스 캘린더를 하나로 합쳐요'
           : connected && status.lastSyncAt ? gcalTime(status.lastSyncAt) + '에 일정 ' + (status.count || 0) + '개를 맞췄어요'
-            + (status.merged ? '. 겹친 캘린더 ' + status.merged + '개를 정리했어요' : '')
+            // Merging happens once; a later sync keeps the note but under its own time.
+            + (!status.merged ? '' : status.mergedAt === status.lastSyncAt ? '. 겹친 캘린더 ' + status.merged + '개도 정리했어요'
+              : '. ' + gcalTime(status.mergedAt) + '에 겹친 캘린더 ' + status.merged + '개를 정리했어요')
             : connected ? '아캠 플러스 캘린더에 일정을 넣는 중이에요'
               : '즐겨찾기 과목 일정을 구글 캘린더에 넣어요';
   }

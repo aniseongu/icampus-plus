@@ -37,6 +37,26 @@ const CanvasToken = (() => {
     } finally { db.close(); }
   }
 
+  async function mark(token, field) {
+    if (!token) return;
+    const db = await open();
+    try {
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE, 'readwrite');
+        const store = transaction.objectStore(STORE);
+        const request = store.get(KEY);
+        request.onsuccess = () => {
+          const record = request.result;
+          if (record?.token === token && (field !== 'lastOkAt' || !record.rejectedAt))
+            store.put({ ...record, [field]: Date.now() }, KEY);
+        };
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally { db.close(); }
+  }
+
   function publicStatus(record) {
     return {
       set: Boolean(record?.token), name: record?.name || null,
@@ -78,8 +98,8 @@ const CanvasToken = (() => {
     status: async () => publicStatus(await read()),
     save,
     clear: async () => { await write(null); return publicStatus(null); },
-    markRejected: async () => { const record = await read(); if (record?.token) await write({ ...record, rejectedAt: Date.now() }); },
-    markOk: async () => { const record = await read(); if (record?.token && !record.rejectedAt) await write({ ...record, lastOkAt: Date.now() }); }
+    markRejected: token => mark(token, 'rejectedAt'),
+    markOk: token => mark(token, 'lastOkAt')
   };
 })();
 

@@ -233,6 +233,21 @@ const Gcal = (() => {
     return usable;
   }
 
+  // A duplicate is merged away only when every event in it is one this extension
+  // wrote; an event the user added by hand keeps the whole calendar.
+  async function onlyOurs(id) {
+    let pageToken = '';
+    do {
+      const query = new URLSearchParams({ maxResults: '250', showDeleted: 'false' });
+      if (pageToken) query.set('pageToken', pageToken);
+      const page = await api('/calendars/' + encodeURIComponent(id) + '/events?' + query, 'GET', null, true, true);
+      if (!Array.isArray(page?.items)) return false;
+      if (page.items.some(event => typeof event?.extendedProperties?.private?.icampusKey !== 'string')) return false;
+      pageToken = typeof page.nextPageToken === 'string' ? page.nextPageToken : '';
+    } while (pageToken);
+    return true;
+  }
+
   async function remember(id, info, reset) {
     const owner = typeof info?.dataOwner === 'string' ? info.dataOwner : null;
     await chrome.storage.local.set({ gcalCalendarId: id, ...(reset ? { gcalEvents: {} } : {}), ...(owner ? { gcalAccount: owner } : {}) });
@@ -300,7 +315,7 @@ const Gcal = (() => {
 
   async function desiredEvents(items, leadSetting) {
     const wanted = new Map();
-    const reminders = { useDefault: false, overrides: leads(leadSetting) };
+    const leadOverrides = leads(leadSetting);
     for (const item of items) {
       if (!item || typeof item.key !== 'string' || !item.key || item.done || item.closed === 'offline') continue;
       const due = Date.parse(item.due);
@@ -314,6 +329,9 @@ const Gcal = (() => {
         const opens = Date.parse(item.opensAt);
         const sitting = item.quiz && part === 'main' && opens < due && due - opens <= 3 * 3600000;
         const start = sitting ? opens : end - 1800000;
+        const overrides = sitting ? leadOverrides : [...new Set(leadOverrides.map(lead =>
+          Math.max(0, lead.minutes - (end - start) / 60000)))].map(minutes => ({ method: 'popup', minutes }));
+        const reminders = { useDefault: false, overrides };
         const summary = (part === 'late' ? '[지각 마감] '
           : item.quiz ? '[퀴즈] ' : item.type === '강의' ? '[강의] ' : '[과제] ') + (item.title || '');
         const opensLine = Number.isFinite(opens) && !sitting ? '열림 ' + new Date(opens).toLocaleString('ko-KR', {
@@ -385,20 +403,35 @@ const Gcal = (() => {
       if (cal.created) { records = {}; changed = true; }
       if (changed) {
         const path = '/calendars/' + encodeURIComponent(cal.id) + '/events';
-        for (const [id, entry] of wanted) {
+        const pending = [...wanted].filter(([id, entry]) => records[id]?.sig !== entry.sig);
+        for (let i = 0; i < pending.length; i += 4) {
           if (await examIsActive()) return { error: 'permission' };
-          if (records[id]?.sig === entry.sig) continue;
-          try { await api(path + '/' + id, 'PUT', entry.event); }
-          catch (error) {
-            if (error.code !== '404') throw error;
-            try { await api(path, 'POST', entry.event); }
-            catch (insertError) {
-              if (insertError.code !== '409') throw insertError;
-              await api(path + '/' + id, 'PUT', entry.event);
+          const batch = pending.slice(i, i + 4);
+          const results = await Promise.allSettled(batch.map(async ([id, entry]) => {
+            if (await examIsActive()) throw failure('permission');
+            try { await api(path + '/' + id, 'PUT', entry.event); }
+            catch (error) {
+              if (error.code !== '404') throw error;
+              try { await api(path, 'POST', entry.event); }
+              catch (insertError) {
+                if (insertError.code !== '409') throw insertError;
+                await api(path + '/' + id, 'PUT', entry.event);
+              }
             }
+          }));
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              const [id, entry] = batch[index];
+              records[id] = { sig: entry.sig, end: entry.end };
+            }
+          });
+          if (results.some(result => result.status === 'fulfilled'))
+            await chrome.storage.local.set({ gcalEvents: records });
+          const rejected = results.find(result => result.status === 'rejected');
+          if (rejected) {
+            if (rejected.reason?.code === 'permission') return { error: 'permission' };
+            throw rejected.reason;
           }
-          records[id] = { sig: entry.sig, end: entry.end };
-          await chrome.storage.local.set({ gcalEvents: records });
         }
         for (const [id, entry] of Object.entries(records)) {
           if (wanted.has(id)) continue;
@@ -412,14 +445,26 @@ const Gcal = (() => {
         }
       }
       // Only after the chosen calendar holds every event: duplicates from other profiles go.
+      const { gcalKeptExtras } = await chrome.storage.local.get('gcalKeptExtras');
+      const kept = new Set(Array.isArray(gcalKeptExtras) ? gcalKeptExtras : []);
       for (const id of cal.extras) {
         if (await examIsActive()) return { error: 'permission' };
-        try { await api('/calendars/' + encodeURIComponent(id), 'DELETE', null, true, true); merged++; }
+        try {
+          if (!(await onlyOurs(id))) {
+            // Reported once per calendar; the hourly sync would repeat it otherwise.
+            if (!kept.has(id)) reportError('gcal', '구글 캘린더: 직접 넣은 일정이 있어 겹친 캘린더를 남김');
+            kept.add(id);
+            continue;
+          }
+          await api('/calendars/' + encodeURIComponent(id), 'DELETE', null, true, true);
+          merged++;
+        }
         catch (error) {
           if (error.code !== 'denied') throw error;
           reportError('gcal', '구글 캘린더: 겹친 캘린더를 지우지 못함 HTTP ' + error.detail);
         }
       }
+      await chrome.storage.local.set({ gcalKeptExtras: [...kept].filter(id => cal.extras.includes(id)) });
     }
     if (full) await chrome.storage.local.set({ gcalFullAt: Date.now() });
     await state(null, wanted.size, merged);
@@ -523,7 +568,7 @@ const Gcal = (() => {
         offline: Boolean(credentials?.refreshToken), hasAccount: Boolean((await chrome.storage.local.get('gcalAccount')).gcalAccount),
         connectError: Date.now() - state.connectErrorAt < 5 * 60000 ? state.connectError || null : null,
         needsListConsent: saved.gcalEnabled === true && saved.gcalListGranted !== true,
-        merged: Date.now() - state.mergedAt < 24 * 3600000 ? state.merged || 0 : 0 };
+        merged: Date.now() - state.mergedAt < 24 * 3600000 ? state.merged || 0 : 0, mergedAt: state.mergedAt || null };
     }
     return serialize(async () => {
       if (type === 'icampus-gcal-prepare') {
