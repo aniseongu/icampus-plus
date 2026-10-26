@@ -493,6 +493,16 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
 
 /* 10. 메시지함 */
 html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
+  & .message-list-scroller > .icd-inbox-banner {
+    background-color: var(--icd-surface);
+    border-color: var(--icd-line);
+    color: var(--icd-text-2);
+  }
+
+  & .icd-inbox-banner-action {
+    color: var(--icd-link);
+  }
+
   & .message-list li,
   & .conversations header.panel,
   & .search.form-search .ac-input-box {
@@ -527,6 +537,28 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
 
   & .conversations .panel .btn.ui-state-active {
     background: var(--icd-brand-soft);
+  }
+
+  /* 읽음 표시: 채운 점은 안 읽음, 빈 원은 읽음이다. 학교 기본색(#033669)은 검은 면에서 1.5:1이라
+     안 보였다. 안 읽음은 밝은 파랑으로 채우고, 읽음은 회색 고리로 한 단계 낮춘다 */
+  & .message-list .read-state::before {
+    background: var(--icd-link);
+  }
+
+  & .message-list .read-state.read::before {
+    background: none;
+    box-shadow: 0 0 0 1px var(--icd-control-line);
+  }
+
+  /* 학교 CSS는 클릭만 해도 네모난 고리를 그려 채운 점이 네모로 보였다. 키보드 포커스에만 둥글게 둔다 */
+  & .message-list .read-state:focus {
+    box-shadow: none;
+  }
+
+  & .message-list .read-state:focus-visible {
+    border-radius: 50%;
+    outline: 2px solid var(--icd-primary);
+    outline-offset: 2px;
   }
 
   & .filters :is(.current-selection-label, #course-filter-description) {
@@ -740,8 +772,16 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
     color: var(--icd-link);
   }
 
-  & :is(.xnmb-module_item-completed.incomplete, .xnmb-module_item-meta_data-attendance_status.none) {
+  & .xnmb-module_item-meta_data-attendance_status.none {
     color: var(--icd-text-3);
+  }
+
+  /* 아직 안 본 영상의 미결 표시: 테두리가 선 색(#2b3038)이라 바탕에 묻혔다. 완료(채운 면)보다는 낮게,
+     빈 면에 조작부 선 색 테두리와 보조 글자색으로 둔다 */
+  & .xnmb-module_item-completed.incomplete {
+    background-color: transparent;
+    border: 1px solid var(--icd-control-line);
+    color: var(--icd-text-2);
   }
 
   & .completed-progress-bar {
@@ -968,6 +1008,12 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
   & .xnvc-progress-info-attendance-status.attendance {
     background-color: var(--icd-primary);
     color: var(--icd-on-accent);
+  }
+
+  /* 영상, 자료 보기 위쪽 줄의 미결: 변환 규칙이 테두리를 선 색(#2b3038)으로 바꿔 글자만 흐리게 남았다 */
+  & :is(.xnvc-progress-info-attendance-status, .xnca-progress-info-attendance-status).none {
+    border-color: var(--icd-control-line);
+    color: var(--icd-text-2);
   }
 }
 

@@ -36,7 +36,7 @@ const AWAKE_KEY = 'awakeLectureTabs';
 const DIRECT_TTL_MS = 2 * 60 * 1000;
 const advanceLocks = new Set();
 // The playlist tab is not playing in these states: no mute or sleep exemption is
-// held. 'halted' is a user pause (정지) that keeps the queue for 재생.
+// held. 'halted' is a user pause (일시중지) that keeps the queue for 재생.
 const INACTIVE_STATUSES = ['finished', 'stopped', 'error', 'halted'];
 let messageQueue = Promise.resolve();
 const EXAM_TABS_KEY = 'examTabs';
@@ -60,27 +60,35 @@ async function updateExamTab(tabId, url) {
   const before = await examTabs();
   const after = before.filter(id => id !== tabId);
   if (ExamMode.EXAM_URL.test(url || '')) after.push(tabId);
-  if (after.length === before.length && after.every(id => before.includes(id))) return;
-  await chrome.storage.session.set({ [EXAM_TABS_KEY]: after });
-  await notifyExamState();
+  // Most tab updates are not exams; skip the storage reads below for them.
+  if (!before.length && !after.length) return;
+  if (after.length !== before.length || !after.every(id => before.includes(id))) {
+    await chrome.storage.session.set({ [EXAM_TABS_KEY]: after });
+    await notifyExamState();
+  }
   const { examGuard, examModeManual } = await chrome.storage.local.get(['examGuard', 'examModeManual']);
-  if (!before.length && after.length && examGuard !== false) await ExamMode.enterExamMode('auto');
+  const { examEntered } = await chrome.storage.session.get('examEntered');
+  if (after.length && examGuard !== false && examEntered !== true) await ExamMode.enterExamMode('auto');
   if (before.length && !after.length && examModeManual !== true) await ExamMode.exitExamMode();
 }
 
 async function reconcileExamTabs() {
   const tabs = await chrome.tabs.query({});
   const found = tabs.filter(tab => ExamMode.EXAM_URL.test(tab.url || '')).map(tab => tab.id);
+  // This runs on every worker start; message the tabs only when the exam tabs changed.
   const before = await examTabs();
-  await chrome.storage.session.set({ [EXAM_TABS_KEY]: found });
-  await notifyExamState();
+  if (found.length !== before.length || !found.every(id => before.includes(id))) {
+    await chrome.storage.session.set({ [EXAM_TABS_KEY]: found });
+    await notifyExamState();
+  }
   const { examGuard, examModeManual, examNotificationsBlocked } = await chrome.storage.local.get([
     'examGuard', 'examModeManual', 'examNotificationsBlocked'
   ]);
+  const { examEntered } = await chrome.storage.session.get('examEntered');
   const disabledIds = await ExamMode.disabledIds();
-  if (found.length && examGuard !== false && !before.length) await ExamMode.enterExamMode('auto');
+  if (found.length && examGuard !== false && examEntered !== true) await ExamMode.enterExamMode('auto');
   if (!found.length && examModeManual !== true &&
-      (disabledIds.length || examNotificationsBlocked === true)) {
+      (disabledIds.length || examNotificationsBlocked === true || examEntered === true)) {
     await ExamMode.exitExamMode();
   }
 }
@@ -124,7 +132,8 @@ async function examIsActive() {
 
 async function notifyExamState() {
   const [tabs, saved] = await Promise.all([
-    chrome.tabs.query({}),
+    // Only these sites run a listener (exam-guard, player, timetable-portal).
+    chrome.tabs.query({ url: ['https://canvas.skku.edu/*', 'https://lcms.skku.edu/*', 'https://kingoinfo.skku.edu/*'] }),
     chrome.storage.local.get(['examGuard', 'examModeManual'])
   ]);
   const blocked = saved.examGuard !== false &&
@@ -154,6 +163,7 @@ chrome.tabs.onRemoved.addListener(tabId => {
 });
 chrome.runtime.onStartup.addListener(() => { queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 복원 실패', error)); });
 chrome.runtime.onInstalled.addListener(() => { queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 초기화 실패', error)); });
+queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 재조정 실패', error));
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.examGuard || changes.examModeManual)) {
     queueExam(notifyExamState).catch(error => logWorker('시험 상태 알림 실패', error));
@@ -715,7 +725,7 @@ async function handlePlayerMessage(message, sender) {
   return null;
 }
 
-// 정지: pause the current lecture and keep the list. 재생 on any row resumes.
+// 일시중지: pause the current lecture and keep the list. 재생 on any row resumes.
 async function haltPlaylist() {
   const state = await getState();
   if (!state?.queue?.length || INACTIVE_STATUSES.includes(state.status)) return { ok: true };
