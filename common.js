@@ -34,7 +34,18 @@ function darkMode() {
   return screenMode === 'dark' || (screenMode === 'auto' && colorMedia.matches);
 }
 
+// 웨일 다크 모드(night_mode) 보정. 웨일 예외에 넣어 다시 칠하지 않으면 꺼서 SVG 필터 없이 선명한 글자로 그린다(D-029).
+// 확장이 웨일 다크 모드 상태를 알 방법이 없어 사용자가 고른다.
+// 툴바 팝업은 웨일 예외 목록에 넣어도 다시 칠해지므로(daily-log 2026-10-20) 늘 보정한다. 끄기는 설정 탭에만 적용된다.
+let nightGuard = true;
+const NIGHT_GUARD_CACHE_KEY = 'icampus-night-guard';
+const NIGHT_GUARD_ALWAYS = location.pathname === '/popup.html';
+
 function applyTheme() {
+  document.documentElement.classList.toggle('nm-off', !nightGuard && !NIGHT_GUARD_ALWAYS);
+  for (const option of document.querySelectorAll('#night-guard [data-night-guard]')) {
+    option.setAttribute('aria-checked', String((option.dataset.nightGuard === 'true') === nightGuard));
+  }
   document.body.classList.toggle('dark-mode', darkMode());
   document.documentElement.style.colorScheme = darkMode() ? 'only dark' : 'only light';
   const tooltip = document.querySelector('#theme-toggle .tooltip');
@@ -57,6 +68,17 @@ function setScreenMode(mode) {
   applyTheme();
   cacheScreenMode();
   chrome.storage.local.set({ screenMode: mode }).catch(logPopup('화면 모드 저장 실패'));
+}
+
+function cacheNightGuard() {
+  try { localStorage.setItem(NIGHT_GUARD_CACHE_KEY, String(nightGuard)); } catch { /* storage 값을 읽을 때까지 보정을 켠다. */ }
+}
+
+function setNightGuard(on) {
+  nightGuard = on;
+  applyTheme();
+  cacheNightGuard();
+  chrome.storage.local.set({ nightGuard: on }).catch(logPopup('다크 모드 보정 저장 실패'));
 }
 
 function element(tag, className, textValue) {
@@ -109,7 +131,9 @@ async function fetchExamStatus() {
 
 async function loadScreenMode() {
   try {
-    const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme']);
+    const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme', 'nightGuard']);
+    nightGuard = saved.nightGuard !== false;
+    cacheNightGuard();
     if (['auto', 'light', 'dark'].includes(saved.screenMode)) screenMode = saved.screenMode;
     else {
       screenMode = 'auto';
@@ -130,6 +154,7 @@ async function loadScreenMode() {
 try {
   const cached = localStorage.getItem(SCREEN_MODE_CACHE_KEY);
   if (['auto', 'light', 'dark'].includes(cached)) screenMode = cached;
+  nightGuard = localStorage.getItem(NIGHT_GUARD_CACHE_KEY) !== 'false';
 } catch { /* 캐시가 없으면 자동 색으로 시작한다. */ }
 // 스크립트는 defer라 body가 이미 있다. storage를 기다리기 전에 첫 색을 칠한다.
 applyTheme();
