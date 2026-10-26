@@ -143,6 +143,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const option of document.querySelectorAll('#screen-mode [data-mode]')) {
     option.addEventListener('click', () => setScreenMode(option.dataset.mode));
   }
+  for (const option of document.querySelectorAll('#night-guard [data-night-guard]')) {
+    option.addEventListener('click', () => setNightGuard(option.dataset.nightGuard === 'true'));
+  }
   const errorLogOptions = [...document.querySelectorAll('#error-log [data-error-log]')];
   const errorLogStatus = document.querySelector('#error-log-status');
   const errorLogHelp = errorLogStatus.textContent;
@@ -653,6 +656,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.screenMode && ['auto', 'light', 'dark'].includes(changes.screenMode.newValue)) {
       screenMode = changes.screenMode.newValue;
+      applyTheme();
+    }
+    if (area === 'local' && changes.nightGuard) {
+      nightGuard = changes.nightGuard.newValue !== false;
+      cacheNightGuard();
       applyTheme();
     }
     if ((area === 'session' && (changes.examTabs || changes.examBlockedCount ||

@@ -38,3 +38,14 @@
 .message-list-scroller[data-icd-view] .messages > li:not(.icd-inbox-match) {
   display: none;
 }
+
+/* Canvas 목록 로딩 표시는 16px GIF라 화면 배율이 1보다 크면 깨져 보인다. 같은 자리에 벡터로 그린다.
+   GIF처럼 도는 것은 Canvas 원래 동작을 옮긴 것이다. 색은 위 안내 글자와 구분선 색이다. */
+.message-list-scroller .paginatedLoadingIndicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='7' stroke='%23c7cdd1'/%3E%3Cpath d='M10 3a7 7 0 0 1 7 7' stroke='%2373818c'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 10 10' to='360 10 10' dur='0.8s' repeatCount='indefinite'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-size: 20px 20px;
+}
+
+html[data-icd="on"] .message-list-scroller .paginatedLoadingIndicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='7' stroke='%233a4148'/%3E%3Cpath d='M10 3a7 7 0 0 1 7 7' stroke='%23a8b3bd'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 10 10' to='360 10 10' dur='0.8s' repeatCount='indefinite'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+}
