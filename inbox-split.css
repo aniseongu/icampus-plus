@@ -1,0 +1,40 @@
+/* 메시지 목록 첫 줄의 안내. Canvas 목록 행과 같은 글꼴, 구분선, 날짜 글자 크기, 링크 색을 쓴다(원본 값 2026-10-26 확인). */
+.message-list-scroller > .icd-inbox-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 20px;
+  border-bottom: 1px solid #c7cdd1;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #73818c;
+}
+
+.icd-inbox-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.icd-inbox-banner-action {
+  flex: none;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ic-link-color, #033669);
+  font: inherit;
+  cursor: pointer;
+}
+
+.icd-inbox-banner-action:hover {
+  text-decoration: underline;
+}
+
+.icd-inbox-banner-action[hidden] {
+  display: none;
+}
+
+/* 우리 보기(일반 메시지, 학습 알림)에서는 분류가 맞는 행만 보인다.
+   Canvas의 .message-list .messages > li { display: flex }보다 우선순위가 높아야 숨는다. */
+.message-list-scroller[data-icd-view] .messages > li:not(.icd-inbox-match) {
+  display: none;
+}

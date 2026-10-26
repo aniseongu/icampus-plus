@@ -9,8 +9,15 @@ var icampusScan = async (env = {}) => {
   const base = inPage ? location.origin : 'https://canvas.skku.edu';
   const now = Date.now();
   const warnings = [];
+  // Requests cut off because the tab is leaving this page are not failures; the
+  // popup scans again once the next page loads. One listener per page.
+  if (inPage && !globalThis.icampusLeaving) {
+    globalThis.icampusLeaving = { now: false };
+    addEventListener('pagehide', () => { globalThis.icampusLeaving.now = true; });
+  }
   const logScan = (description, error) => {
     const message = description + ': ' + String(error?.message || '알 수 없는 오류');
+    if (inPage && globalThis.icampusLeaving.now) return;
     if (inPage) {
       // The worker checks exam mode before accepting content script records.
       try {

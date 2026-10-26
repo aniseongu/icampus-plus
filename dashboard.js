@@ -74,9 +74,11 @@
       }
       const label = difference === 0 ? '오늘' : `D-${difference}`;
       const level = difference <= 3 ? 'soon' : 'warning';
+      // Write only on change: setting textContent replaces the text node, a childList
+      // mutation inside the planner that would schedule this again forever.
       const badge = existing || document.createElement('span');
-      badge.dataset.icdDayBadge = level;
-      badge.textContent = label;
+      if (badge.dataset.icdDayBadge !== level) badge.dataset.icdDayBadge = level;
+      if (badge.textContent !== label) badge.textContent = label;
       if (!existing) heading.append(badge);
     });
   }

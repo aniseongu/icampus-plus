@@ -44,9 +44,18 @@ function applyTheme() {
   }
 }
 
+// 첫 화면이 밝게 번쩍이지 않도록 마지막 모드를 확장 출처 localStorage에 같이 적어 두고 동기로 먼저 읽는다(dark/boot.js와 같은 방식).
+// 정본은 chrome.storage.local의 screenMode이고, loadScreenMode가 읽은 뒤 다시 맞춘다.
+const SCREEN_MODE_CACHE_KEY = 'icampus-screen-mode';
+
+function cacheScreenMode() {
+  try { localStorage.setItem(SCREEN_MODE_CACHE_KEY, screenMode); } catch { /* 캐시가 없으면 storage 값을 읽을 때까지 자동 색이다. */ }
+}
+
 function setScreenMode(mode) {
   screenMode = mode;
   applyTheme();
+  cacheScreenMode();
   chrome.storage.local.set({ screenMode: mode }).catch(logPopup('화면 모드 저장 실패'));
 }
 
@@ -103,6 +112,7 @@ async function loadScreenMode() {
     const saved = await chrome.storage.local.get(['screenMode', 'darkMode', 'icampusTheme']);
     if (['auto', 'light', 'dark'].includes(saved.screenMode)) screenMode = saved.screenMode;
     else {
+      screenMode = 'auto';
       // 1.5.x의 팝업 전용 테마 선택을 화면 모드로 옮긴다
       // 1.5.x의 darkMode/icampusTheme는 팝업 색만 정하던 값이다. 화면 모드는 아이캠퍼스 페이지 전체에 걸리므로 '어둡게'만 옮기고 '밝게'는 자동으로 둔다
       const old = saved.darkMode === true || saved.icampusTheme === 'dark' ? true : null;
@@ -110,7 +120,16 @@ async function loadScreenMode() {
         screenMode = old ? 'dark' : 'light';
         await chrome.storage.local.set({ screenMode });
       }
-      await chrome.storage.local.remove(['darkMode', 'icampusTheme']);
+      // 옛 키가 남아 있을 때만 지운다. 팝업을 열 때마다 저장소에 쓰지 않는다.
+      if ('darkMode' in saved || 'icampusTheme' in saved) await chrome.storage.local.remove(['darkMode', 'icampusTheme']);
     }
+    cacheScreenMode();
   } catch (error) { logPopup('화면 모드 읽기 실패')(error); /* Keeps automatic color. */ }
 }
+
+try {
+  const cached = localStorage.getItem(SCREEN_MODE_CACHE_KEY);
+  if (['auto', 'light', 'dark'].includes(cached)) screenMode = cached;
+} catch { /* 캐시가 없으면 자동 색으로 시작한다. */ }
+// 스크립트는 defer라 body가 이미 있다. storage를 기다리기 전에 첫 색을 칠한다.
+applyTheme();

@@ -71,35 +71,31 @@ const ExamMode = (() => {
     if (!hasPermission) {
       await blockNotifications();
       await chrome.storage.local.set({ examDisableFailures: 0 });
+      await chrome.storage.session.set({ examEntered: true });
       return { disabledCount: (await disabledIds()).length, failed: 0 };
     }
 
     const previous = await disabledState();
     let existing = new Set(previous.ids);
-    if (previous.source === 'local') {
-      if (existing.size && isStale(previous.startedAt)) {
-        await markManualRestore([...existing]);
-        existing = new Set();
-        await chrome.storage.local.set({ examStartedAt: Date.now() });
-      } else {
-        const verified = [];
-        for (const id of existing) {
-          try {
-            const item = await chrome.management.get(id);
-            if (item.type === 'extension' && item.enabled === false && id !== chrome.runtime.id) verified.push(id);
-          } catch (error) {
-            if (!/No extension with id/i.test(String(error?.message || '')))
-              logExam('시험 중 확장 상태 확인 실패', error);
-          }
+    if (previous.source === 'local' && existing.size && isStale(previous.startedAt)) {
+      await markManualRestore([...existing]);
+      existing = new Set();
+    } else {
+      const verified = [];
+      for (const id of existing) {
+        try {
+          const item = await chrome.management.get(id);
+          if (item.type === 'extension' && item.enabled === false && id !== chrome.runtime.id) verified.push(id);
+        } catch (error) {
+          if (!/No extension with id/i.test(String(error?.message || '')))
+            logExam('시험 중 확장 상태 확인 실패', error);
         }
-        existing = new Set(verified);
-        await chrome.storage.session.set({ [IDS_KEY]: verified });
-        await chrome.storage.local.set({ [IDS_KEY]: verified,
-          examStartedAt: verified.length ? previous.startedAt : Date.now() });
       }
-    } else if (!existing.size) {
-      await chrome.storage.local.set({ examStartedAt: Date.now() });
+      existing = new Set(verified);
     }
+    await chrome.storage.session.set({ [IDS_KEY]: [...existing] });
+    await chrome.storage.local.set({ [IDS_KEY]: [...existing],
+      examStartedAt: existing.size ? (previous.startedAt || Date.now()) : Date.now() });
     const saved = await chrome.storage.local.get('examKeepIds');
     const keepIds = new Set(Array.isArray(saved.examKeepIds)
       ? saved.examKeepIds.filter(id => typeof id === 'string') : []);
@@ -110,25 +106,34 @@ const ExamMode = (() => {
       logExam('확장 목록 조회 실패', error);
       await blockNotifications();
       await chrome.storage.local.set({ examDisableFailures: 1 });
+      await chrome.storage.session.set({ examEntered: true });
       return { disabledCount: existing.size, failed: 1 };
     }
     for (const item of extensions) {
       if (item.type !== 'extension' || !item.enabled || item.mayDisable === false ||
           item.id === chrome.runtime.id || existing.has(item.id) || keepIds.has(item.id)) continue;
+      existing.add(item.id);
       try {
-        await chrome.management.setEnabled(item.id, false);
-        existing.add(item.id);
         // Session is authoritative; local is only a restart backup.
         await chrome.storage.session.set({ [IDS_KEY]: [...existing] });
         await chrome.storage.local.set({ [IDS_KEY]: [...existing] });
-      } catch (error) { failed++; logExam('시험 중 확장 끄기 실패', error); }
+        await chrome.management.setEnabled(item.id, false);
+      } catch (error) {
+        existing.delete(item.id);
+        await chrome.storage.session.set({ [IDS_KEY]: [...existing] });
+        await chrome.storage.local.set({ [IDS_KEY]: [...existing] });
+        failed++;
+        logExam('시험 중 확장 끄기 실패', error);
+      }
     }
     await blockNotifications();
     await chrome.storage.local.set({ examRestorePending: false, examDisableFailures: failed });
+    await chrome.storage.session.set({ examEntered: true });
     return { disabledCount: existing.size, failed };
   }
 
   async function exitExamMode({ manualRestore = false } = {}) {
+    await chrome.storage.session.remove('examEntered');
     await restoreNotifications();
     const [manual, localManual] = await Promise.all([
       chrome.storage.session.get('examRestoreManualIds'),

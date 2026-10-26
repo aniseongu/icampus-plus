@@ -93,8 +93,8 @@ async function updateSchedule(result) {
   const fresh = result.items.map(scheduleItem).filter(Boolean);
   const keys = new Set(fresh.map(item => item.key));
   const keep = cached.filter(item => !keys.has(item.key) && (item.type === '강의'
-    ? (!result.moduleSources || failedModules.has(courseOf(item.key))) && !attended.has(item.key)
-    : !result.assignmentSources || failedAssignments.has(courseOf(item.key))));
+    ? failedModules.has(courseOf(item.key)) && !attended.has(item.key)
+    : failedAssignments.has(courseOf(item.key))));
   await chrome.storage.local.set({ [SCHEDULE_KEY]: {
     items: [...fresh, ...keep], userId: userId || (sameUser ? saved?.userId || null : null), fetchedAt: Date.now()
   } });
@@ -331,11 +331,11 @@ async function backgroundScan() {
       result = await icampusScan({ token, canvasToken });
       if (expired) return;
       if (canvasToken && result?.fatal && result.status === 401) {
-        await CanvasToken.markRejected();
+        await CanvasToken.markRejected(canvasToken);
         rejected = true;
         result = await icampusScan({ token });
       } else if (canvasToken && result && !result.fatal) {
-        await CanvasToken.markOk();
+        await CanvasToken.markOk(canvasToken);
       }
       if (canvasToken && hasCookies && result && !result.fatal &&
           (!token || (result.moduleSources === 0 && result.failedModuleCourses?.length > 0))) {
@@ -456,17 +456,24 @@ async function showNotification(item, kind, left, deadline = item.due, lead = nu
     : kind === 'late' ? course + ', 지각 제출은 ' + whenText(deadline) + '까지'
       : course + ', ' + whenText(deadline) + ' 마감';
   const id = 'icampus-' + crypto.randomUUID();
-  await chrome.notifications.create(id, {
-    type: 'basic', iconUrl: 'icons/' + icon + '.png', title,
-    message: item.title, contextMessage: context,
-    // A quiz may close in ten minutes, so its alert stays until it is dismissed.
-    // Windows then adds 닫기; the open button pairs with it.
-    priority: lead >= 720 ? 1 : 2, requireInteraction: quiz,
-    ...(quiz ? { buttons: [{ title: /시험|exam/i.test(item.title) ? '시험 열기' : '퀴즈 열기' }] } : {})
-  });
   const links = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
   links[id] = { url: item.url, lecture: item.type === '강의' };
   await chrome.storage.session.set({ [LINKS_KEY]: links });
+  try {
+    await chrome.notifications.create(id, {
+      type: 'basic', iconUrl: 'icons/' + icon + '.png', title,
+      message: item.title, contextMessage: context,
+      // A quiz may close in ten minutes, so its alert stays until it is dismissed.
+      // Windows then adds 닫기; the open button pairs with it.
+      priority: lead >= 720 ? 1 : 2, requireInteraction: quiz,
+      ...(quiz ? { buttons: [{ title: /시험|exam/i.test(item.title) ? '시험 열기' : '퀴즈 열기' }] } : {})
+    });
+  } catch (error) {
+    const saved = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
+    delete saved[id];
+    await chrome.storage.session.set({ [LINKS_KEY]: saved });
+    throw error;
+  }
 }
 
 function alertLeads(value) {
