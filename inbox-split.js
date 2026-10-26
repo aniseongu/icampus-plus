@@ -12,6 +12,7 @@
   // null이면 Canvas 원래 보기다. 받은 편지함으로 처음 열 때만 일반 메시지로 시작한다.
   let view = null;
   let conversations = new Map();
+  let ready = false;
   let safe = false;
   let busy = false;
   let exam = false;
@@ -25,6 +26,30 @@
   let note = '';
   const forceRead = new Set();
   const asked = new Set();
+  const CACHE_KEY = 'icd-inbox-split-v1';
+  const CACHE_AGE = 5 * 60 * 1000;
+
+  // 같은 탭에서 다시 열 때 행 분류에만 쓴다. 읽지 않음 수와 모두 읽음은 서버 조회가 끝나야 켠다.
+  const readCache = () => {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+      const age = Date.now() - cached?.at;
+      if (!Number.isFinite(age) || age < 0 || age > CACHE_AGE || !Array.isArray(cached.items) || cached.items.length > 10000) return new Map();
+      const items = new Map();
+      for (const item of cached.items) {
+        if (!Array.isArray(item) || !/^\d+$/.test(item[0]) || typeof item[1] !== 'boolean' || typeof item[2] !== 'boolean') return new Map();
+        items.set(item[0], { id: item[0], bot: item[1], unread: item[2] });
+      }
+      return items;
+    } catch { return new Map(); }
+  };
+
+  const writeCache = () => {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(),
+        items: [...conversations.values()].map(item => [item.id, item.bot, item.unread]) }));
+    } catch { /* 저장 공간이 부족해도 이번 목록은 그대로 쓴다. */ }
+  };
 
   const isBot = item => Array.isArray(item.audience) && item.audience.length > 0 &&
     item.audience.every(id => BOT_IDS.has(String(id)));
@@ -139,7 +164,7 @@
     return { data: JSON.parse(raw.replace(/^\s*while\s*\(\s*1\s*\)\s*;\s*/, '') || '{}'), response };
   };
 
-  const listConversations = async (scope, courseValue = '') => {
+  const listConversations = async (scope, courseValue = '', onPage) => {
     const items = new Map();
     let url = new URL('/api/v1/conversations', location.origin);
     url.searchParams.set('per_page', '100');
@@ -154,6 +179,7 @@
       visited.add(url.href);
       const { data, response } = await api(url.href);
       if (!Array.isArray(data)) throw new Error('대화 목록 형식 오류');
+      const page = new Map();
       for (const item of data) {
         if (!/^\d+$/.test(String(item.id)) || !Array.isArray(item.audience) ||
             !['read', 'unread', 'archived'].includes(item.workflow_state)) {
@@ -161,8 +187,11 @@
         }
         // 메시지 미리보기나 참여자 같은 내용은 버리고 분류에 쓰는 두 값만 남긴다(메모리, 개인 정보).
         const id = String(item.id);
-        items.set(id, { id, bot: isBot(item), unread: item.workflow_state === 'unread' });
+        const entry = { id, bot: isBot(item), unread: item.workflow_state === 'unread' };
+        items.set(id, entry);
+        page.set(id, entry);
       }
+      onPage?.(page);
       const next = response.headers.get('Link')?.split(',').find(part => /rel="?next"?/.test(part));
       const target = next?.match(/<([^>]+)>/)?.[1];
       url = target ? new URL(target, location.origin) : null;
@@ -177,21 +206,31 @@
     const serial = ++run;
     safe = false;
     loading = false;
+    ready = conversations.size > 0;
     const parts = render();
     // 목록이 아직 없으면 여기서 끝내고, 목록이 나타나면 applyRows가 다시 부른다.
     if (!parts || exam || canvasType() !== 'inbox') { releaseRows(); return; }
     loading = true;
+    if (ready) applyRows();
     try {
-      const next = await listConversations('inbox', parts.course.value);
+      const next = await listConversations('inbox', parts.course.value, page => {
+        if (serial !== run || exam) return;
+        for (const [id, item] of page) conversations.set(id, item);
+        ready = true;
+        applyRows();
+      });
       if (serial !== run || exam) return;
       conversations = next;
+      ready = true;
       safe = true;
       loading = false;
-      applyRows();
+      scan();
+      writeCache();
     } catch {
       if (serial !== run) return;
       // 못 받으면 우리 보기를 끄고 Canvas 목록을 그대로 보여 준다. 빈 목록으로 남기지 않는다.
       safe = false;
+      ready = false;
       loading = false;
       view = null;
       const scope = structure()?.scope;
@@ -215,7 +254,8 @@
     const parts = render();
     if (!parts || exam) return;
     // 우리 보기는 분류 정보가 있어야 행을 보여 줄 수 있다. 아직 없고 받는 중도 아니면 지금 받는다.
-    if (!safe) { if (view && !loading) refresh(); return; }
+    if (view && !safe && !loading) { refresh(); return; }
+    if (!ready) return;
     const rows = [...parts.list.querySelectorAll('li')];
     const matched = rows.map(row => [row, rowId(row)]);
     // 행 모양이 다르면 Canvas 화면이 바뀐 것이다. 우리 보기를 끄고 Canvas 받은 편지함으로 돌린다.
@@ -225,8 +265,8 @@
       render();
       return;
     }
-    // 모르는 대화는 새로 온 메시지일 수 있어 한 번만 다시 받는다. 그래도 모르면 모든 보기에 그대로 둔다.
-    const unknown = matched.filter(([, id]) => !conversations.has(id) && !asked.has(id));
+    // 받는 중에는 모르는 행을 가려 둔다. 전체 조회 후에도 없으면 새 메시지일 수 있어 다시 받고 보여 준다.
+    const unknown = safe ? matched.filter(([, id]) => !conversations.has(id) && !asked.has(id)) : [];
     if (unknown.length) {
       for (const [, id] of unknown) asked.add(id);
       scheduleRefresh();
@@ -234,7 +274,7 @@
     for (const [row, id] of matched) {
       // 이미 read면 손대지 않는다. 같은 값을 다시 써도 class 변경 기록이 생겨 다시 훑게 된다.
       const state = row.querySelector('input.read-state');
-      if (!conversations.has(id)) { row.classList.add('icd-inbox-match'); continue; }
+      if (!conversations.has(id)) { row.classList.toggle('icd-inbox-match', safe); continue; }
       if (forceRead.has(id) && !state.classList.contains('read')) state.classList.replace('unread', 'read') || state.classList.add('read');
       const bot = conversations.get(id).bot;
       row.classList.toggle('icd-inbox-match', view ? bot === (view === 'learning') : true);
@@ -379,7 +419,11 @@
     else refresh();
   };
   chrome.storage.local.get(['examGuard', 'examModeManual']).then(saved => {
-    if (canvasType() === 'inbox') view = 'people';
+    if (canvasType() === 'inbox') {
+      view = 'people';
+      conversations = readCache();
+      ready = conversations.size > 0;
+    }
     setExam(saved);
   }).catch(() => { safe = false; releaseRows(); });
   chrome.storage.onChanged.addListener((changes, area) => {

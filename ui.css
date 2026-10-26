@@ -1273,6 +1273,7 @@ body:not(.dark-mode)
     .loading h2
   ) {
   --nm-l-ink: url(#nm-l-link);
+  --nm-l-ink-c: #033669;
 }
 body:not(.dark-mode)
   :is(
@@ -1286,12 +1287,15 @@ body:not(.dark-mode)
     .closed-task td
   ) {
   --nm-l-ink: url(#nm-l-text2);
+  --nm-l-ink-c: #5c6770;
 }
 body:not(.dark-mode) .closed-task .title {
   --nm-l-ink: url(#nm-l-text2);
+  --nm-l-ink-c: #5c6770;
 }
 body:not(.dark-mode) .playlist-secondary {
   --nm-l-ink: url(#nm-l-text);
+  --nm-l-ink-c: #434343;
 }
 body:not(.dark-mode)
   :is(
@@ -1302,16 +1306,20 @@ body:not(.dark-mode)
     .tooltip
   ) {
   --nm-l-ink: url(#nm-l-white);
+  --nm-l-ink-c: #ffffff;
 }
 body:not(.dark-mode)
   :is(table td.urgent, .error-message, #sync-status summary) {
   --nm-l-ink: url(#nm-l-urgent);
+  --nm-l-ink-c: #c9100f;
 }
 body:not(.dark-mode) table td.soon {
   --nm-l-ink: url(#nm-l-soon);
+  --nm-l-ink-c: #a14a07;
 }
 body:not(.dark-mode) table td.warning {
   --nm-l-ink: url(#nm-l-warning);
+  --nm-l-ink-c: #7d6300;
 }
 body.dark-mode .nm-light-ink {
   color: #000;
@@ -1324,6 +1332,7 @@ body.dark-mode
     .footer a, a, .playlist-action, .loading h2
   ) {
   --nm-ink: url(#nm-link);
+  --nm-ink-c: #7fb5ef;
 }
 body.dark-mode
   :is(
@@ -1332,12 +1341,15 @@ body.dark-mode
     .connection-status
   ) {
   --nm-ink: url(#nm-text2);
+  --nm-ink-c: #b3bac2;
 }
 body.dark-mode .closed-task .title {
   --nm-ink: url(#nm-text2);
+  --nm-ink-c: #b3bac2;
 }
 body.dark-mode .playlist-secondary {
   --nm-ink: url(#nm-text);
+  --nm-ink-c: #e2e5e9;
 }
 body.dark-mode
   :is(
@@ -1346,14 +1358,43 @@ body.dark-mode
     .caption-row .caption-toggle[aria-pressed="true"], .tooltip
   ) {
   --nm-ink: url(#nm-header-text);
+  --nm-ink-c: #f7f9fc;
 }
 body.dark-mode
   :is(table td.urgent, .error-message, #sync-status summary) {
   --nm-ink: url(#nm-danger);
+  --nm-ink-c: #ff8277;
 }
 body.dark-mode table td.soon,
 body.dark-mode table td.warning {
   --nm-ink: url(#nm-warning);
+  --nm-ink-c: #e6b84f;
+}
+/* 설정 "웨일 다크 모드 보정"을 끄면(html.nm-off) 글자만 필터 대신 같은 색의 CSS 색으로 칠한다.
+   필터를 거친 글자는 크로미움이 클리어타입을 끄고 회색으로 그려 흐려 보인다. 면 필터는 글자 선명도와 상관없어 그대로 둔다(D-029). */
+html.nm-off body:not(.dark-mode) .nm-light-ink {
+  color: var(--nm-l-ink-c, #434343);
+  filter: none;
+}
+html.nm-off body.dark-mode .nm-light-ink {
+  color: var(--nm-ink-c, #e2e5e9);
+  filter: none;
+}
+/* 선택한 글자도 필터가 칠하던 같은 색으로 두고, 선택 띠는 그 색을 옅게 깐다. */
+html.nm-off body:not(.dark-mode) .nm-light-ink::selection {
+  color: var(--nm-l-ink-c, #434343);
+  background: color-mix(in srgb, var(--nm-l-ink-c, #434343) 22%, transparent);
+}
+html.nm-off body.dark-mode .nm-light-ink::selection {
+  color: var(--nm-ink-c, #e2e5e9);
+  background: color-mix(in srgb, var(--nm-ink-c, #e2e5e9) 22%, transparent);
+}
+html.nm-off .badge::after {
+  color: #171717;
+  filter: none;
+}
+html.nm-off body:not(.dark-mode) .badge::after {
+  color: #ffffff;
 }
 /* 실제 선은 투명하게 남겨 1px 상자 크기를 지킨다. 검은 표시층만 SVG로 착색한다. */
 table,
