@@ -1370,7 +1370,7 @@ body.dark-mode table td.warning {
   --nm-ink: url(#nm-warning);
   --nm-ink-c: #e6b84f;
 }
-/* 설정 "웨일 다크 모드 보정"을 끄면(html.nm-off) 글자만 필터 대신 같은 색의 CSS 색으로 칠한다.
+/* 웨일 설정에서 "확장 화면 보정"을 끄거나 크롬에서 열면(html.nm-off) 글자만 필터 대신 같은 색의 CSS 색으로 칠한다.
    필터를 거친 글자는 크로미움이 클리어타입을 끄고 회색으로 그려 흐려 보인다. 면 필터는 글자 선명도와 상관없어 그대로 둔다(D-029). */
 html.nm-off body:not(.dark-mode) .nm-light-ink {
   color: var(--nm-l-ink-c, #434343);
