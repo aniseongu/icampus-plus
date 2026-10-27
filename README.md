@@ -6,6 +6,10 @@
 
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
+![version](https://img.shields.io/badge/version-1.8.67-124532)
+![manifest](https://img.shields.io/badge/Manifest-V3-124532)
+![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%EC%9B%A8%EC%9D%BC%20%7C%20%ED%81%AC%EB%A1%AC-555555)
+
 </div>
 
 [아캠체크(iCampus Check)](https://github.com/moseoridev/iCampusCheck)를 바탕으로 만들었습니다. 네이버 웨일과 구글 크롬에서 같은 확장 파일을 사용합니다. **아이캠퍼스에서 별표로 즐겨찾기한 과목만** 조회합니다.
@@ -18,6 +22,13 @@
 - **선택 기능:** 영상 저장, 로그아웃 중 일정 알림, 시험 모드를 설정에서 켤 수 있습니다.
 
 ## 기술 구성
+
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
+![Chrome Extension](https://img.shields.io/badge/Chrome%20Extension-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)
+![Google Calendar API](https://img.shields.io/badge/Google%20Calendar%20API-4285F4?logo=googlecalendar&logoColor=white)
+![SortableJS](https://img.shields.io/badge/SortableJS-1.15.6-555555)
 
 | 구분 | 사용 기술 |
 | --- | --- |
