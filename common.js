@@ -36,13 +36,16 @@ function darkMode() {
 
 // 웨일 다크 모드(night_mode) 보정. 웨일 예외에 넣어 다시 칠하지 않으면 꺼서 SVG 필터 없이 선명한 글자로 그린다(D-029).
 // 확장이 웨일 다크 모드 상태를 알 방법이 없어 사용자가 고른다.
-// 툴바 팝업은 웨일 예외 목록에 넣어도 다시 칠해지므로(daily-log 2026-10-20) 늘 보정한다. 끄기는 설정 탭에만 적용된다.
+// 웨일 툴바 팝업은 예외 목록에 넣어도 다시 칠해지므로(daily-log 2026-10-20) 늘 보정한다.
+// 기본 크롬은 확장 화면을 강제로 다시 칠하지 않으므로 글자 필터를 쓰지 않는다.
 let nightGuard = true;
 const NIGHT_GUARD_CACHE_KEY = 'icampus-night-guard';
-const NIGHT_GUARD_ALWAYS = location.pathname === '/popup.html';
+const IS_WHALE = /\bWhale\//.test(navigator.userAgent);
+const NIGHT_GUARD_ALWAYS = IS_WHALE && location.pathname === '/popup.html';
+if (!IS_WHALE) document.querySelector('#night-guard-group')?.remove();
 
 function applyTheme() {
-  document.documentElement.classList.toggle('nm-off', !nightGuard && !NIGHT_GUARD_ALWAYS);
+  document.documentElement.classList.toggle('nm-off', !IS_WHALE || (!nightGuard && !NIGHT_GUARD_ALWAYS));
   for (const option of document.querySelectorAll('#night-guard [data-night-guard]')) {
     option.setAttribute('aria-checked', String((option.dataset.nightGuard === 'true') === nightGuard));
   }
