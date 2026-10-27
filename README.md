@@ -17,6 +17,15 @@
 - **읽기 편한 화면:** Canvas와 LearningX의 다크 모드, 좁은 창의 영상·PDF 확대, 메시지함의 일반 메시지와 학습 알림 나눠 보기를 제공합니다.
 - **선택 기능:** 영상 저장, 로그아웃 중 일정 알림, 시험 모드를 설정에서 켤 수 있습니다.
 
+## 기술 구성
+
+| 구분 | 사용 기술 |
+| --- | --- |
+| 언어 | JavaScript, HTML, CSS |
+| 확장 구조 | Manifest V3, 서비스 워커, 콘텐츠 스크립트, Chrome Extensions API |
+| 연동 | Canvas·LearningX API, Google Calendar API(선택 기능) |
+| 라이브러리 | SortableJS(재생 목록 정렬) |
+
 ## 설치와 업데이트
 
 웹 스토어에 등록하지 않았습니다. 이 저장소를 내려받아 확장 폴더를 직접 불러옵니다.
