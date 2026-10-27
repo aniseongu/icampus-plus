@@ -355,41 +355,6 @@
             </button>
           </div>
         </div>
-        <div class="setting-row">
-          <div class="setting-text">
-            <span id="night-guard-label" class="setting-label"
-              >웨일 다크 모드 보정</span
-            >
-            <span class="setting-help"
-              >웨일 다크 모드 예외에 넣었다면 끄세요. 이 화면 글씨가 선명해져요. 팝업은 늘 보정해요</span
-            >
-          </div>
-          <div
-            id="night-guard"
-            class="mode-choice"
-            role="radiogroup"
-            aria-labelledby="night-guard-label"
-          >
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="true"
-              data-night-guard="true"
-            >
-              켜기
-            </button>
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="false"
-              data-night-guard="false"
-            >
-              끄기
-            </button>
-          </div>
-        </div>
       </div>
       <div class="setting-group">
         <div class="setting-row">
@@ -927,6 +892,43 @@
               role="radio"
               aria-checked="true"
               data-error-log="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="setting-group" id="night-guard-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="night-guard-label" class="setting-label"
+              >웨일 확장 화면 보정</span
+            >
+            <span class="setting-help"
+              >웨일이 설정 탭 색을 바꿀 때만 켜세요. 툴바 팝업은 늘 보정해요</span
+            >
+          </div>
+          <div
+            id="night-guard"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="night-guard-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-night-guard="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-night-guard="false"
             >
               끄기
             </button>
