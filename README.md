@@ -73,7 +73,7 @@
 ## 알아둘 점
 
 - 학교의 비공개 LearningX API가 바뀌면 강의 일부를 못 가져올 수 있습니다. 실제 마감 시각과 출석 인정은 아이캠퍼스에서 확인하세요.
-- 오류가 나면 팝업의 **일부 자료 확인 실패**에서 과목과 자료 종류를 확인하고 [Issues](https://github.com/aniseongu/icampus-plus/issues)에 알려 주세요.
+- 팝업에 **강의와 과제 …건을 불러오지 못했어요**가 나오면 과목과 자료 종류를 확인하고 [Issues](https://github.com/aniseongu/icampus-plus/issues)에 알려 주세요.
 - 권한과 저장 정보는 [개인정보처리방침](PRIVACY.md)에 설명했습니다. 변경 사항은 [커밋 기록](https://github.com/aniseongu/icampus-plus/commits)에서 볼 수 있습니다.
 
 ## 출처와 참고

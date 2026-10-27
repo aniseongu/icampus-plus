@@ -675,40 +675,45 @@ html[data-icd='on']:not(#icd-a):not(#icd-b):not(#icd-c) {
     color: var(--icd-text);
   }
 
-  & :is(#grades_summary, #grades_summary tbody, #grades_summary thead) :is(th, td) {
-    background-color: var(--icd-table-row-bg);
+  /* 라이트 성적표는 표, 행, 칸이 모두 투명하고 가로선만 있다. 바깥 표의 직계 행과 칸만 다루어 펼친 점수 상세 표(.score_details_table)로 번지지 않게 한다. */
+  & #grades_summary {
+    background-color: transparent;
+    border: 0;
+  }
+
+  & #grades_summary > :is(thead, tbody) > tr {
+    background-color: transparent;
+  }
+
+  & #grades_summary > :is(thead, tbody) > tr > :is(th, td) {
+    background-color: transparent;
     color: var(--icd-text);
     border-color: var(--icd-table-line);
   }
 
-  /* 본문 일부 행은 마지막 머리글 칸에 대응하는 td가 없다. 표와 행도 칠해 남는 폭을 메운다. */
-  & #grades_summary,
-  & #grades_summary tbody tr {
-    background-color: var(--icd-table-row-bg);
-  }
-
-  & #grades_summary {
-    border: 1px solid var(--icd-line);
-  }
-
-  & #grades_summary thead :is(th, td) {
-    background-color: var(--icd-table-header-bg);
+  & #grades_summary > thead > tr > :is(th, td) {
     color: var(--icd-table-header-text);
     font-weight: 700;
     border-bottom-color: var(--icd-table-line-head);
   }
 
-  & #grades_summary :is(th, td) :is(a, .grade, .context, .tooltip) {
+  /* 안쪽 점수 상세 표는 일반 표 규칙(table.ic-Table 등)이 칠할 수 있어 투명으로 고정한다. */
+  & #grades_summary .score_details_table,
+  & #grades_summary .score_details_table :is(thead, tbody, tr, th, td) {
+    background-color: transparent;
+  }
+
+  & #grades_summary > :is(thead, tbody) > tr > :is(th, td) :is(a, .grade, .context, .tooltip) {
     color: inherit;
   }
 
-  & #grades_summary th > a,
-  & #grades_summary td > a {
+  & #grades_summary > :is(thead, tbody) > tr > :is(th, td) > a {
     color: var(--icd-link);
   }
 
-  & #grades_summary tbody tr:hover > :is(th, td) {
-    background-color: var(--icd-table-row-hover);
+  /* 라이트처럼 약한 hover: 다른 행 요소는 건드리지 않고 직계 칸만 옅게 표시한다. */
+  & #grades_summary > tbody > tr:not(.grade_details):hover > :is(th, td) {
+    background-color: color-mix(in srgb, var(--icd-table-row-hover) 50%, transparent);
   }
 
   & .ic-Table--hover-row > tbody > tr {
