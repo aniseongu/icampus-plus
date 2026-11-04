@@ -163,3 +163,16 @@ dist
 # End of https://www.toptal.com/developers/gitignore/api/node,visualstudiocode
 
 web-ext-artifacts/
+
+# Local AI instructions, design notes and work records
+.agents/
+.claude/
+.codex/
+codex/
+docs/
+*.md
+*.mdx
+*.MD
+!/README.md
+!/PRIVACY.md
+!/SECURITY.md
