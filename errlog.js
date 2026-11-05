@@ -79,6 +79,7 @@ const ErrorLog = (() => {
         else await chrome.storage.local.remove(PENDING_KEY);
       }
       if (!remaining.length) break;
+      if ((await chrome.storage.local.get('errorLogOptIn')).errorLogOptIn === false) break;
       if (typeof chrome.runtime.sendNativeMessage !== 'function' ||
           !await chrome.permissions.contains({ permissions: ['nativeMessaging'] })) break;
       const batch = [];

@@ -845,11 +845,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         changes.examDisabledIds || changes.examRestoreManualIds)) {
       refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
     }
-    if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen ||
+    if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen || changes.examNoticeShield ||
         changes.examDisabledIds || changes.examRestorePending || changes.examRestoreManual ||
         changes.examNotificationsBlocked)) {
       refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
     }
+  });
+  chrome.runtime.onMessage.addListener(message => {
+    if (message?.type === 'icampus-fullscreen-shield-change')
+      refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
   });
   try {
     const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView']);

@@ -69,6 +69,16 @@ async function refreshExamSettings() {
     }
     // The sub-settings below 시험 모드 only show while it is on.
     document.querySelector('#exam-fullscreen-group').hidden = !status.guard;
+    document.querySelector('#exam-notice-shield-group').hidden = !status.guard || !status.fullscreen;
+    for (const option of document.querySelectorAll('#exam-notice-shield [data-notice-shield]')) {
+      option.setAttribute('aria-checked', String((option.dataset.noticeShield === 'true') === status.noticeShield));
+    }
+    document.querySelector('#exam-notice-shield-status').textContent = !status.noticeShield
+      ? 'Windows 보조 프로그램을 설치해 주세요'
+      : status.noticeShieldStatus === 'ready' ? '시험 중 안내를 숨기고 있어요'
+        : status.noticeShieldStatus === 'starting' ? '보조 프로그램을 연결하고 있어요'
+          : ['error', 'permission'].includes(status.noticeShieldStatus)
+            ? '보조 프로그램과 권한을 확인해 주세요' : '시험이 시작되면 안내를 숨겨요';
     const keep = document.querySelector('#exam-keep');
     keep.hidden = !status.guard || !status.hasManagementPermission;
     keep.inert = !status.guard;
@@ -150,7 +160,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const errorLogStatus = document.querySelector('#error-log-status');
   const errorLogHelp = errorLogStatus.textContent;
   async function refreshErrorLogPermission() {
-    errorLogEnabled = await chrome.permissions.contains({ permissions: ['nativeMessaging'] });
+    const [permitted, saved] = await Promise.all([
+      chrome.permissions.contains({ permissions: ['nativeMessaging'] }), chrome.storage.local.get('errorLogOptIn')
+    ]);
+    if (saved.errorLogOptIn === undefined) await chrome.storage.local.set({ errorLogOptIn: permitted });
+    errorLogEnabled = permitted && saved.errorLogOptIn !== false;
     for (const option of errorLogOptions) {
       option.setAttribute('aria-checked', String((option.dataset.errorLog === 'true') === errorLogEnabled));
     }
@@ -161,8 +175,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (option.disabled || enable === errorLogEnabled) return;
       errorLogOptions.forEach(control => { control.disabled = true; });
       try {
-        if (enable) await chrome.permissions.request({ permissions: ['nativeMessaging'] });
-        else await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+        if (enable) {
+          const granted = await chrome.permissions.request({ permissions: ['nativeMessaging'] });
+          if (granted) {
+            await chrome.storage.local.set({ errorLogOptIn: true });
+            await ErrorLog.flushPending();
+          }
+        } else {
+          await chrome.storage.local.set({ errorLogOptIn: false });
+          if (!(await chrome.storage.local.get('examNoticeShield')).examNoticeShield)
+            await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+        }
         errorLogStatus.textContent = errorLogHelp;
         await refreshErrorLogPermission();
       } catch (error) {
@@ -175,8 +198,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   chrome.permissions.onAdded.addListener(refreshErrorLogPermission);
   chrome.permissions.onRemoved.addListener(refreshErrorLogPermission);
+  chrome.runtime.onMessage.addListener(message => {
+    if (message?.type === 'icampus-fullscreen-shield-change') refreshExamSettings();
+  });
   // Do not let the optional error-log row block the rest of the popup.
-  refreshErrorLogPermission().catch(logPopup('오류 기록 권한 확인 실패'));
+  await refreshErrorLogPermission().catch(logPopup('오류 기록 권한 확인 실패'));
   document.querySelector('#exam-keep').addEventListener('toggle', event => {
     const keep = event.currentTarget;
     keep.querySelector('summary .playlist-action').textContent = keep.open ? '접기' : '펼치기';
@@ -637,6 +663,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       await refreshExamSettings();
     });
   }
+  for (const option of document.querySelectorAll('#exam-notice-shield [data-notice-shield]')) {
+    option.addEventListener('click', async () => {
+      const enable = option.dataset.noticeShield === 'true';
+      try {
+        if (enable) {
+          // Request directly in the click handler while its user gesture is active.
+          if (!await chrome.permissions.request({ permissions: ['nativeMessaging'] })) return;
+          const check = await chrome.runtime.sendMessage({ type: 'icampus-fullscreen-shield-check' });
+          if (!check?.ok) {
+            if ((await chrome.storage.local.get('errorLogOptIn')).errorLogOptIn === false)
+              await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+            document.querySelector('#exam-notice-shield-status').textContent = '보조 프로그램을 설치한 뒤 다시 켜 주세요';
+            return;
+          }
+        }
+        await chrome.storage.local.set({ examNoticeShield: enable });
+        if (!enable && (await chrome.storage.local.get('errorLogOptIn')).errorLogOptIn === false)
+          await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
+        await refreshExamSettings();
+      } catch (error) {
+        logPopup('전체화면 안내 설정 실패')(error);
+        document.querySelector('#exam-notice-shield-status').textContent = '설정을 바꾸지 못했어요. 다시 눌러 주세요';
+      }
+    });
+  }
   for (const option of document.querySelectorAll('#exam-guard [data-guard]')) {
     option.addEventListener('click', async () => {
       const guard = option.dataset.guard === 'true';
@@ -665,7 +716,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if ((area === 'session' && (changes.examTabs || changes.examBlockedCount ||
         changes.examDisabledIds || changes.examRestoreManualIds)) ||
-        (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen ||
+        (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen || changes.examNoticeShield ||
         changes.examDisabledIds || changes.examRestorePending || changes.examRestoreManual ||
         changes.examNotificationsBlocked))) {
       refreshExamSettings().catch(logPopup('시험 상태 표시 실패'));
