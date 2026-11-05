@@ -74,7 +74,7 @@ async function refreshExamSettings() {
       option.setAttribute('aria-checked', String((option.dataset.noticeShield === 'true') === status.noticeShield));
     }
     document.querySelector('#exam-notice-shield-status').textContent = !status.noticeShield
-      ? 'Windows 웨일 보조 프로그램이 필요해요'
+      ? '시험 중 전체화면 안내를 숨겨요'
       : status.noticeShieldStatus === 'ready' ? '시험 중 안내를 숨기고 있어요'
         : status.noticeShieldStatus === 'starting' ? '보조 프로그램을 연결하고 있어요'
           : ['error', 'permission'].includes(status.noticeShieldStatus)
@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (!check?.ok) {
             if ((await chrome.storage.local.get('errorLogOptIn')).errorLogOptIn === false)
               await chrome.permissions.remove({ permissions: ['nativeMessaging'] });
-            document.querySelector('#exam-notice-shield-status').textContent = 'Windows 웨일에 보조 프로그램을 설치해 주세요';
+            document.querySelector('#exam-notice-shield-status').textContent = '보조 프로그램 연결 상태를 확인해 주세요';
             return;
           }
         }
