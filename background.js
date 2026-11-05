@@ -1,10 +1,18 @@
-importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'gcal.js', 'notify.js');
+importScripts('exam.js', 'errlog.js', 'executescript.js', 'secrets.js', 'gcal.js', 'notify.js', 'fullscreen-shield.js');
 chrome.permissions.onAdded.addListener(added => {
-  if (added.permissions?.includes('nativeMessaging')) ErrorLog.flushPending();
+  if (added.permissions?.includes('nativeMessaging')) {
+    ErrorLog.flushPending();
+    queueExam(async () => FullscreenShield.reconcile(await examIsActive())).catch(() => {});
+  }
   if (added.permissions?.includes('identity') ||
       added.origins?.some(origin => Gcal.PERMISSIONS.origins.includes(origin))) {
     Gcal.permissionAdded().catch(error => reportError('gcal', '구글 캘린더 권한 처리 실패: ' +
       String(error?.message || 'unknown'), { stack: error?.stack }));
+  }
+});
+chrome.permissions.onRemoved.addListener(removed => {
+  if (removed.permissions?.includes('nativeMessaging')) {
+    queueExam(async () => { await FullscreenShield.stop(); await FullscreenShield.reconcile(await examIsActive()); }).catch(() => {});
   }
 });
 self.addEventListener('error', event => {
@@ -70,6 +78,7 @@ async function updateExamTab(tabId, url) {
   const { examEntered } = await chrome.storage.session.get('examEntered');
   if (after.length && examGuard !== false && examEntered !== true) await ExamMode.enterExamMode('auto');
   if (before.length && !after.length && examModeManual !== true) await ExamMode.exitExamMode();
+  await FullscreenShield.reconcile(await examIsActive());
 }
 
 async function reconcileExamTabs() {
@@ -91,12 +100,13 @@ async function reconcileExamTabs() {
       (disabledIds.length || examNotificationsBlocked === true || examEntered === true)) {
     await ExamMode.exitExamMode();
   }
+  await FullscreenShield.reconcile(await examIsActive());
 }
 
 async function examStatus() {
   const [tabs, saved, session, hasManagementPermission, hasContentSettingsPermission] = await Promise.all([
     examTabs(),
-    chrome.storage.local.get(['examGuard', 'examModeManual', 'examDisabledIds', 'examRestorePending', 'examRestoreManual', 'examRestoreManualIds', 'examDisableFailures', 'examNotificationsBlocked', 'examFullscreen']),
+    chrome.storage.local.get(['examGuard', 'examModeManual', 'examDisabledIds', 'examRestorePending', 'examRestoreManual', 'examRestoreManualIds', 'examDisableFailures', 'examNotificationsBlocked', 'examFullscreen', 'examNoticeShield']),
     chrome.storage.session.get(['examDisabledIds', 'examRestoreManualIds', 'examBlockedCount']),
     chrome.permissions.contains({ permissions: ['management'] }),
     chrome.permissions.contains({ permissions: ['contentSettings'] })
@@ -118,6 +128,8 @@ async function examStatus() {
     notificationsBlocked: saved.examNotificationsBlocked === true && hasContentSettingsPermission,
     notificationRestorePending: saved.examNotificationsBlocked === true && !hasContentSettingsPermission,
     fullscreen: saved.examFullscreen !== false,
+    noticeShield: saved.examNoticeShield === true,
+    noticeShieldStatus: FullscreenShield.status(),
     hasManagementPermission,
     hasContentSettingsPermission,
     hasPermission: hasManagementPermission && hasContentSettingsPermission
@@ -167,6 +179,10 @@ queueExam(reconcileExamTabs).catch(error => logWorker('시험 탭 재조정 실�
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.examGuard || changes.examModeManual)) {
     queueExam(notifyExamState).catch(error => logWorker('시험 상태 알림 실패', error));
+  }
+  if (area === 'local' && (changes.examGuard || changes.examModeManual || changes.examFullscreen || changes.examNoticeShield)) {
+    queueExam(async () => FullscreenShield.reconcile(await examIsActive()))
+      .catch(error => logWorker('전체화면 보조 상태 확인 실패', error));
   }
 });
 
@@ -750,7 +766,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule',
     'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
-    'icampus-exam-blocked-count', 'icampus-error-log', 'icampus-canvas-token-status',
+    'icampus-exam-blocked-count', 'icampus-fullscreen-shield-status', 'icampus-fullscreen-shield-check', 'icampus-error-log', 'icampus-canvas-token-status',
     'icampus-canvas-token-set', 'icampus-canvas-token-clear',
     'icampus-gcal-status', 'icampus-gcal-prepare', 'icampus-gcal-connect', 'icampus-gcal-disconnect', 'icampus-gcal-sync'].includes(message.type)) return;
   const settingsPage = sender.id === chrome.runtime.id &&
@@ -787,6 +803,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Only extension pages (the popup) may start a playlist or open a lecture.
   const extensionPage = sender.id === chrome.runtime.id &&
     sender.url?.startsWith(chrome.runtime.getURL(''));
+  if (message.type === 'icampus-fullscreen-shield-check') {
+    if (!settingsPage) return;
+    chrome.runtime.sendNativeMessage('kr.aniseongu.icampus_fullscreen', { action: 'check' })
+      .then(result => sendResponse({ ok: result?.ok === true }), () => sendResponse({ ok: false }));
+    return true;
+  }
+  if (message.type === 'icampus-fullscreen-shield-status') {
+    if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.tab?.url?.startsWith('https://canvas.skku.edu/')) return;
+    sendResponse({ ready: FullscreenShield.status() === 'ready' });
+    return;
+  }
   if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-remove', 'icampus-playlist-sync',
        'icampus-playlist-halt', 'icampus-schedule', 'icampus-open-lecture', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
       !extensionPage) return;
