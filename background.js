@@ -805,6 +805,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sender.url?.startsWith(chrome.runtime.getURL(''));
   if (message.type === 'icampus-fullscreen-shield-check') {
     if (!settingsPage) return;
+    if (typeof chrome.runtime.sendNativeMessage !== 'function') {
+      sendResponse({ ok: false });
+      return;
+    }
     chrome.runtime.sendNativeMessage('kr.aniseongu.icampus_fullscreen', { action: 'check' })
       .then(result => sendResponse({ ok: result?.ok === true }), () => sendResponse({ ok: false }));
     return true;
