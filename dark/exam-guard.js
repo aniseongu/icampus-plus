@@ -6,6 +6,9 @@
   let guard = true;
   let manual = false;
   let fullscreen = true;
+  let shieldWanted = false;
+  let shieldReady = false;
+  let shieldRequest = 0;
   let active = false;
   let fullscreenActive = false;
   let requestPending = false;
@@ -67,6 +70,7 @@
 
   const onInput = () => {
     if (!fullscreenActive) return;
+    if (shieldWanted && !shieldReady) return;
     if (document.fullscreenElement) {
       lockKeyboard();
       return;
@@ -107,6 +111,13 @@
   const sync = () => {
     const nextActive = guard && (manual || EXAM_URL.test(location.href));
     const nextFullscreen = nextActive && fullscreen;
+    const request = ++shieldRequest;
+    shieldReady = false;
+    if (nextFullscreen && shieldWanted) {
+      chrome.runtime.sendMessage({ type: 'icampus-fullscreen-shield-status' })
+        .then(result => { if (request === shieldRequest) shieldReady = result?.ready === true; })
+        .catch(error => log('전체화면 보조 상태 확인 실패', error));
+    }
     if (nextActive !== active) {
       active = nextActive;
       if (active) {
@@ -133,10 +144,11 @@
     }
   };
 
-  chrome.storage.local.get(['examGuard', 'examModeManual', 'examFullscreen']).then(saved => {
+  chrome.storage.local.get(['examGuard', 'examModeManual', 'examFullscreen', 'examNoticeShield']).then(saved => {
     guard = saved.examGuard !== false;
     manual = saved.examModeManual === true;
     fullscreen = saved.examFullscreen !== false;
+    shieldWanted = saved.examNoticeShield === true;
     sync();
   }).catch(error => log('시험 설정 읽기 실패', error));
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -144,9 +156,14 @@
     if (changes.examGuard) guard = changes.examGuard.newValue !== false;
     if (changes.examModeManual) manual = changes.examModeManual.newValue === true;
     if (changes.examFullscreen) fullscreen = changes.examFullscreen.newValue !== false;
-    if (changes.examGuard || changes.examModeManual || changes.examFullscreen) sync();
+    if (changes.examNoticeShield) shieldWanted = changes.examNoticeShield.newValue === true;
+    if (changes.examGuard || changes.examModeManual || changes.examFullscreen || changes.examNoticeShield) sync();
   });
   chrome.runtime.onMessage.addListener(message => {
     if (message?.type === 'icampus-exam-blocked') sync();
+    if (message?.type === 'icampus-fullscreen-shield') {
+      ++shieldRequest;
+      shieldReady = message.ready === true;
+    }
   });
 })();

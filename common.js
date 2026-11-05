@@ -20,7 +20,12 @@ function examProtectionText() {
   if (!examStatus) return '';
   const notes = [];
   if (examStatus.notificationsBlocked) notes.push('사이트 알림을 막았어요.');
-  if (examStatus.fullscreen) notes.push('시험 화면을 누르면 전체화면이 돼요.');
+  if (examStatus.fullscreen) {
+    if (examStatus.noticeShield && (examStatus.manual || examStatus.examTabs > 0) && examStatus.noticeShieldStatus !== 'ready') {
+      notes.push(examStatus.noticeShieldStatus === 'error' || examStatus.noticeShieldStatus === 'permission'
+        ? '전체화면 보조 프로그램과 권한을 확인해 주세요.' : '전체화면 보조 프로그램을 연결하고 있어요.');
+    } else notes.push('시험 화면을 누르면 전체화면이 돼요.');
+  }
   return notes.join(' ');
 }
 
