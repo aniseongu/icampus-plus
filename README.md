@@ -7,7 +7,7 @@
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
 [![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
-![version](https://img.shields.io/badge/version-1.8.71-124532)
+![version](https://img.shields.io/badge/version-1.8.72-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC-555555)
 
@@ -116,7 +116,7 @@ Canvas와 LearningX에서 밝은 화면과 어두운 화면을 고를 수 있습
 - **구글 캘린더:** 내 구글 계정의 아캠 플러스 캘린더에 즐겨찾기 과목의 마감 일정을 맞춥니다. 아래 연결 방법을 참고하세요.
 - **영상 저장:** 설정에서 켜면 강의 플레이어의 다운로드 버튼이 나타납니다. 개인 학습용으로만 사용하고 다른 사람에게 나누거나 올리지 마세요.
 - **시험 모드:** 시험 화면에서는 아캠 플러스 기능과 다른 확장·사이트 알림을 잠시 멈춥니다. 감독용 확장은 설정의 **시험 중에도 켤 확장**에서 고를 수 있습니다. 모든 확장을 꺼야 하는 시험이라면 아캠 플러스도 확장 관리 화면에서 직접 끄세요.
-- **전체화면 안내 숨기기:** Windows 웨일에서 사용할 수 있는 실험적 선택 기능입니다. 별도 보조 프로그램이 필요합니다. [설치 방법과 제한](native/fullscreen-prototype/README.md)을 확인하세요.
+- **전체화면 안내 숨기기:** Windows x64에서 사용할 수 있는 실험적 선택 기능입니다. 설정의 **Windows 보조 설정 > 파일 받기**를 누르고 받은 파일을 열어 브라우저를 고른 뒤 **전체화면 보조 설치**를 누르세요. 확장 설정에서 전체화면 안내 숨기기를 켜고 권한을 허용하면 연결합니다. 다른 브라우저를 쓰면 각각 설치해 주세요. [제한과 제거 방법](native/fullscreen-prototype/README.md)을 확인하세요.
 
 ### 구글 캘린더 연결
 
@@ -131,7 +131,7 @@ Canvas와 LearningX에서 밝은 화면과 어두운 화면을 고를 수 있습
 
 ### 강의 자동 재생
 
-브라우저가 소리 켠 영상의 자동 재생을 막으면 강의 화면을 한 번 눌러 주세요. Windows에서 클릭 없이 재생하고 싶다면 [`windows/autoplay-allow.reg`](windows/autoplay-allow.reg)를 적용하고 브라우저를 다시 여세요. `chrome://policy`에서 `AutoplayAllowlist`에 학교 주소 두 곳이 있는지 확인할 수 있습니다. 정책을 적용하면 브라우저에 **조직에서 관리** 표시가 생깁니다. 되돌릴 때는 [`windows/autoplay-allow-remove.reg`](windows/autoplay-allow-remove.reg)를 적용하세요.
+브라우저가 소리 켠 영상의 자동 재생을 막으면 강의 화면을 한 번 눌러 주세요. Windows x64에서는 설정의 **Windows 보조 설정 > 파일 받기**를 누르고 받은 파일에서 브라우저를 고른 뒤 **강의 자동 재생 허용**을 누를 수 있어요. 브라우저를 다시 열면 적용돼요. 이 설정은 아이캠퍼스와 강의 영상 사이트를 브라우저의 자동 재생 허용 목록에 추가하며, 브라우저에 **조직에서 관리** 표시가 생길 수 있어요. 같은 파일에서 **자동 재생 설정 되돌리기**를 누르면 이 프로그램이 추가한 항목만 지웁니다.
 
 ## 알아둘 점
 

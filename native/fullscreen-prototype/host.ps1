@@ -26,7 +26,7 @@ function FindBrowser {
   for ($i = 0; $i -lt 12 -and $current -gt 0; $i++) {
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current"
     if (-not $proc) { break }
-    if ($proc.Name -ieq 'whale.exe' -and $proc.CommandLine -notmatch '(?:^|\s)--type=') {
+    if ($proc.Name -in @('whale.exe', 'chrome.exe', 'msedge.exe', 'brave.exe', 'vivaldi.exe', 'chromium.exe') -and $proc.CommandLine -notmatch '(?:^|\s)--type=') {
       return [int]$proc.ProcessId
     }
     $current = [int]$proc.ParentProcessId

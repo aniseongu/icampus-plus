@@ -1,4 +1,12 @@
 // The settings page: every row the popup used to hold under 설정.
+document.querySelector('#helper-download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.href = chrome.runtime.getURL('native/fullscreen-prototype/IcampusHelper.exe');
+  link.download = chrome.runtime.id === 'dfbmennlapdcfamcdocebolgclgibmmn'
+    ? 'IcampusPlusSetup.exe' : `IcampusPlusSetup-${chrome.runtime.id}.exe`;
+  link.click();
+});
+document.querySelector('#gcal-redirect-help').textContent = `리디렉션 URI: https://${chrome.runtime.id}.chromiumapp.org/`;
 let examKeepIds = new Set();
 let examKeepSaving = false;
 let errorLogEnabled = false;
@@ -74,7 +82,7 @@ async function refreshExamSettings() {
       option.setAttribute('aria-checked', String((option.dataset.noticeShield === 'true') === status.noticeShield));
     }
     document.querySelector('#exam-notice-shield-status').textContent = !status.noticeShield
-      ? '시험 중 전체화면 안내를 숨겨요'
+      ? 'Windows 보조 프로그램을 설치한 뒤 켤 수 있어요'
       : status.noticeShieldStatus === 'ready' ? '시험 중 안내를 숨기고 있어요'
         : status.noticeShieldStatus === 'starting' ? '보조 프로그램을 연결하고 있어요'
           : ['error', 'permission'].includes(status.noticeShieldStatus)

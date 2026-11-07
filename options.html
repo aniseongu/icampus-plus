@@ -716,9 +716,16 @@
             />
           </div>
           <span id="gcal-help" class="setting-help" role="status"
-            >보안 비밀번호까지 넣으면 구글 로그인이 풀려도 연결이 이어져요.
-            만드는 방법은 README에 있어요</span
+            >보안 비밀번호를 넣으면 구글 로그인이 풀려도 연결을 유지해요</span
           >
+          <details class="setting-help">
+            <summary>연결 방법</summary>
+            <p><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud</a>에서 프로젝트를 만들고 Google Calendar API를 켜 주세요.</p>
+            <p>Google 인증 플랫폼에서 동의 화면을 만들어요. 학교 계정은 내부, 개인 계정은 외부를 선택해요.</p>
+            <p>웹 애플리케이션 OAuth 클라이언트를 만들고 아래 주소를 승인된 리디렉션 URI로 넣어요.</p>
+            <p id="gcal-redirect-help"></p>
+            <p>클라이언트 ID를 위에 붙여 넣고 연결해 주세요. 외부 테스트 앱은 테스트 사용자 설정과 연결 유지 기간을 확인해 주세요.</p>
+          </details>
         </div>
       </div>
       <div class="setting-group">
@@ -754,6 +761,15 @@
               끄기
             </button>
           </div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">Windows 보조 설정</span>
+            <span class="setting-help">강의 자동 재생과 전체화면 안내를 설정해요</span>
+          </div>
+          <button type="button" id="helper-download" class="playlist-action">파일 받기</button>
         </div>
       </div>
       <div class="setting-group">
