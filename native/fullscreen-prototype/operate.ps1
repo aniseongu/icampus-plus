@@ -1,7 +1,7 @@
 param([Parameter(Mandatory=$true)][int]$BrowserPid,[Parameter(Mandatory=$true)][ValidateSet('start','stop','status')][string]$Action,[int]$HostPid = 0)
 $ErrorActionPreference='Stop'
 $proc=Get-Process -Id $BrowserPid
-if ($proc.ProcessName -ne 'whale') { throw '대상 프로세스가 웨일이 아닙니다.' }
+if ($proc.ProcessName -notin @('whale', 'chrome', 'msedge', 'brave', 'vivaldi', 'chromium')) { throw '지원하지 않는 브라우저입니다.' }
 if (-not ('HookLoader' -as [type])) { Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
