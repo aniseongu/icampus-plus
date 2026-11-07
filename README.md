@@ -6,6 +6,7 @@
 
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
+[![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
 ![version](https://img.shields.io/badge/version-1.8.71-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC-555555)
@@ -81,13 +82,13 @@ Canvas와 LearningX에서 밝은 화면과 어두운 화면을 고를 수 있습
 
 ## 설치와 업데이트
 
-웹 스토어에 등록하지 않았습니다. 이 저장소를 내려받아 확장 폴더를 직접 불러옵니다.
+크롬은 [Chrome 웹 스토어](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)에서 바로 설치할 수 있습니다. 웨일 등 다른 크로미움 브라우저나 최신 소스를 쓰려면 이 저장소를 내려받아 확장 폴더를 직접 불러옵니다.
 
 1. [저장소](https://github.com/aniseongu/icampus-plus)에서 **Code > Download ZIP**을 눌러 압축을 풉니다. Git을 쓴다면 `git clone https://github.com/aniseongu/icampus-plus.git`도 됩니다.
 2. 크롬은 `chrome://extensions`, 웨일은 `whale://extensions`를 열고 **개발자 모드**를 켭니다. 다른 크로미움 브라우저에서는 해당 브라우저의 확장 관리 화면을 여세요.
 3. **압축 해제된 확장 프로그램을 로드**를 눌러 `manifest.json`이 있는 폴더를 고릅니다.
 
-업데이트할 때는 같은 폴더에 새 파일을 덮어쓰고 확장 관리 화면에서 **새로고침**을 누르세요. 폴더를 옮기면 브라우저가 새 확장으로 인식해 설정이 초기화될 수 있습니다. 웹 스토어판 아캠체크를 함께 쓰고 있다면 한쪽을 꺼 두세요.
+업데이트할 때는 같은 폴더에 새 파일을 덮어쓰고 확장 관리 화면에서 **새로고침**을 누르세요. 폴더를 옮기면 브라우저가 새 확장으로 인식해 설정이 초기화될 수 있습니다. 웹 스토어판과 직접 불러온 판을 함께 쓰고 있다면 한쪽을 꺼 두세요.
 
 ## 시작하기
 
