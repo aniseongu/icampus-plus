@@ -102,7 +102,7 @@ const FullscreenShield = (() => {
   async function reconcile(active) {
     const saved = await chrome.storage.local.get(['examNoticeShield', 'examFullscreen', 'examGuard']);
     const wanted = saved.examNoticeShield === true && saved.examFullscreen !== false &&
-      saved.examGuard !== false && active;
+      saved.examGuard === true && active;
     if (!wanted) { await stop(); return false; }
     return start();
   }

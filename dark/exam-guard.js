@@ -3,7 +3,7 @@
   if (window.top !== window) return;
   const log = (description, error) => globalThis.icdLogError?.('exam', description, error);
   const EXAM_URL = /^https:\/\/canvas\.skku\.edu\/courses\/\d+\/quizzes\/\d+\/take(?:[/?#]|$)/;
-  let guard = true;
+  let guard = false;
   let manual = false;
   let fullscreen = true;
   let shieldWanted = false;
@@ -145,7 +145,7 @@
   };
 
   chrome.storage.local.get(['examGuard', 'examModeManual', 'examFullscreen', 'examNoticeShield']).then(saved => {
-    guard = saved.examGuard !== false;
+    guard = saved.examGuard === true;
     manual = saved.examModeManual === true;
     fullscreen = saved.examFullscreen !== false;
     shieldWanted = saved.examNoticeShield === true;
@@ -153,7 +153,7 @@
   }).catch(error => log('시험 설정 읽기 실패', error));
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (changes.examGuard) guard = changes.examGuard.newValue !== false;
+    if (changes.examGuard) guard = changes.examGuard.newValue === true;
     if (changes.examModeManual) manual = changes.examModeManual.newValue === true;
     if (changes.examFullscreen) fullscreen = changes.examFullscreen.newValue !== false;
     if (changes.examNoticeShield) shieldWanted = changes.examNoticeShield.newValue === true;

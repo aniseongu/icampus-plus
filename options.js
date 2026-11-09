@@ -1,9 +1,17 @@
 // The settings page: every row the popup used to hold under 설정.
+// The Web Store strips .exe files from packages, so the store build downloads the installer
+// from the GitHub release. Unpacked builds still carry the exe next to the sources.
+const STORE_ID = 'dfbmennlapdcfamcdocebolgclgibmmn';
 document.querySelector('#helper-download').addEventListener('click', () => {
   const link = document.createElement('a');
-  link.href = chrome.runtime.getURL('native/fullscreen-prototype/IcampusHelper.exe');
-  link.download = chrome.runtime.id === 'dfbmennlapdcfamcdocebolgclgibmmn'
-    ? 'IcampusPlusSetup.exe' : `IcampusPlusSetup-${chrome.runtime.id}.exe`;
+  if (chrome.runtime.id === STORE_ID) {
+    link.href = 'https://github.com/aniseongu/icampus-plus/releases/latest/download/IcampusPlusSetup.exe';
+    link.target = '_blank';
+    link.rel = 'noopener';
+  } else {
+    link.href = chrome.runtime.getURL('native/fullscreen-prototype/IcampusHelper.exe');
+    link.download = `IcampusPlusSetup-${chrome.runtime.id}.exe`;
+  }
   link.click();
 });
 document.querySelector('#gcal-redirect-help').textContent = `리디렉션 URI: https://${chrome.runtime.id}.chromiumapp.org/`;

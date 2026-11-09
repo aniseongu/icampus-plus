@@ -76,7 +76,7 @@ async function updateExamTab(tabId, url) {
   }
   const { examGuard, examModeManual } = await chrome.storage.local.get(['examGuard', 'examModeManual']);
   const { examEntered } = await chrome.storage.session.get('examEntered');
-  if (after.length && examGuard !== false && examEntered !== true) await ExamMode.enterExamMode('auto');
+  if (after.length && examGuard === true && examEntered !== true) await ExamMode.enterExamMode('auto');
   if (before.length && !after.length && examModeManual !== true) await ExamMode.exitExamMode();
   await FullscreenShield.reconcile(await examIsActive());
 }
@@ -95,7 +95,7 @@ async function reconcileExamTabs() {
   ]);
   const { examEntered } = await chrome.storage.session.get('examEntered');
   const disabledIds = await ExamMode.disabledIds();
-  if (found.length && examGuard !== false && examEntered !== true) await ExamMode.enterExamMode('auto');
+  if (found.length && examGuard === true && examEntered !== true) await ExamMode.enterExamMode('auto');
   if (!found.length && examModeManual !== true &&
       (disabledIds.length || examNotificationsBlocked === true || examEntered === true)) {
     await ExamMode.exitExamMode();
@@ -117,8 +117,10 @@ async function examStatus() {
     ? session.examRestoreManualIds : saved.examRestoreManualIds;
   const manualCount = Array.isArray(manualIds) ? manualIds.length : 0;
   return {
-    guard: saved.examGuard !== false,
+    guard: saved.examGuard === true,
     manual: saved.examModeManual === true,
+    // Quiz pages always pause the extension's own features; manual exam mode needs the setting on.
+    paused: tabs.length > 0 || (saved.examGuard === true && saved.examModeManual === true),
     examTabs: tabs.length,
     disabledCount: saved.examRestorePending ? 0 : count,
     pendingRestore: saved.examRestorePending ? count + manualCount : 0,
@@ -138,8 +140,8 @@ async function examStatus() {
 
 async function examIsActive() {
   const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
-  return saved.examGuard !== false &&
-    (saved.examModeManual === true || (await examTabs()).length > 0);
+  return (await examTabs()).length > 0 ||
+    (saved.examGuard === true && saved.examModeManual === true);
 }
 
 async function notifyExamState() {
@@ -148,8 +150,8 @@ async function notifyExamState() {
     chrome.tabs.query({ url: ['https://canvas.skku.edu/*', 'https://lcms.skku.edu/*', 'https://kingoinfo.skku.edu/*'] }),
     chrome.storage.local.get(['examGuard', 'examModeManual'])
   ]);
-  const blocked = saved.examGuard !== false &&
-    (saved.examModeManual === true || (await examTabs()).length > 0);
+  const blocked = (await examTabs()).length > 0 ||
+    (saved.examGuard === true && saved.examModeManual === true);
   if (blocked) {
     const task = messageQueue.then(async () => {
       await stopPlaylist();
@@ -852,7 +854,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const task = queueExam(async () => {
       const url = sender.tab.url || '';
       const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
-      if (saved.examGuard === false || !(ExamMode.EXAM_URL.test(url) ||
+      if (saved.examGuard !== true || !(ExamMode.EXAM_URL.test(url) ||
           (saved.examModeManual === true && url.startsWith('https://canvas.skku.edu/')))) return;
       const state = await chrome.storage.session.get('examBlockedCount');
       await chrome.storage.session.set({ examBlockedCount: (state.examBlockedCount || 0) + 1 });

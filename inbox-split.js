@@ -414,7 +414,7 @@
 
   const setExam = saved => {
     examReady = true;
-    exam = saved.examGuard !== false && saved.examModeManual === true;
+    exam = saved.examGuard === true && saved.examModeManual === true;
     if (exam) { ++run; safe = false; view = null; releaseRows(); render(); }
     else refresh();
   };

@@ -9,12 +9,12 @@
 
   let examManual = false;
   chrome.storage.local.get(['examGuard', 'examModeManual']).then(saved => {
-    examManual = saved.examGuard !== false && saved.examModeManual === true;
+    examManual = saved.examGuard === true && saved.examModeManual === true;
   }).catch(() => {});
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local' || !('examGuard' in changes || 'examModeManual' in changes)) return;
     chrome.storage.local.get(['examGuard', 'examModeManual']).then(saved => {
-      examManual = saved.examGuard !== false && saved.examModeManual === true;
+      examManual = saved.examGuard === true && saved.examModeManual === true;
     }).catch(() => {});
   });
 

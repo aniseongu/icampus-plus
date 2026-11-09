@@ -14,7 +14,7 @@
   if (EXAM_URL.test(location.href)) return;
   const TARGET = 'https://kingoinfo.skku.edu/gaia/nxui/index.html?icd_timetable=1';
   const hasUserNo = () => /(?:^|;\s*)skku_user_no=[^;]+/.test(document.cookie);
-  let examGuard = true;
+  let examGuard = false;
   let examModeManual = false;
   let listening = false;
   const onClick = (e) => {
@@ -33,12 +33,12 @@
     listening = !active;
   };
   chrome.storage.local.get(['examGuard', 'examModeManual']).then(saved => {
-    examGuard = saved.examGuard !== false;
+    examGuard = saved.examGuard === true;
     examModeManual = saved.examModeManual === true;
     update();
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
-      if (changes.examGuard) examGuard = changes.examGuard.newValue !== false;
+      if (changes.examGuard) examGuard = changes.examGuard.newValue === true;
       if (changes.examModeManual) examModeManual = changes.examModeManual.newValue === true;
       if (changes.examGuard || changes.examModeManual) update();
     });

@@ -17,8 +17,8 @@
   const checkExam = async () => {
     try {
       const status = await chrome.runtime.sendMessage({ type: 'exam-status' });
-      if (typeof status?.guard !== 'boolean') throw new Error('시험 상태를 확인하지 못함');
-      examBlocked = status.guard && (status.manual || status.examTabs > 0);
+      if (typeof status?.paused !== 'boolean') throw new Error('시험 상태를 확인하지 못함');
+      examBlocked = status.paused;
     } catch (error) { examBlocked = true; logPlayer('시험 상태 확인 실패', error); }
   };
   await checkExam();

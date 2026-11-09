@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -43,7 +44,15 @@ internal static class HelperInstaller {
         return match.Success ? match.Groups[1].Value : StoreId;
     }
 
-    [STAThread] static void Main() {
+    [STAThread] static int Main(string[] argv) {
+        // Elevated child: the autoplay policy key under HKCU\Software\Policies is read-only for standard tokens.
+        if (argv.Length == 3 && argv[0] == "--autoplay") {
+            int index, code = 2;
+            if (Int32.TryParse(argv[1], out index) && index >= 0 && index < Names.Length) {
+                try { code = SetAutoplay(index, argv[2] == "on") ? 0 : 1; } catch (Exception) { code = 2; }
+            }
+            return code;
+        }
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(true);
         using (var form = new Form { Text = "아캠 플러스 보조 설정", ClientSize = new Size(520, 400), Font = LoadUiFont(), BackColor = ColorTranslator.FromHtml("#eef2f6"), ForeColor = ColorTranslator.FromHtml("#434343"), AutoScaleMode = AutoScaleMode.Font, StartPosition = FormStartPosition.CenterScreen, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false }) {
             var label = new Label { Left = 20, Top = 18, Width = 480, Height = 25, Text = "사용할 브라우저와 필요한 설정을 골라 주세요." };
@@ -57,13 +66,14 @@ internal static class HelperInstaller {
             browsers.SelectedIndexChanged += (sender, args) => refresh();
             AddButton(form, browsers, refresh, "전체화면 보조 설치", 20, 230, () => { InstallHost(browsers.SelectedIndex - 1); return "보조 프로그램을 연결했어요. 확장 설정에서 기능을 켜 주세요."; });
             AddButton(form, browsers, refresh, "전체화면 보조 연결 해제", 270, 230, () => { RemoveHost(browsers.SelectedIndex - 1); return "보조 프로그램 연결을 해제했어요."; });
-            AddButton(form, browsers, refresh, "강의 자동 재생 허용", 20, 285, () => SetAutoplay(browsers.SelectedIndex - 1, true) ? "자동 재생을 허용했어요. 브라우저를 다시 열어 주세요." : "이미 자동 재생을 허용했어요.");
-            AddButton(form, browsers, refresh, "자동 재생 설정 되돌리기", 270, 285, () => SetAutoplay(browsers.SelectedIndex - 1, false) ? "이 프로그램이 추가한 자동 재생 설정을 지웠어요. 브라우저를 다시 열어 주세요." : "이 프로그램이 추가한 설정이 없어요.");
+            AddButton(form, browsers, refresh, "강의 자동 재생 허용", 20, 285, () => ChangeAutoplay(browsers.SelectedIndex - 1, true) ? "자동 재생을 허용했어요. 브라우저를 다시 열어 주세요." : "이미 자동 재생을 허용했어요.");
+            AddButton(form, browsers, refresh, "자동 재생 설정 되돌리기", 270, 285, () => ChangeAutoplay(browsers.SelectedIndex - 1, false) ? "이 프로그램이 추가한 자동 재생 설정을 지웠어요. 브라우저를 다시 열어 주세요." : "이 프로그램이 추가한 설정이 없어요.");
             var licenses = new LinkLabel { Left = 20, Top = 350, Width = 200, Height = 24, Text = "오픈소스 라이선스" };
             licenses.LinkClicked += (sender, args) => ShowLicenses(form);
             form.Controls.Add(licenses);
             Application.Run(form);
         }
+        return 0;
     }
     static void ShowLicenses(Form owner) {
         var text = new StringBuilder();
@@ -80,8 +90,8 @@ internal static class HelperInstaller {
         var button = new Button { Text = text, Left = left, Top = top, Width = 220, Height = 36, Enabled = false };
         browsers.SelectedIndexChanged += (sender, args) => button.Enabled = browsers.SelectedIndex > 0;
         button.Click += (sender, args) => { try { string result = action(); refresh(); MessageBox.Show(form, result, "아캠 플러스"); }
-            catch (System.Security.SecurityException) { MessageBox.Show(form, "브라우저 설정을 바꿀 권한이 없어요. 컴퓨터 관리자에게 확인해 주세요.", "아캠 플러스"); }
-            catch (UnauthorizedAccessException) { MessageBox.Show(form, "브라우저 설정을 바꿀 권한이 없어요. 컴퓨터 관리자에게 확인해 주세요.", "아캠 플러스"); }
+            catch (System.Security.SecurityException) { MessageBox.Show(form, "관리자 권한 확인이 필요해요. 승인 창에서 ‘예’를 눌러 주세요. 관리자 계정이 아니라면 컴퓨터 관리자에게 확인해 주세요.", "아캠 플러스"); }
+            catch (UnauthorizedAccessException) { MessageBox.Show(form, "관리자 권한 확인이 필요해요. 승인 창에서 ‘예’를 눌러 주세요. 관리자 계정이 아니라면 컴퓨터 관리자에게 확인해 주세요.", "아캠 플러스"); }
             catch (Exception e) { MessageBox.Show(form, "설정을 마치지 못했어요.\n" + e.Message, "아캠 플러스"); } };
         form.Controls.Add(button);
     }
@@ -146,6 +156,22 @@ internal static class HelperInstaller {
             }
         }
         Registry.CurrentUser.DeleteSubKey(path, false);
+    }
+    // Tries as the current user; when the policy key refuses, asks Windows for administrator approval once.
+    static bool ChangeAutoplay(int browser, bool enable) {
+        try { return SetAutoplay(browser, enable); }
+        catch (UnauthorizedAccessException) { }
+        catch (System.Security.SecurityException) { }
+        var info = new ProcessStartInfo(Application.ExecutablePath, "--autoplay " + browser + " " + (enable ? "on" : "off")) { UseShellExecute = true, Verb = "runas" };
+        Process child;
+        try { child = Process.Start(info); }
+        catch (System.ComponentModel.Win32Exception) { throw new UnauthorizedAccessException(); }
+        using (child) {
+            child.WaitForExit();
+            if (child.ExitCode == 0) return true;
+            if (child.ExitCode == 1) return false;
+            throw new UnauthorizedAccessException();
+        }
     }
     static bool SetAutoplay(int browser, bool enable) {
         if (enable) {

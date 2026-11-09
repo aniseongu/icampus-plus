@@ -125,7 +125,7 @@ const ErrorLog = (() => {
         // The worker's exam-status check uses ExamMode's URL judgement.
         try {
           const state = await chrome.runtime.sendMessage({ type: 'exam-status' });
-          if (!state || (state.guard && (state.manual || state.examTabs > 0))) return;
+          if (!state || state.paused) return;
           await chrome.runtime.sendMessage({ type: 'icampus-error-log',
             source: entry.source, message: entry.message, url: entry.url, stack: entry.stack });
         } catch { /* Logging must never disrupt playback. */ }

@@ -24,12 +24,12 @@
   try { if (!perfMode && window.parent !== window && /^icdperf-(light|dark)$/.test(window.parent.name)) perfMode = window.parent.name.slice(8); } catch (e) { /* 다른 출처 부모의 이름은 읽지 않는다. */ }
   if (perfMode !== 'light' && perfMode !== 'dark') perfMode = null;
   let mode = 'auto';
-  let examGuard = true;
+  let examGuard = false;
   let examModeManual = false;
 
   try {
     mode = localStorage.getItem(CACHE_KEY) || 'auto';
-    examGuard = localStorage.getItem(GUARD_CACHE_KEY) !== 'false';
+    examGuard = localStorage.getItem(GUARD_CACHE_KEY) === 'true';
     examModeManual = localStorage.getItem(MANUAL_CACHE_KEY) === 'true';
   } catch (e) {
     globalThis.icdLogError('dark', '화면 모드 캐시 읽기 실패', e);
@@ -51,7 +51,8 @@
     }
   };
 
-  const examActive = () => examGuard && (examModeManual || examPage());
+  // A quiz page always turns the features off; manual exam mode needs the setting on.
+  const examActive = () => examPage() || (examGuard && examModeManual);
 
   const cache = (key, value) => {
     // 실제 응시 주소에는 페이지 저장소 흔적을 남기지 않는다. 일반 페이지는 수동 모드 캐시를 갱신한다.
@@ -95,7 +96,7 @@
     // 1.5.x의 darkMode/icampusTheme는 팝업 색만 정하던 값이다. 화면 모드는 아이캠퍼스 페이지 전체에 걸리므로 '어둡게'만 옮기고 '밝게'는 자동으로 둔다
     const old = v.darkMode === true || v.icampusTheme === 'dark' ? 'dark' : 'auto';
     const saved = ['auto', 'light', 'dark'].includes(v.screenMode) ? v.screenMode : old;
-    examGuard = v.examGuard !== false;
+    examGuard = v.examGuard === true;
     examModeManual = v.examModeManual === true;
     if (!perfMode && saved !== mode) setMode(saved);
     apply();
@@ -106,7 +107,7 @@
     if (!perfMode && area === 'local' && changes.screenMode) setMode(changes.screenMode.newValue);
     if (area !== 'local') return;
     if (changes.examGuard) {
-      examGuard = changes.examGuard.newValue !== false;
+      examGuard = changes.examGuard.newValue === true;
     }
     if (changes.examModeManual) {
       examModeManual = changes.examModeManual.newValue === true;

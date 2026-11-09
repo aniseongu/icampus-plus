@@ -14,8 +14,8 @@ let playlistKeys = new Set();
 async function examBlocksPopup() {
   if (ExamMode.EXAM_URL.test(activeTab?.url || '')) return true;
   const saved = await chrome.storage.local.get(['examGuard', 'examModeManual']);
-  return saved.examGuard !== false &&
-    (saved.examModeManual === true || (examStatus?.examTabs || 0) > 0);
+  return (examStatus?.examTabs || 0) > 0 ||
+    (saved.examGuard === true && saved.examModeManual === true);
 }
 
 function showExamNotice() {
@@ -29,10 +29,10 @@ function showExamNotice() {
   const notice = element('div', 'empty-message');
   notice.append(
     element('h2', '', '시험 중이에요'),
-    element('p', '', '시험이 끝날 때까지 아캠 플러스의 모든 기능을 멈췄어요. ' +
-      (examStatus?.disabledCount > 0
-        ? `다른 확장 ${examStatus.disabledCount}개도 잠시 꺼 두었어요.`
-        : '다른 확장도 잠시 꺼 두었어요.'))
+    element('p', '', '시험이 끝날 때까지 아캠 플러스의 모든 기능을 멈췄어요.' +
+      (!examStatus?.guard ? '' : examStatus.disabledCount > 0
+        ? ` 다른 확장 ${examStatus.disabledCount}개도 잠시 꺼 두었어요.`
+        : ' 다른 확장도 잠시 꺼 두었어요.'))
   );
   const protections = examProtectionText();
   if (protections) notice.append(element('p', '', protections));
