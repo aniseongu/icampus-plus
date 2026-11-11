@@ -27,57 +27,30 @@
 
 ## 기능 화면
 
-### 남은 과제
+과목명, 과제명, 강의 이름은 모두 예시로 바꿨습니다.
 
-팝업에서 즐겨찾기 과목의 남은 과제와 마감까지 남은 시간을 확인할 수 있습니다. 과목명과 과제명은 예시로 바꿨습니다.
-
-<img src="screenshots/tasks.png" width="400" alt="행마다 숨기기 버튼이 있는 아캠 플러스 팝업">
-
-### 과제 숨기기와 직접 추가
-
-안 내도 되는 과제는 **숨기기**로 목록과 알림에서 뺄 수 있고, 제목 줄의 **숨긴 과제 N개**로 다시 볼 수 있습니다. 메일처럼 아이캠퍼스 밖에서 내는 과제는 **추가하기**에서 과목, 이름, 마감을 적어 직접 추가하면 마감 알림도 받습니다.
-
-<img src="screenshots/task-add.png" width="400" alt="과목, 과제 이름, 마감을 적는 직접 추가 양식">
-
-<img src="screenshots/task-manage.png" width="400" alt="직접 추가한 과제와 숨긴 과제가 함께 보이는 목록">
-
-### 설정
-
-자주 쓰는 설정부터 화면 모드, 보조 설정, 영상 저장, 알림 순서로 모았습니다. 맥과 리눅스에서는 Windows 보조 설정 대신 강의 자동 재생 스크립트 받기 줄이 보입니다.
-
-<img src="screenshots/settings-order.png" width="720" alt="자주 쓰는 순서로 정리한 설정 화면">
-
-### 강의 선택과 재생 목록
-
-강의를 고른 뒤 재생 목록으로 듣고, 목록에서 순서를 바꾸거나 일시중지할 수 있습니다. 재생 목록으로 연 강의는 자동 재생을 시도하고, 완료 화면을 확인한 뒤 다음 강의로 넘어갑니다. 아래 강의 이름과 재생 상태는 화면 예시입니다.
-
-<img src="screenshots/playlist-select.png" width="400" alt="강의 두 개를 선택한 팝업">
-
-<img src="screenshots/playlist-playing.png" width="400" alt="재생 상태와 순서 변경 버튼이 보이는 재생 목록">
-
-### 인트로 건너뛰기, 영상 확대, 영상 저장
-
-영상 앞의 인트로·프리로더를 자동으로 넘깁니다. 일반 브라우저 창에서 학교 플레이어의 전체화면 버튼을 누르면 영상이 창 안에서 크게 펼쳐집니다. 설정에서 영상 저장을 켜면 전체화면 버튼 옆에 다운로드 버튼이 생깁니다(아래 화면은 예시 영상입니다).
-
-<img src="screenshots/video-save.png" width="720" alt="학교 플레이어의 전체화면 버튼으로 펼친 강의 화면">
-
-### 화면 모드
-
-Canvas와 LearningX에서 밝은 화면과 어두운 화면을 고를 수 있습니다.
-
-<img src="screenshots/dark-dashboard.png" width="720" alt="어두운 화면 모드의 아이캠퍼스 대시보드">
-
-### 알림과 구글 캘린더
-
-마감 알림 시점과 매일 요약을 고르고, 원하는 경우 구글 캘린더를 연결할 수 있습니다.
-
-<img src="screenshots/alerts-calendar.png" width="720" alt="알림과 구글 캘린더 설정">
-
-### 시험 모드
-
-시험 모드를 켜면 시험 중 다른 확장과 알림을 잠시 멈추는 기능, 전체화면 관련 선택 기능을 설정할 수 있습니다. 시험 모드가 꺼져 있어도 퀴즈 응시 화면에서는 아캠 플러스의 모든 기능이 멈춥니다.
-
-<img src="screenshots/exam-settings.png" width="720" alt="시험 모드와 전체화면 관련 설정">
+<table>
+<tr>
+<td width="50%" valign="top"><b>남은 과제</b><br>즐겨찾기 과목의 남은 과제와 마감까지 남은 시간을 보여 줘요. 행마다 숨기기 버튼이 있어요.<br><br><img src="screenshots/tasks.png" width="400" alt="남은 과제"></td>
+<td width="50%" valign="top"><b>과제 직접 추가</b><br>메일처럼 아이캠퍼스 밖에서 내는 과제는 과목, 이름, 마감을 적어 추가하면 마감 알림도 받아요.<br><br><img src="screenshots/task-add.png" width="400" alt="과제 직접 추가"></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>숨김과 추가 목록</b><br>제목 줄의 숨긴 과제 N개로 숨긴 과제를 다시 볼 수 있어요. 직접 추가한 과제는 완료와 삭제를 할 수 있어요.<br><br><img src="screenshots/task-manage.png" width="400" alt="숨김과 추가 목록"></td>
+<td width="50%" valign="top"><b>설정</b><br>자주 쓰는 순서로 화면 모드, 보조 설정, 영상 저장, 알림을 모았어요. 맥과 리눅스는 보조 설정 대신 자동 재생 스크립트 받기 줄이 보여요.<br><br><img src="screenshots/settings-order.png" width="400" alt="설정"></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>강의 선택</b><br>강의를 골라 재생 목록으로 들어요. 강의 이름은 화면 예시예요.<br><br><img src="screenshots/playlist-select.png" width="400" alt="강의 선택"></td>
+<td width="50%" valign="top"><b>재생 목록</b><br>순서를 바꾸고 일시중지할 수 있어요. 자동 재생을 시도하고 완료 화면을 확인한 뒤 다음 강의로 넘어가요.<br><br><img src="screenshots/playlist-playing.png" width="400" alt="재생 목록"></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>영상 저장과 영상 확대</b><br>인트로는 자동으로 넘기고, 학교 플레이어의 전체화면 버튼으로 창 안에서 크게 봐요. 영상 저장을 켜면 다운로드 버튼이 생겨요(예시 영상).<br><br><img src="screenshots/video-save.png" width="400" alt="영상 저장과 영상 확대"></td>
+<td width="50%" valign="top"><b>화면 모드</b><br>Canvas와 LearningX를 밝은 화면과 어두운 화면 중에서 고를 수 있어요.<br><br><img src="screenshots/dark-dashboard.png" width="400" alt="화면 모드"></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>알림과 구글 캘린더</b><br>마감 알림 시점과 매일 요약을 고르고, 원하면 구글 캘린더를 연결해요.<br><br><img src="screenshots/alerts-calendar.png" width="420" alt="알림과 구글 캘린더"></td>
+<td width="50%" valign="top"><b>시험 모드</b><br>시험 중 다른 확장과 알림을 잠시 멈추고, 전체화면(Windows) 같은 선택 기능을 설정해요. 시험 모드가 꺼져 있어도 퀴즈 응시 화면에서는 모든 기능이 멈춰요.<br><br><img src="screenshots/exam-settings.png" width="420" alt="시험 모드"></td>
+</tr>
+</table>
 
 ## 기술 구성
 
