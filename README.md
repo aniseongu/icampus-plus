@@ -6,6 +6,8 @@
 
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
+영문 이름: iCampus Plus (icampus-plus)
+
 [![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
 ![version](https://img.shields.io/badge/version-1.8.76-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
