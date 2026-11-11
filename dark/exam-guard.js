@@ -5,7 +5,9 @@
   const EXAM_URL = /^https:\/\/canvas\.skku\.edu\/courses\/\d+\/quizzes\/\d+\/take(?:[/?#]|$)/;
   let guard = false;
   let manual = false;
-  let fullscreen = true;
+  // 전체화면 고정은 Windows 키로 시작 메뉴가 뜨는 것을 막으려는 기능이다. 맥·리눅스에서는 요청하지 않는다.
+  const fullscreenOS = /Windows/.test(navigator.userAgent);
+  let fullscreen = fullscreenOS;
   let shieldWanted = false;
   let shieldReady = false;
   let shieldRequest = 0;
@@ -147,7 +149,7 @@
   chrome.storage.local.get(['examGuard', 'examModeManual', 'examFullscreen', 'examNoticeShield']).then(saved => {
     guard = saved.examGuard === true;
     manual = saved.examModeManual === true;
-    fullscreen = saved.examFullscreen !== false;
+    fullscreen = fullscreenOS && saved.examFullscreen !== false;
     shieldWanted = saved.examNoticeShield === true;
     sync();
   }).catch(error => log('시험 설정 읽기 실패', error));
@@ -155,7 +157,7 @@
     if (area !== 'local') return;
     if (changes.examGuard) guard = changes.examGuard.newValue === true;
     if (changes.examModeManual) manual = changes.examModeManual.newValue === true;
-    if (changes.examFullscreen) fullscreen = changes.examFullscreen.newValue !== false;
+    if (changes.examFullscreen) fullscreen = fullscreenOS && changes.examFullscreen.newValue !== false;
     if (changes.examNoticeShield) shieldWanted = changes.examNoticeShield.newValue === true;
     if (changes.examGuard || changes.examModeManual || changes.examFullscreen || changes.examNoticeShield) sync();
   });

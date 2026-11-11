@@ -7,6 +7,11 @@ let examNoticeShown = false;
 let lastResult = null;
 // 'open': only tasks that can be submitted now (default), 'all': every unfinished task.
 let assignmentView = 'open';
+// 팝업에서 숨긴 과제(key -> {title, course})와 직접 추가한 과제(메일 제출 등). 둘 다 이 브라우저에만 저장한다.
+let hiddenTasks = {};
+let manualTasks = [];
+let showHiddenTasks = false;
+let manualFormOpen = false;
 const selectedLectureKeys = new Set();
 // Lectures already in the playlist leave the lecture table; the playlist table lists them.
 let playlistKeys = new Set();
@@ -191,7 +196,7 @@ function makeTitleLink(node, item) {
   });
 }
 
-function createTable(items, captionText, type, captionExtra, captionHelp) {
+function createTable(items, captionText, type, captionExtra, captionHelp, rowAction) {
   const empty = element('div', 'empty-message', '남은 ' + captionText + '가 없어요');
   if (!items.length && !captionExtra) return empty;
   const captionRow = element('span', 'caption-row', captionText);
@@ -214,9 +219,17 @@ function createTable(items, captionText, type, captionExtra, captionHelp) {
   table.append(caption);
   const head = element('thead');
   const headerRow = element('tr');
+  // 행마다 붙는 버튼(숨기기, 완료 등)이 하나라도 있을 때만 다섯 번째 칸을 둔다.
+  const actions = new Map(rowAction ? items.map(item => [item, rowAction(item)]) : []);
+  const hasActions = [...actions.values()].some(Boolean);
   ['과목', '제목', '마감기한', '남은시간'].forEach((label, index) => {
     headerRow.append(element('th', 'colum' + (index + 1), label));
   });
+  if (hasActions) {
+    const th = element('th', 'colum5');
+    th.append(element('span', 'visually-hidden', '관리'));
+    headerRow.append(th);
+  }
   head.append(headerRow);
   table.append(head);
   const body = element('tbody');
@@ -250,7 +263,8 @@ function createTable(items, captionText, type, captionExtra, captionHelp) {
       title.append(choice);
     } else {
       title.textContent = replaceUnderbar(item.title);
-      makeTitleLink(title, item);
+      if (item.manual) title.title = replaceUnderbar(item.title);
+      else makeTitleLink(title, item);
     }
     row.append(title);
     const dateCell = element('td');
@@ -273,6 +287,13 @@ function createTable(items, captionText, type, captionExtra, captionHelp) {
       timeCell.textContent = remainingTime(item.due, timeCell, item.lateUntil);
     }
     row.append(timeCell);
+    if (hasActions) {
+      const actionCell = element('td', 'row-actions');
+      const buttons = actions.get(item);
+      if (buttons) actionCell.append(...buttons);
+      row.append(actionCell);
+    }
+    if (item.hiddenByUser) row.classList.add('closed-task');
     body.append(row);
   });
   table.append(body);
@@ -606,11 +627,14 @@ function renderPlaylistStatus(state) {
   if (state.soundBlocked && !['error', 'halted'].includes(state.status)) {
     const help = element('p', 'setting-help playlist-sound-help');
     help.append(element('span', '', '강의 화면을 한 번 누르면 다른 탭에서도 계속 재생돼요'));
-    const link = element('a', '', '자동 재생 허용 파일을 설치하면 다음부터 누르지 않아도 돼요');
-    link.href = 'https://github.com/aniseongu/icampus-plus#자동-재생-허용';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    help.append(document.createElement('br'), link);
+    // 자동 재생 허용 파일은 Windows용이라 맥과 리눅스에서는 링크를 보이지 않는다.
+    if (/Windows/.test(navigator.userAgent)) {
+      const link = element('a', '', '자동 재생 허용 파일을 설치하면 다음부터 누르지 않아도 돼요');
+      link.href = 'https://github.com/aniseongu/icampus-plus#자동-재생-허용';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      help.append(document.createElement('br'), link);
+    }
     container.append(help);
   }
 }
@@ -634,30 +658,180 @@ async function refreshPlaylistStatus() {
   } catch { renderPlaylistStatus(null); }
 }
 
+// 한 행에는 주 동작이 하나만 있다. 완료는 주 버튼, 숨기기·삭제·되돌리기·다시 보기는 보조 버튼이다.
+function rowButton(label, name, handler, primary = false) {
+  const button = element('button', 'playlist-action row-action ' + (primary ? 'playlist-primary' : 'playlist-secondary'), label);
+  button.type = 'button';
+  button.setAttribute('aria-label', name + ' ' + label);
+  button.addEventListener('click', event => { event.stopPropagation(); handler(); });
+  return button;
+}
+
+async function saveUserTasks() {
+  try {
+    await chrome.storage.local.set({ hiddenAssignments: hiddenTasks, manualAssignments: manualTasks });
+    // 알림과 캘린더도 같은 목록을 쓰도록 워커에 알린다.
+    chrome.runtime.sendMessage({ type: 'icampus-tasks-changed' }).catch(logPopup('알림 목록 갱신 실패'));
+  } catch (error) { logPopup('과제 목록 저장 실패')(error); }
+}
+
+function rerender(focusSelector) {
+  if (lastResult) render(lastResult);
+  if (focusSelector) document.querySelector(focusSelector)?.focus();
+}
+
+function hideTask(item) {
+  hiddenTasks[item.key] = { title: item.title, course: item.course };
+  saveUserTasks();
+  rerender('#assignment .caption-buttons button');
+}
+
+function restoreTask(item) {
+  delete hiddenTasks[item.key];
+  saveUserTasks();
+  rerender('#assignment .caption-buttons button');
+}
+
+function updateManualTask(key, change) {
+  manualTasks = change === 'delete' ? manualTasks.filter(task => task.key !== key)
+    : manualTasks.map(task => task.key === key ? { ...task, done: change === 'done' } : task);
+  saveUserTasks();
+  rerender();
+}
+
+// 숨기기, 직접 추가한 과제 정리 버튼. 목록에 보이는 행마다 한 칸에 모은다.
+function assignmentRowActions(item) {
+  const name = replaceUnderbar(item.title);
+  if (item.manual) {
+    return item.done
+      ? [rowButton('되돌리기', name, () => updateManualTask(item.key, 'open')),
+        rowButton('삭제', name, () => updateManualTask(item.key, 'delete'))]
+      : [rowButton('완료', name, () => updateManualTask(item.key, 'done'), true),
+        rowButton('삭제', name, () => updateManualTask(item.key, 'delete'))];
+  }
+  if (item.done) return null;
+  return [item.hiddenByUser ? rowButton('다시 보기', name, () => restoreTask(item))
+    : rowButton('숨기기', name, () => hideTask(item))];
+}
+
+function localInputValue(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+    'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+}
+
+// 아이캠퍼스 밖에서 내는 과제(메일 등)를 직접 적는 한 줄 양식. 이름과 마감을 적으면 추가할 수 있다.
+function manualTaskForm(courses) {
+  const form = element('form', 'manual-form');
+  form.setAttribute('aria-label', '과제 직접 추가');
+  const field = (label, control) => {
+    const wrap = element('label', 'manual-field');
+    wrap.append(element('span', 'setting-help', label), control);
+    return wrap;
+  };
+  const input = (type, placeholder) => {
+    const control = document.createElement('input');
+    control.type = type;
+    control.className = 'token-input';
+    if (placeholder) control.placeholder = placeholder;
+    control.maxLength = 120;
+    return control;
+  };
+  const course = input('text', '예: 시스템프로그램');
+  course.setAttribute('list', 'manual-courses');
+  const list = document.createElement('datalist');
+  list.id = 'manual-courses';
+  for (const name of courses) { const option = document.createElement('option'); option.value = name; list.append(option); }
+  const title = input('text', '예: 보고서 메일 제출');
+  const due = input('datetime-local');
+  due.removeAttribute('maxlength');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(23, 59, 0, 0);
+  due.value = localInputValue(tomorrow);
+  const submit = element('button', 'playlist-action playlist-primary', '추가하기');
+  submit.type = 'submit';
+  const close = element('button', 'playlist-action', '닫기');
+  close.type = 'button';
+  close.addEventListener('click', () => { manualFormOpen = false; rerender('#manual-add'); });
+  const buttons = element('div', 'manual-buttons');
+  buttons.append(submit, close);
+  const sync = () => { submit.disabled = !title.value.trim() || !due.value; };
+  title.addEventListener('input', sync);
+  due.addEventListener('input', sync);
+  sync();
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const time = Date.parse(due.value);
+    if (!title.value.trim() || !Number.isFinite(time)) return;
+    manualTasks = [...manualTasks, {
+      key: 'manual:' + crypto.randomUUID(), course: course.value.trim() || '직접 추가',
+      title: title.value.trim(), due: new Date(time).toISOString(), done: false
+    }];
+    manualFormOpen = false;
+    saveUserTasks();
+    rerender('#manual-add');
+  });
+  form.append(field('과목', course), field('과제 이름', title), field('마감', due), buttons, list);
+  queueMicrotask(() => title.focus());
+  return form;
+}
+
+function assignmentButtons(hiddenCount, closedCount) {
+  const group = element('div', 'caption-buttons');
+  if (hiddenCount) {
+    const toggle = element('button', 'playlist-action caption-toggle', '숨긴 과제 ' + hiddenCount + '개');
+    toggle.type = 'button';
+    toggle.id = 'hidden-toggle';
+    toggle.setAttribute('aria-pressed', String(showHiddenTasks));
+    toggle.addEventListener('click', () => { showHiddenTasks = !showHiddenTasks; rerender('#hidden-toggle'); });
+    group.append(toggle);
+  }
+  if (closedCount) group.append(assignmentViewToggle());
+  const add = element('button', 'playlist-action caption-toggle', '추가하기');
+  add.type = 'button';
+  add.id = 'manual-add';
+  add.setAttribute('aria-expanded', String(manualFormOpen));
+  add.addEventListener('click', () => { manualFormOpen = !manualFormOpen; rerender(manualFormOpen ? null : '#manual-add'); });
+  group.append(add);
+  return group;
+}
+
 function render(result) {
   lastResult = result;
-  const pending = result.items.filter(item => !item.done);
+  const manualItems = manualTasks.map(task => ({ ...task, type: '과제', manual: true, url: CANVAS_ORIGIN }));
+  const all = [...result.items, ...manualItems];
+  const pending = all.filter(item => !item.done);
   const lectures = pending.filter(item => item.type === '강의' && !playlistKeys.has(item.key));
   const pendingKeys = new Set(lectures.map(item => item.key));
   for (const key of selectedLectureKeys) if (!pendingKeys.has(key)) selectedLectureKeys.delete(key);
-  const completed = result.items.filter(item => item.done);
+  const completed = all.filter(item => item.done);
   const queued = pending.some(item => item.type === '강의' && playlistKeys.has(item.key));
   document.querySelector('#lecture').replaceChildren(
     !lectures.length && queued ? element('div', 'empty-message', '남은 강의는 모두 재생 목록에 있어요')
       : createTable(lectures, '강의', 'lecture', ...(lectures.length ? playlistControls() : []))
   );
-  const assignments = pending.filter(item => item.type === '과제');
-  const closedCount = assignments.filter(item => item.closed).length;
-  document.querySelector('#assignment').replaceChildren(
-    createTable(assignmentView === 'all' ? assignments : assignments.filter(item => !item.closed), '과제', 'assignment',
-      closedCount ? assignmentViewToggle() : null)
-  );
+  const byDue = (a, b) => (a.due ? Date.parse(a.due) : Infinity) - (b.due ? Date.parse(b.due) : Infinity);
+  const assignments = pending.filter(item => item.type === '과제').sort(byDue);
+  const hiddenAll = assignments.filter(item => hiddenTasks[item.key]);
+  const visible = assignments.filter(item => !hiddenTasks[item.key]);
+  const closedCount = visible.filter(item => item.closed).length;
+  const shown = (assignmentView === 'all' ? visible : visible.filter(item => !item.closed))
+    .concat(showHiddenTasks ? hiddenAll.map(item => ({ ...item, hiddenByUser: true })) : []);
+  const box = element('div');
+  if (manualFormOpen) {
+    const courses = [...new Set(result.items.filter(item => item.type === '과제').map(item =>
+      replaceUnderbar(item.course).replace(/\s+[A-Z]{2,}\d{3,}.*$/i, '').trim()))].filter(Boolean);
+    box.append(manualTaskForm(courses));
+  }
+  box.append(createTable(shown, '과제', 'assignment', assignmentButtons(hiddenAll.length, closedCount), null, assignmentRowActions));
+  document.querySelector('#assignment').replaceChildren(box);
   const completedPanel = document.querySelector('#completed');
   const completedItems = document.querySelector('#completed-items');
   completedItems.replaceChildren();
   for (const type of ['강의', '과제']) {
     const matches = completed.filter(item => item.type === type);
-    if (matches.length) completedItems.append(createTable(matches, type, 'completed-' + type));
+    if (matches.length) completedItems.append(createTable(matches, type, 'completed-' + type, null, null, type === '과제' ? assignmentRowActions : null));
   }
   setBadgeCount(document.querySelector('#completed-count'), completed.length);
   completedPanel.hidden = completed.length === 0;
@@ -856,8 +1030,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
   });
   try {
-    const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView']);
+    const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView', 'hiddenAssignments', 'manualAssignments']);
     if (saved.assignmentView === 'all') assignmentView = 'all';
+    if (saved.hiddenAssignments && typeof saved.hiddenAssignments === 'object') hiddenTasks = saved.hiddenAssignments;
+    if (Array.isArray(saved.manualAssignments)) manualTasks = saved.manualAssignments.filter(task =>
+      task && typeof task.key === 'string' && typeof task.title === 'string' && Number.isFinite(Date.parse(task.due)));
     if (saved.icampusPlaylistDraft) {
       for (const key of saved.icampusPlaylistDraft.keys || []) selectedLectureKeys.add(key);
     }

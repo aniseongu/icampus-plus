@@ -389,7 +389,7 @@ const Gcal = (() => {
   async function sync(forceCalendar = false) {
     if (await examIsActive()) return { error: 'permission' };
     const saved = await chrome.storage.local.get(['icampusSchedule', 'alertLeadMinutes', 'gcalEvents', 'gcalCalendarId']);
-    const wanted = await desiredEvents(saved.icampusSchedule?.items || [], saved.alertLeadMinutes);
+    const wanted = await desiredEvents(await userScheduleItems(saved.icampusSchedule?.items), saved.alertLeadMinutes);
     let records = saved.gcalEvents && typeof saved.gcalEvents === 'object' ? { ...saved.gcalEvents } : {};
     // Once a day rewrite every event, so one deleted by hand in Google Calendar comes back.
     const { gcalFullAt } = await chrome.storage.local.get('gcalFullAt');

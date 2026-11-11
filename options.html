@@ -356,6 +356,60 @@
           </div>
         </div>
       </div>
+      <div class="setting-group" id="unix-autoplay-group" hidden>
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">강의 자동 재생</span>
+            <span class="setting-help">파일을 받아 터미널에서 실행하면 누르지 않고 재생해요</span>
+            <span class="setting-help">받은 폴더에서 sudo bash icampus-autoplay.sh install 을 실행해요</span>
+          </div>
+          <button type="button" id="unix-autoplay-download" class="playlist-action">파일 받기</button>
+        </div>
+      </div>
+      <div class="setting-group" id="helper-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-label">Windows 보조 설정</span>
+            <span class="setting-help">강의 자동 재생과 전체화면 안내를 설정해요</span>
+          </div>
+          <button type="button" id="helper-download" class="playlist-action">파일 받기</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-text">
+            <span id="video-save-label" class="setting-label">영상 저장</span>
+            <span id="video-save-status" class="setting-help" role="status"
+              >강의 영상 아래 조작 막대에 저장 버튼이 생겨요</span
+            >
+          </div>
+          <div
+            id="video-save"
+            class="mode-choice"
+            role="radiogroup"
+            aria-labelledby="video-save-label"
+          >
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="false"
+              data-video-save="true"
+            >
+              켜기
+            </button>
+            <button
+              type="button"
+              class="playlist-action"
+              role="radio"
+              aria-checked="true"
+              data-video-save="false"
+            >
+              끄기
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="setting-group">
         <div class="setting-row">
           <div class="setting-text">
@@ -726,50 +780,6 @@
             <p id="gcal-redirect-help"></p>
             <p>클라이언트 ID를 위에 붙여 넣고 연결해 주세요. 외부 테스트 앱은 테스트 사용자 설정과 연결 유지 기간을 확인해 주세요.</p>
           </details>
-        </div>
-      </div>
-      <div class="setting-group">
-        <div class="setting-row">
-          <div class="setting-text">
-            <span id="video-save-label" class="setting-label">영상 저장</span>
-            <span id="video-save-status" class="setting-help" role="status"
-              >강의 영상 아래 조작 막대에 저장 버튼이 생겨요</span
-            >
-          </div>
-          <div
-            id="video-save"
-            class="mode-choice"
-            role="radiogroup"
-            aria-labelledby="video-save-label"
-          >
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="false"
-              data-video-save="true"
-            >
-              켜기
-            </button>
-            <button
-              type="button"
-              class="playlist-action"
-              role="radio"
-              aria-checked="true"
-              data-video-save="false"
-            >
-              끄기
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="setting-group">
-        <div class="setting-row">
-          <div class="setting-text">
-            <span class="setting-label">Windows 보조 설정</span>
-            <span class="setting-help">강의 자동 재생과 전체화면 안내를 설정해요</span>
-          </div>
-          <button type="button" id="helper-download" class="playlist-action">파일 받기</button>
         </div>
       </div>
       <div class="setting-group">

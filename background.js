@@ -129,7 +129,8 @@ async function examStatus() {
     blockedCount: session.examBlockedCount || 0,
     notificationsBlocked: saved.examNotificationsBlocked === true && hasContentSettingsPermission,
     notificationRestorePending: saved.examNotificationsBlocked === true && !hasContentSettingsPermission,
-    fullscreen: saved.examFullscreen !== false,
+    // 전체화면 고정은 Windows 키로 시작 메뉴가 뜨는 것을 막으려는 기능이라 맥·리눅스에서는 쓰지 않는다.
+    fullscreen: /Windows/.test(navigator.userAgent) && saved.examFullscreen !== false,
     noticeShield: saved.examNoticeShield === true,
     noticeShieldStatus: FullscreenShield.status(),
     hasManagementPermission,
@@ -765,7 +766,7 @@ async function stopPlaylist() {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-remove',
-    'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule',
+    'icampus-playlist-sync', 'icampus-playlist-halt', 'icampus-schedule', 'icampus-tasks-changed',
     'icampus-video-save-status', 'icampus-video-save', 'icampus-open-lecture', 'icampus-player-ready', 'icampus-player-progress', 'icampus-player-state',
     'icampus-player-ended', 'icampus-direct-mute', 'exam-status', 'exam-start', 'exam-stop', 'exam-restore',
     'icampus-exam-blocked-count', 'icampus-fullscreen-shield-status', 'icampus-fullscreen-shield-check', 'icampus-error-log', 'icampus-canvas-token-status',
@@ -821,7 +822,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
   if (['icampus-playlist-start', 'icampus-playlist-stop', 'icampus-playlist-reorder', 'icampus-playlist-remove', 'icampus-playlist-sync',
-       'icampus-playlist-halt', 'icampus-schedule', 'icampus-open-lecture', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
+       'icampus-playlist-halt', 'icampus-schedule', 'icampus-tasks-changed', 'icampus-open-lecture', 'exam-start', 'exam-stop', 'exam-restore'].includes(message.type) &&
       !extensionPage) return;
   if (message.type === 'exam-status' && !extensionPage &&
       !['https://lcms.skku.edu', 'https://kingoinfo.skku.edu'].some(origin => sender.url?.startsWith(origin + '/'))) return;
@@ -884,6 +885,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     : message.type === 'icampus-playlist-remove' ? removePlaylistItem(message)
     : message.type === 'icampus-playlist-sync' ? syncPlaylist(message)
     : message.type === 'icampus-playlist-halt' ? haltPlaylist()
+    : message.type === 'icampus-tasks-changed'
+      ? queueNotify(async () => { await Gcal.syncIfEnabled(); await checkNotifications(); return { ok: true }; })
     : message.type === 'icampus-schedule'
       ? queueNotify(async () => {
         await updateSchedule(message.result);

@@ -7,17 +7,18 @@
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
 [![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
-![version](https://img.shields.io/badge/version-1.8.74-124532)
+![version](https://img.shields.io/badge/version-1.8.75-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
-![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC-555555)
+![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC%20%7C%20%EB%A7%A5%C2%B7%EB%A6%AC%EB%88%85%EC%8A%A4-555555)
 
 </div>
 
-아캠 플러스는 크로미움 기반 브라우저용 Manifest V3 확장입니다. 크롬과 웨일에서 설치와 일부 동작을 확인했으며, 다른 크로미움 브라우저의 동작은 환경에 따라 다를 수 있습니다.
+아캠 플러스는 크로미움 기반 브라우저용 Manifest V3 확장입니다. Windows의 크롬과 웨일에서 설치와 주요 동작을 확인했고, 맥과 리눅스의 크롬 계열 브라우저에서도 쓸 수 있습니다. 맥과 리눅스는 자동 테스트(GitHub의 macOS·Linux 환경, 리눅스 크로미움에서 실제 강의 재생과 영상 저장)로 확인했고, 맥에서 직접 써 본 확인은 아직 없습니다. 다른 크로미움 브라우저의 동작은 환경에 따라 다를 수 있습니다.
 
 ## 주요 기능
 
 - **할 일과 재생 목록:** 즐겨찾기 과목의 과제와 LearningX 강의를 마감 순으로 보여 줍니다. 강의를 골라 순서를 바꿀 수 있고, 재생 목록에서는 자동 재생과 다음 강의 이동을 시도합니다.
+- **과제 정리:** 안 내도 되는 과제는 행에서 숨기고, 메일처럼 아이캠퍼스 밖에서 내는 과제는 직접 추가할 수 있어요. 숨긴 과제는 알림과 캘린더에서도 빠지고, 직접 추가한 과제는 마감 알림을 받아요. 둘 다 이 브라우저에만 저장돼요.
 - **알림과 캘린더:** 퀴즈 열림, 마감, 새 공지와 성적 공개를 알려 줍니다. 원하는 경우 구글 캘린더에도 마감 일정을 맞춥니다.
 - **읽기 편한 화면:** Canvas와 LearningX의 다크 모드, 좁은 창의 영상·PDF 확대, 메시지함의 일반 메시지와 학습 알림 나눠 보기를 제공합니다.
 - **강의콘텐츠 주차:** 처음 열면 현재 남은 항목이 있는 주차를 먼저 펼치고, 없으면 가장 최근 공개된 주차를 보여 줍니다. 직접 고른 주차는 그대로 볼 수 있습니다.
@@ -133,8 +134,21 @@ Canvas와 LearningX에서 밝은 화면과 어두운 화면을 고를 수 있습
 
 브라우저가 소리 켠 영상의 자동 재생을 막으면 강의 화면을 한 번 눌러 주세요. Windows x64에서는 설정의 **Windows 보조 설정 > 파일 받기**를 누르고 받은 파일에서 브라우저를 고른 뒤 **강의 자동 재생 허용**을 누를 수 있어요. 브라우저를 다시 열면 적용돼요. 이 설정은 아이캠퍼스와 강의 영상 사이트를 브라우저의 자동 재생 허용 목록에 추가하며, 브라우저에 **조직에서 관리** 표시가 생길 수 있어요. 같은 파일에서 **자동 재생 설정 되돌리기**를 누르면 이 프로그램이 추가한 항목만 지웁니다.
 
+### 맥과 리눅스 자동 재생
+
+맥과 리눅스에서도 강의 화면을 한 번 누르면 재생돼요. 누르지 않고 재생하려면 터미널에서 허용 목록 정책을 켜면 돼요. 프로그램 설치 없이 파일 하나면 돼요. 설정의 **강의 자동 재생 > 파일 받기**로 `icampus-autoplay.sh`를 받아 받은 폴더에서 실행하세요. 스토어에서 설치했다면 [이 저장소의 파일](https://github.com/aniseongu/icampus-plus/blob/master/native/unix-autoplay/icampus-autoplay.sh)에서 오른쪽 위 다운로드(Raw) 버튼으로 받으세요.
+
+```bash
+sudo bash icampus-autoplay.sh install    # 설치된 크롬, 크로미움, 엣지, 브레이브에 허용
+sudo bash icampus-autoplay.sh status     # 허용 여부 확인
+sudo bash icampus-autoplay.sh uninstall  # 이 스크립트가 추가한 설정만 지우기
+```
+
+브라우저를 완전히 닫았다가 다시 열면 적용돼요. 리눅스는 `/etc/.../policies/managed/icampus-plus-autoplay.json` 파일 하나를, 맥은 `/Library/Managed Preferences/`의 브라우저 plist 파일에 `AutoplayAllowlist` 항목 하나를 쓰고 아이캠퍼스와 강의 영상 주소 두 곳만 넣어요. 적용되면 브라우저 주소창에 `chrome://policy`를 열어 확인할 수 있고, 브라우저에 **조직에서 관리** 표시가 생길 수 있어요. 맥은 GitHub의 macOS 환경에서 크롬이 정책을 읽는 것까지 확인했어요. 실제 맥에서 영상이 클릭 없이 재생되는지는 직접 확인하지 못했어요.
+
 ## 알아둘 점
 
+- 맥과 리눅스의 크롬에서도 과제 보기, 숨기기, 직접 추가, 재생 목록, 영상 저장을 쓸 수 있어요. 시험 모드의 전체화면 고정과 Windows 보조 설정(전체화면 안내 숨기기)은 Windows에서만 보여요. 강의 자동 재생 허용은 맥·리눅스용 스크립트가 따로 있어요.
 - 학교의 비공개 LearningX API가 바뀌면 강의 일부를 못 가져올 수 있습니다. 실제 마감 시각과 출석 인정은 아이캠퍼스에서 확인하세요.
 - 팝업에 **강의와 과제 …건을 불러오지 못했어요**가 나오면 과목과 자료 종류를 확인하고 [Issues](https://github.com/aniseongu/icampus-plus/issues)에 알려 주세요.
 - 권한과 저장 정보는 [개인정보처리방침](PRIVACY.md)에 설명했습니다. 변경 사항은 [커밋 기록](https://github.com/aniseongu/icampus-plus/commits)에서 볼 수 있습니다.

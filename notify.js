@@ -65,6 +65,20 @@ async function notificationsEnabled() {
   return saved[NOTIFY_SETTING] !== false;
 }
 
+// 팝업에서 숨긴 과제는 빼고, 직접 추가한 과제(메일 제출 등)는 더해서 알림과 캘린더에 쓴다.
+const HIDDEN_KEY = 'hiddenAssignments';
+const MANUAL_KEY = 'manualAssignments';
+async function userScheduleItems(items) {
+  const saved = await chrome.storage.local.get([HIDDEN_KEY, MANUAL_KEY]);
+  const hidden = saved[HIDDEN_KEY] && typeof saved[HIDDEN_KEY] === 'object' ? saved[HIDDEN_KEY] : {};
+  const manual = (Array.isArray(saved[MANUAL_KEY]) ? saved[MANUAL_KEY] : []).filter(item =>
+    item && typeof item.key === 'string' && typeof item.title === 'string' && Number.isFinite(Date.parse(item.due)))
+    .map(item => ({ key: item.key, type: '과제', course: String(item.course || '').slice(0, 300), title: item.title.slice(0, 300),
+      url: 'https://canvas.skku.edu/', due: new Date(item.due).toISOString(), lateUntil: null, opensAt: null,
+      done: item.done === true, closed: null, quiz: false }));
+  return [...(Array.isArray(items) ? items : []).filter(item => !hidden[item.key]), ...manual];
+}
+
 function scheduleItem(item) {
   const text = value => typeof value === 'string' ? value.slice(0, 300) : '';
   const time = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
@@ -516,7 +530,7 @@ async function markElapsedLeads() {
   const leads = alertLeads(saved[LEAD_SETTING]);
   const notified = saved[NOTIFIED_KEY] || {};
   const now = Date.now();
-  for (const item of saved[SCHEDULE_KEY]?.items || []) {
+  for (const item of await userScheduleItems(saved[SCHEDULE_KEY]?.items)) {
     const due = item.due ? Date.parse(item.due) : NaN;
     const lateUntil = item.lateUntil ? Date.parse(item.lateUntil) : NaN;
     for (const [deadline, mark] of [[due, 'm'], [lateUntil, 'L']]) {
@@ -540,7 +554,7 @@ async function checkNotifications() {
   const notified = Object.fromEntries(Object.entries(saved[NOTIFIED_KEY] || {})
     .filter(([, time]) => now - time < NOTIFIED_TTL_MS));
   let next = Infinity;
-  for (const item of saved[SCHEDULE_KEY]?.items || []) {
+  for (const item of await userScheduleItems(saved[SCHEDULE_KEY]?.items)) {
     if (item.done) continue;
     const due = item.due ? Date.parse(item.due) : NaN;
     const opens = item.quiz && item.opensAt ? Date.parse(item.opensAt) : NaN;
@@ -631,7 +645,7 @@ async function showDailySummary(scheduledTime) {
   const until = new Date(now);
   until.setHours(24, 0, 0, 0);
   if (evening) until.setDate(until.getDate() + 1);
-  const items = (saved[SCHEDULE_KEY]?.items || []).map(item => {
+  const items = (await userScheduleItems(saved[SCHEDULE_KEY]?.items)).map(item => {
     const due = item.due ? Date.parse(item.due) : NaN;
     const late = item.lateUntil ? Date.parse(item.lateUntil) : NaN;
     return { item, deadline: due > now ? due : late };

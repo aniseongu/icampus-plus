@@ -1545,3 +1545,75 @@ body.options-page {
   justify-content: flex-start;
   font-size: 1.5rem;
 }
+
+/* 과제 숨기기와 직접 추가 (1.8.75) */
+/* 제목 줄 오른쪽 버튼 묶음. 낱개 버튼은 .caption-toggle 크기(0.7em)를 따른다 */
+.caption-row .caption-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.caption-row .caption-buttons .caption-toggle {
+  margin-left: 0;
+}
+/* 행 끝 버튼: 기존 보조 버튼(.playlist-secondary)과 같은 색, 높이만 28px로 키워 누르기 쉽게 한다.
+   직접 추가한 행은 완료(주 버튼)와 삭제를 위아래로 쌓아도 두 줄 행 높이 안에 들어간다 */
+table .colum5 {
+  width: 76px;
+}
+table tbody td.row-actions {
+  display: table-cell;
+  padding: 4px 8px;
+}
+.row-actions .row-action {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 6px;
+  font-size: 0.85em;
+  box-shadow: none;
+}
+.row-actions .row-action + .row-action {
+  margin-top: 4px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* 직접 추가 양식: 표 위 한 덩어리. 과목, 이름, 마감 세 칸과 버튼 */
+.manual-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+.manual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.manual-field:nth-of-type(2) {
+  grid-column: 1 / -1;
+}
+.manual-field .token-input {
+  flex: none;
+}
+.manual-buttons {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.manual-buttons .playlist-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

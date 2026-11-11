@@ -2,6 +2,22 @@
 // The Web Store strips .exe files from packages, so the store build downloads the installer
 // from the GitHub release. Unpacked builds still carry the exe next to the sources.
 const STORE_ID = 'dfbmennlapdcfamcdocebolgclgibmmn';
+// 보조 프로그램(전체화면 안내 숨기기, 자동 재생 허용)은 Windows 전용이다. 맥과 리눅스에서는 줄째 숨긴다.
+const IS_WINDOWS = /Windows/.test(navigator.userAgent);
+document.querySelector('#helper-group').hidden = !IS_WINDOWS;
+// 맥과 리눅스에는 프로그램 없이 셸 스크립트 하나로 같은 정책을 켠다. 설정 화면은 그 파일을 내려받게 한다.
+document.querySelector('#unix-autoplay-group').hidden = IS_WINDOWS;
+document.querySelector('#unix-autoplay-download').addEventListener('click', () => {
+  // 스토어 패키지에는 셸 스크립트를 넣지 않는다(실행 파일로 분류될 수 있다). 스토어판은 GitHub의 파일과 설명으로 안내한다.
+  if (chrome.runtime.id === STORE_ID) {
+    chrome.tabs.create({ url: 'https://github.com/aniseongu/icampus-plus#맥과-리눅스-자동-재생' }).catch(logPopup('설명 열기 실패'));
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = chrome.runtime.getURL('native/unix-autoplay/icampus-autoplay.sh');
+  link.download = 'icampus-autoplay.sh';
+  link.click();
+});
 document.querySelector('#helper-download').addEventListener('click', () => {
   const link = document.createElement('a');
   if (chrome.runtime.id === STORE_ID) {
@@ -84,8 +100,8 @@ async function refreshExamSettings() {
       option.disabled = !status.guard;
     }
     // The sub-settings below 시험 모드 only show while it is on.
-    document.querySelector('#exam-fullscreen-group').hidden = !status.guard;
-    document.querySelector('#exam-notice-shield-group').hidden = !status.guard || !status.fullscreen;
+    document.querySelector('#exam-fullscreen-group').hidden = !IS_WINDOWS || !status.guard;
+    document.querySelector('#exam-notice-shield-group').hidden = !IS_WINDOWS || !status.guard || !status.fullscreen;
     for (const option of document.querySelectorAll('#exam-notice-shield [data-notice-shield]')) {
       option.setAttribute('aria-checked', String((option.dataset.noticeShield === 'true') === status.noticeShield));
     }
