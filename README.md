@@ -7,7 +7,7 @@
 성균관대 아이캠퍼스의 남은 과제와 강의를 모아 보고, 화면을 편하게 읽도록 돕는 브라우저 확장
 
 [![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
-![version](https://img.shields.io/badge/version-1.8.75-124532)
+![version](https://img.shields.io/badge/version-1.8.76-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC%20%7C%20%EB%A7%A5%C2%B7%EB%A6%AC%EB%88%85%EC%8A%A4-555555)
 
@@ -94,9 +94,9 @@
 | 환경 | 설정 방법 |
 | --- | --- |
 | **크롬 등** | 브라우저의 강제 다크 모드를 따로 켰다면 아이캠퍼스에는 적용하지 않도록 해 주세요. |
-| **웨일** | 웹 콘텐츠 다크 모드를 사용한다면 **사이트 제외**에서 `canvas.skku.edu`를 제외하세요. 확장 설정 화면의 색이 다시 바뀐다면 **웨일 확장 화면 보정**을 켜 주세요. |
+| **웨일** | 웹 콘텐츠 다크 모드를 사용한다면 **사이트 제외**에서 `canvas.skku.edu`를 제외하세요. |
 
-화면 모드의 **자동/밝게/어둡게**는 브라우저와 관계없이 고를 수 있습니다. 웨일의 웹 콘텐츠 다크 모드를 사용하지 않거나 확장 자체를 예외에 넣었다면 설정 탭의 웨일 보정을 꺼도 됩니다. 툴바 팝업은 웨일이 예외와 관계없이 다시 칠할 수 있어 항상 보정합니다.
+화면 모드의 **자동/밝게/어둡게**는 브라우저와 관계없이 고를 수 있습니다.
 
 ## 선택 기능
 
