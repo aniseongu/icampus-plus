@@ -13,7 +13,7 @@
 
 </div>
 
-아캠 플러스는 크로미움 기반 브라우저용 Manifest V3 확장입니다. Windows의 크롬과 웨일에서 설치와 주요 동작을 확인했고, 맥과 리눅스의 크롬 계열 브라우저에서도 쓸 수 있습니다. 맥과 리눅스는 자동 테스트(GitHub의 macOS·Linux 환경, 리눅스 크로미움에서 실제 강의 재생과 영상 저장)로 확인했고, 맥에서 직접 써 본 확인은 아직 없습니다. 다른 크로미움 브라우저의 동작은 환경에 따라 다를 수 있습니다.
+아캠 플러스는 크로미움 기반 브라우저용 Manifest V3 확장입니다. Windows의 크롬과 웨일에서 설치와 주요 동작을 확인했고, 맥과 리눅스의 크롬 계열 브라우저에서도 쓸 수 있습니다. 맥과 리눅스는 자동 테스트(GitHub의 macOS·Linux 환경, 리눅스 크로미움에서 실제 강의 재생과 영상 저장)로 확인했습니다. 다른 크로미움 브라우저의 동작은 환경에 따라 다를 수 있습니다.
 
 ## 주요 기능
 
@@ -144,7 +144,7 @@ sudo bash icampus-autoplay.sh status     # 허용 여부 확인
 sudo bash icampus-autoplay.sh uninstall  # 이 스크립트가 추가한 설정만 지우기
 ```
 
-브라우저를 완전히 닫았다가 다시 열면 적용돼요. 리눅스는 `/etc/.../policies/managed/icampus-plus-autoplay.json` 파일 하나를, 맥은 `/Library/Managed Preferences/`의 브라우저 plist 파일에 `AutoplayAllowlist` 항목 하나를 쓰고 아이캠퍼스와 강의 영상 주소 두 곳만 넣어요. 적용되면 브라우저 주소창에 `chrome://policy`를 열어 확인할 수 있고, 브라우저에 **조직에서 관리** 표시가 생길 수 있어요. 맥은 GitHub의 macOS 환경에서 크롬이 정책을 읽는 것까지 확인했어요. 실제 맥에서 영상이 클릭 없이 재생되는지는 직접 확인하지 못했어요.
+브라우저를 완전히 닫았다가 다시 열면 적용돼요. 리눅스는 `/etc/.../policies/managed/icampus-plus-autoplay.json` 파일 하나를, 맥은 `/Library/Managed Preferences/`의 브라우저 plist 파일에 `AutoplayAllowlist` 항목 하나를 쓰고 아이캠퍼스와 강의 영상 주소 두 곳만 넣어요. 적용되면 브라우저 주소창에 `chrome://policy`를 열어 확인할 수 있고, 브라우저에 **조직에서 관리** 표시가 생길 수 있어요. 맥은 GitHub의 macOS 환경에서 크롬이 정책을 읽는 것까지 확인했어요.
 
 ## 알아둘 점
 
