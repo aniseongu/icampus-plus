@@ -237,16 +237,28 @@ var icampusScan = async (env = {}) => {
 
   function addModule(course, item) {
     const info = item && item.content_data;
-    if (!info || !item.title || !info.due_at) return;
+    if (!info || !item.title) return;
     const due = validDue(info.due_at);
     const lateAt = validDue(info.late_at);
     const lateUntil = due && lateAt && Date.parse(lateAt) > Date.parse(due) ? lateAt : null;
     const assignmentId = item.content_id || info.id;
+    if (!info.due_at && item.content_type !== 'attendance_item') return;
     // Attended lectures are not listed, but the playlist still needs their keys
     // to drop them (same key as the lecture entry below).
     if (info.use_attendance && (item.attendance_status === 'attendance' || item.completed)) {
       doneLectureKeys.add(String(course.id) + ':lecture:' +
         String(assignmentId || item.module_item_id || item.id || item.title + due));
+    }
+    if (!info.due_at) {
+      if (!info.use_attendance || item.attendance_status === 'attendance' || item.completed) return;
+      const unlock = validDue(info.unlock_at);
+      if (unlock && Date.parse(unlock) > now) return;
+      const key = String(course.id) + ':lecture:' +
+        String(assignmentId || item.module_item_id || item.id || item.title + due);
+      if (found.has(key)) return;
+      found.set(key, { key, course: course.name, title: item.title, type: '강의', due, done: false,
+        url: base + '/courses/' + course.id + '/modules/items/' + (item.module_item_id || item.id) });
+      return;
     }
     if (!due || (Date.parse(due) < now && (!lateUntil || Date.parse(lateUntil) <= now))) return;
     const unlock = validDue(info.unlock_at);
@@ -277,7 +289,8 @@ var icampusScan = async (env = {}) => {
     }
     const key = String(course.id) + ':' + (isAssignment ? 'assignment:' : 'lecture:') +
       String(assignmentId || item.module_item_id || item.id || item.title + due);
-    if (found.has(key)) return;
+    // An undated copy of the same content may have come first; the dated one wins.
+    if (found.has(key) && found.get(key).due) return;
     const done = Boolean(item.completed);
     found.set(key, {
       key, course: course.name, title: item.title,

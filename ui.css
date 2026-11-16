@@ -705,6 +705,59 @@ table tbody td {
   background: var(--table-header);
   color: var(--table-header-text);
 }
+/* 설정 묶음(1.8.79): 첫 화면은 묶음 줄만 두고, 줄을 누르면 상세 화면으로 들어간다.
+   크로미움 설정의 링크 줄처럼 제목 아래 지금 상태를 한 줄로 보이고 오른쪽에 꺾쇠를 둔다.
+   줄 모양과 구분선은 다른 설정 줄과 같다. 면은 웨일 다크 모드에도 남도록 ::before 필터로 칠한다. */
+.settings-page[hidden],
+#error-log-group[hidden] {
+  display: none;
+}
+#settings .setting-link {
+  position: relative;
+  isolation: isolate;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+#settings .setting-link:hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #000;
+  filter: url(#nm-l-hover);
+}
+.dark-mode #settings .setting-link:hover::before {
+  filter: url(#nm-hover);
+}
+#settings .setting-link:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+.setting-chevron {
+  flex: none;
+  color: var(--text-light);
+}
+/* 상세 화면 첫 줄: 뒤로 버튼과 화면 이름. 버튼 안쪽 여백(8px)만큼 왼쪽을 줄여 꺾쇠가 아래 줄 글자와 맞는다 */
+.subpage-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 15px 12px 7px;
+  border-bottom: 1px solid var(--border-color);
+}
+.subpage-back {
+  margin: 0;
+}
+.subpage-title {
+  margin: 0;
+  font-size: 1.4em;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+.subpage-title:focus:not(:focus-visible) {
+  outline: none;
+}
 .empty-message {
   border-radius: 8px;
   margin: 15px 0;
@@ -1261,6 +1314,7 @@ body:not(.dark-mode) .nm-light-ink {
 body:not(.dark-mode)
   :is(
     h1,
+    .subpage-title,
     table caption,
     .caption-standalone,
     .title,
@@ -1289,11 +1343,16 @@ body:not(.dark-mode)
   --nm-l-ink: url(#nm-l-text2);
   --nm-l-ink-c: #5c6770;
 }
-body:not(.dark-mode) .closed-task .title {
+body:not(.dark-mode) .closed-task :is(.title, .title-link) {
   --nm-l-ink: url(#nm-l-text2);
   --nm-l-ink-c: #5c6770;
 }
 body:not(.dark-mode) .playlist-secondary {
+  --nm-l-ink: url(#nm-l-text);
+  --nm-l-ink-c: #434343;
+}
+/* 설정 묶음 줄은 링크지만 제목은 다른 설정 줄과 같은 본문 색이다 */
+body:not(.dark-mode) .setting-link .setting-label {
   --nm-l-ink: url(#nm-l-text);
   --nm-l-ink-c: #434343;
 }
@@ -1327,7 +1386,7 @@ body.dark-mode .nm-light-ink {
 }
 body.dark-mode
   :is(
-    h1, table caption, .caption-standalone,
+    h1, .subpage-title, table caption, .caption-standalone,
     .title, .title-link, .playlist-lecture-title, .completed-panel > summary,
     .footer a, a, .playlist-action, .loading h2
   ) {
@@ -1343,7 +1402,11 @@ body.dark-mode
   --nm-ink: url(#nm-text2);
   --nm-ink-c: #b3bac2;
 }
-body.dark-mode .closed-task .title {
+body.dark-mode .setting-link .setting-label {
+  --nm-ink: url(#nm-text);
+  --nm-ink-c: #e2e5e9;
+}
+body.dark-mode .closed-task :is(.title, .title-link) {
   --nm-ink: url(#nm-text2);
   --nm-ink-c: #b3bac2;
 }

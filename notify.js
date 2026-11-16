@@ -716,6 +716,8 @@ function openFromNotification(id) {
   queueNotify(async () => {
     if (id === 'icampus-gcal-reconnect') {
       await chrome.notifications.clear(id);
+      // 설정 화면이 구글 캘린더 상세 화면으로 바로 열리도록 경로를 남긴다(options.js가 읽고 지운다)
+      await chrome.storage.session.set({ optionsRoute: 'calendar' });
       await chrome.runtime.openOptionsPage();
       return;
     }
@@ -726,6 +728,7 @@ function openFromNotification(id) {
     await chrome.notifications.clear(id);
     if (!link) return;
     if (link.options) {
+      await chrome.storage.session.set({ optionsRoute: 'notify' });
       await chrome.runtime.openOptionsPage();
       return;
     }

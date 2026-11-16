@@ -747,3 +747,102 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+// 첫 화면은 자주 쓰는 줄과 묶음 줄만 두고, 묶음 줄을 누르면 해시 경로(#notify, #calendar, #exam)의 상세 화면을 연다.
+// 크로미움 설정처럼 화면마다 경로가 있어 브라우저 뒤로 가기와 화면 안 뒤로 버튼이 같게 움직인다.
+// 첫 화면에서 들어간 기록에는 history.state에 표시를 남긴다. 뒤로, 앞으로 가기를 거쳐도 그 기록에 남아 있다.
+const SETTINGS_PAGES = { notify: '알림', calendar: '구글 캘린더', exam: '시험 모드' };
+const settingsSections = [...document.querySelectorAll('#settings .settings-page')];
+let settingsLastPage = '';
+
+function settingsRoute() {
+  const page = location.hash.slice(1);
+  return Object.hasOwn(SETTINGS_PAGES, page) ? page : '';
+}
+
+function renderSettingsRoute({ focus = true } = {}) {
+  const page = settingsRoute();
+  for (const section of settingsSections) section.hidden = section.dataset.page !== (page || 'main');
+  document.title = page ? `아캠 플러스 ${SETTINGS_PAGES[page]} 설정` : '아캠 플러스 설정';
+  if (focus) {
+    if (page) document.querySelector(`.settings-page[data-page="${page}"] .subpage-title`)?.focus();
+    else if (settingsLastPage) document.querySelector(`.setting-link[data-go="${settingsLastPage}"]`)?.focus();
+  }
+  settingsLastPage = page;
+}
+
+// 알림에서 바로 연 화면은 기록을 새로 쌓지 않는다. 뒤로 버튼은 그 자리를 첫 화면으로 바꾼다.
+function openSettingsPage(page) {
+  if (!Object.hasOwn(SETTINGS_PAGES, page) || settingsRoute() === page) return;
+  history.replaceState(null, '', '#' + page);
+  renderSettingsRoute();
+}
+
+for (const link of document.querySelectorAll('.setting-link')) {
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    if (settingsRoute()) return;
+    history.pushState({ settingsFromMain: true }, '', '#' + link.dataset.go);
+    renderSettingsRoute();
+  });
+}
+for (const back of document.querySelectorAll('.subpage-back')) {
+  back.addEventListener('click', event => {
+    event.preventDefault();
+    if (history.state?.settingsFromMain) {
+      history.back();
+      return;
+    }
+    history.replaceState(null, '', location.pathname);
+    renderSettingsRoute();
+  });
+}
+// 브라우저 뒤로, 앞으로 가기와 주소창에서 해시를 바꾼 경우
+window.addEventListener('popstate', () => renderSettingsRoute());
+renderSettingsRoute({ focus: Boolean(settingsRoute()) });
+
+// 알림을 눌러 설정을 열면(구글 캘린더 다시 연결, 토큰 거절) 워커가 남긴 경로로 바로 간다.
+chrome.storage.session.get('optionsRoute').then(({ optionsRoute }) => {
+  if (!optionsRoute) return;
+  chrome.storage.session.remove('optionsRoute');
+  openSettingsPage(optionsRoute);
+}).catch(logPopup('설정 경로 읽기 실패'));
+chrome.storage.onChanged.addListener((changes, area) => {
+  const page = area === 'session' && changes.optionsRoute?.newValue;
+  if (!page) return;
+  chrome.storage.session.remove('optionsRoute');
+  openSettingsPage(page);
+});
+
+// 묶음 줄의 요약 한 줄은 상세 화면의 실제 상태에서 읽는다. 요약 칸은 관찰 대상 밖에 두어 고리가 생기지 않는다.
+const settingsSummaries = {
+  notify: () => document.querySelector('#notify [data-notify="true"]')?.getAttribute('aria-checked') === 'true'
+    ? document.querySelector('#lead-status').textContent.trim() : '꺼짐',
+  calendar: () => document.querySelector('#gcal-disconnect').hidden ? '연결 안 됨' : '연결됨',
+  exam: () => document.querySelector('#exam-guard [data-guard="true"]')?.getAttribute('aria-checked') === 'true'
+    ? '켜짐' : '꺼짐'
+};
+let settingsSummaryFrame = 0;
+function refreshSettingsSummaries() {
+  settingsSummaryFrame = 0;
+  for (const [page, read] of Object.entries(settingsSummaries)) {
+    const target = document.querySelector(`#${page}-summary`);
+    const text = read();
+    if (target.textContent !== text) target.textContent = text;
+  }
+}
+const settingsSummaryObserver = new MutationObserver(() => {
+  if (!settingsSummaryFrame) settingsSummaryFrame = requestAnimationFrame(refreshSettingsSummaries);
+});
+for (const selector of ['#notify', '#exam-guard', '#gcal-disconnect']) {
+  settingsSummaryObserver.observe(document.querySelector(selector), {
+    attributes: true, attributeFilter: ['aria-checked', 'hidden'], subtree: true
+  });
+}
+settingsSummaryObserver.observe(document.querySelector('#lead-status'), { childList: true, characterData: true, subtree: true });
+refreshSettingsSummaries();
+
+// 오류 기록은 개발용이다. 압축 해제로 올린 설치에서만 보이고 스토어판에는 줄이 없다. getSelf는 권한이 필요 없다.
+Promise.resolve(chrome.management?.getSelf?.()).then(self => {
+  document.querySelector('#error-log-group').hidden = self?.installType !== 'development';
+}).catch(() => {});

@@ -7,6 +7,7 @@ let examNoticeShown = false;
 let lastResult = null;
 // 'open': only tasks that can be submitted now (default), 'all': every unfinished task.
 let assignmentView = 'open';
+let lectureNoDueView = 'hidden';
 // 팝업에서 숨긴 과제(key -> {title, course})와 직접 추가한 과제(메일 제출 등). 둘 다 이 브라우저에만 저장한다.
 let hiddenTasks = {};
 let manualTasks = [];
@@ -293,7 +294,8 @@ function createTable(items, captionText, type, captionExtra, captionHelp, rowAct
       if (buttons) actionCell.append(...buttons);
       row.append(actionCell);
     }
-    if (item.hiddenByUser) row.classList.add('closed-task');
+    // 기한 없는 강의는 과제 모두 보기의 제출할 수 없는 과제처럼 흐린 글씨로 둔다.
+    if (item.hiddenByUser || (type === 'lecture' && !item.due)) row.classList.add('closed-task');
     body.append(row);
   });
   table.append(body);
@@ -322,6 +324,22 @@ function assignmentViewToggle() {
     chrome.storage.local.set({ assignmentView }).catch(logPopup('과제 보기 저장 실패'));
     if (lastResult) render(lastResult);
     document.querySelector('#assignment .caption-toggle')?.focus();
+  });
+  return toggle;
+}
+
+// Lectures without a deadline stay out of the 강의 table until this toggle adds them to its end.
+// Same shape as the 과제 모두 보기 toggle; it only shows the rows, nothing is picked.
+function lectureNoDueToggle() {
+  const toggle = element('button', 'playlist-action caption-toggle', '모두 보기');
+  toggle.type = 'button';
+  toggle.id = 'lecture-nodue-toggle';
+  toggle.setAttribute('aria-pressed', String(lectureNoDueView === 'all'));
+  toggle.addEventListener('click', () => {
+    lectureNoDueView = lectureNoDueView === 'all' ? 'hidden' : 'all';
+    chrome.storage.local.set({ lectureNoDueView }).catch(logPopup('기한 없는 강의 보기 저장 실패'));
+    if (lastResult) render(lastResult);
+    document.querySelector('#lecture-nodue-toggle')?.focus();
   });
   return toggle;
 }
@@ -807,9 +825,29 @@ function render(result) {
   for (const key of selectedLectureKeys) if (!pendingKeys.has(key)) selectedLectureKeys.delete(key);
   const completed = all.filter(item => item.done);
   const queued = pending.some(item => item.type === '강의' && playlistKeys.has(item.key));
+  const noDue = lectures.filter(item => !item.due);
+  const withDue = lectures.filter(item => item.due);
+  const shownLectures = lectureNoDueView === 'all' ? withDue.concat(noDue) : withDue;
+  const shownKeys = new Set(shownLectures.map(item => item.key));
+  for (const key of selectedLectureKeys) if (!shownKeys.has(key)) selectedLectureKeys.delete(key);
+  let lectureExtra = null;
+  let lectureHelp = null;
+  if (noDue.length || shownLectures.length) {
+    lectureExtra = element('div', 'caption-buttons');
+    if (noDue.length) lectureExtra.append(lectureNoDueToggle());
+    if (shownLectures.length) {
+      const [actions, help] = playlistControls();
+      lectureExtra.append(actions);
+      lectureHelp = help;
+    }
+  }
+  const lectureTable = createTable(shownLectures, '강의', 'lecture', lectureExtra, lectureHelp);
+  if (!shownLectures.length && noDue.length) {
+    const none = lectureTable.querySelector?.('.empty-message');
+    if (none) none.textContent = '기한이 있는 강의가 없어요';
+  }
   document.querySelector('#lecture').replaceChildren(
-    !lectures.length && queued ? element('div', 'empty-message', '남은 강의는 모두 재생 목록에 있어요')
-      : createTable(lectures, '강의', 'lecture', ...(lectures.length ? playlistControls() : []))
+    !lectures.length && queued ? element('div', 'empty-message', '남은 강의는 모두 재생 목록에 있어요') : lectureTable
   );
   const byDue = (a, b) => (a.due ? Date.parse(a.due) : Infinity) - (b.due ? Date.parse(b.due) : Infinity);
   const assignments = pending.filter(item => item.type === '과제').sort(byDue);
@@ -1030,8 +1068,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshExamPresentation().catch(logPopup('시험 상태 표시 실패'));
   });
   try {
-    const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView', 'hiddenAssignments', 'manualAssignments']);
+    const saved = await chrome.storage.local.get(['icampusPlaylistDraft', 'assignmentView', 'lectureNoDueView', 'hiddenAssignments', 'manualAssignments']);
     if (saved.assignmentView === 'all') assignmentView = 'all';
+    if (saved.lectureNoDueView === 'all') lectureNoDueView = 'all';
     if (saved.hiddenAssignments && typeof saved.hiddenAssignments === 'object') hiddenTasks = saved.hiddenAssignments;
     if (Array.isArray(saved.manualAssignments)) manualTasks = saved.manualAssignments.filter(task =>
       task && typeof task.key === 'string' && typeof task.title === 'string' && Number.isFinite(Date.parse(task.due)));
