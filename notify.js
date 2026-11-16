@@ -12,6 +12,8 @@ const LEARNINGX_LAUNCH_KEY = 'learningxLaunchAt';
 const LEARNINGX_TOOL_KEY = 'learningxToolId';
 const ACTIVITY_KEY = 'icampusActivity';
 const ACTIVITY_SETTING = 'activityNotifyEnabled';
+const MESSAGE_SETTING = 'messageNotifyEnabled';
+const MESSAGE_STATE_KEY = 'icampusMessageAlerts';
 const LEAD_SETTING = 'alertLeadMinutes';
 const DAILY_TIME_SETTING = 'dailySummaryTime';
 const DAILY_SENT_KEY = 'icampusDailySent';
@@ -26,6 +28,8 @@ const QUIZ_STALE_MS = 6 * HOUR_MS;
 const NOTIFIED_TTL_MS = 30 * 24 * HOUR_MS;
 const ACTIVITY_TTL_MS = 60 * 24 * HOUR_MS;
 const ACTIVITY_RECENT_MS = 7 * 24 * HOUR_MS;
+const MESSAGE_RECENT_MS = 7 * 24 * HOUR_MS;
+const MESSAGE_SEEN_MS = 30 * 24 * HOUR_MS;
 let notifyQueue = Promise.resolve();
 let scanLogQueue = Promise.resolve();
 function logScanOnce(description, error) {
@@ -204,6 +208,103 @@ async function updateActivity(result) {
       await showActivityNotification(group, kind);
     }
   }
+}
+
+// Canvas marks a conversation unread after a new message. Keep only its ID and
+// latest message time in storage; titles and message text live only in the API
+// response and the transient browser notification.
+async function unreadConversations(token) {
+  let url = new URL('https://canvas.skku.edu/api/v1/conversations?scope=unread&per_page=100');
+  const visited = new Set();
+  const items = [];
+  let checkedAt = null;
+  while (url && !visited.has(url.href) && visited.size < 10) {
+    visited.add(url.href);
+    const response = await fetch(url.href, {
+      credentials: token ? 'omit' : 'include', redirect: 'error',
+      headers: { Accept: 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error('Canvas HTTP ' + response.status);
+    if (checkedAt === null) {
+      const date = Date.parse(response.headers.get('Date'));
+      if (Number.isFinite(date)) checkedAt = date;
+    }
+    const data = JSON.parse((await response.text()).replace(/^\s*while\s*\(\s*1\s*\)\s*;\s*/, ''));
+    if (!Array.isArray(data)) throw new Error('Canvas 대화 목록 형식 오류');
+    items.push(...data);
+    const next = response.headers.get('Link')?.split(',').find(part => /rel="?next"?/.test(part));
+    const target = next?.match(/<([^>]+)>/)?.[1];
+    url = target ? new URL(target, url) : null;
+    if (url && (url.origin !== 'https://canvas.skku.edu' || url.pathname !== '/api/v1/conversations'))
+      throw new Error('Canvas 대화 목록 다음 주소 오류');
+  }
+  if (url) throw new Error('Canvas 대화 목록 페이지 초과');
+  return { items, checkedAt };
+}
+
+function generalMessage(item) {
+  const id = String(item?.id ?? '');
+  const at = Date.parse(item?.last_message_at);
+  const audience = item?.audience;
+  if (!/^\d+$/.test(id) || !Number.isFinite(at) || item.workflow_state !== 'unread' ||
+      !Array.isArray(audience) || !audience.length ||
+      audience.every(value => ['159841', '165997'].includes(String(value))) ||
+      (Array.isArray(item.properties) && item.properties.includes('last_author'))) return null;
+  return { id, at, subject: String(item.subject || '제목 없는 메시지').slice(0, 120),
+    preview: String(item.last_message || '내용을 확인해 보세요').slice(0, 120) };
+}
+
+async function updateMessageAlerts(result, token) {
+  const enabled = await chrome.storage.local.get([NOTIFY_SETTING, MESSAGE_SETTING]);
+  if (enabled[NOTIFY_SETTING] === false || enabled[MESSAGE_SETTING] === false || await examIsActive()) return;
+  const userId = String(result?.userId ?? '');
+  if (!/^\d+$/.test(userId)) return;
+  let resultPage;
+  try { resultPage = await unreadConversations(token); }
+  catch (error) { await logScanOnce('일반 메시지 조회 실패', error); return; }
+  if (await examIsActive()) return;
+  const now = Date.now();
+  const checkedAt = resultPage.checkedAt;
+  const saved = (await chrome.storage.local.get(MESSAGE_STATE_KEY))[MESSAGE_STATE_KEY];
+  const sameUser = saved?.userId === userId;
+  const lastCheckedAt = sameUser && Number.isFinite(saved.checkedAt) ? saved.checkedAt : null;
+  const seen = sameUser && saved.seen && typeof saved.seen === 'object' && !Array.isArray(saved.seen)
+    ? { ...saved.seen } : {};
+  for (const [key, time] of Object.entries(seen)) {
+    if (!Number.isFinite(time) || now - time > MESSAGE_SEEN_MS) delete seen[key];
+  }
+  const fresh = [];
+  for (const item of resultPage.items) {
+    const message = generalMessage(item);
+    if (!message) continue;
+    const sig = message.id + '|' + message.at;
+    if (Object.hasOwn(seen, sig)) continue;
+    // Server Date and message timestamps share a clock. Without that header,
+    // keep the next scan eligible rather than permanently discarding a future timestamp.
+    if (checkedAt !== null && message.at > checkedAt + MINUTE_MS) continue;
+    if (sameUser && (lastCheckedAt === null || message.at > lastCheckedAt - MINUTE_MS) &&
+        (checkedAt === null || checkedAt - message.at <= MESSAGE_RECENT_MS)) {
+      fresh.push({ message, sig });
+    } else seen[sig] = now;
+  }
+  for (const { message, sig } of fresh) {
+    if (await examIsActive()) return;
+    const id = 'icampus-message-' + message.id + '-' + message.at;
+    const links = (await chrome.storage.session.get(LINKS_KEY))[LINKS_KEY] || {};
+    links[id] = { url: 'https://canvas.skku.edu/conversations', lecture: false };
+    await chrome.storage.session.set({ [LINKS_KEY]: links });
+    await chrome.notifications.create(id, {
+      type: 'basic', iconUrl: 'icons/icon48.png',
+      title: '새 일반 메시지: ' + message.subject,
+      message: message.preview,
+      priority: 1
+    });
+    seen[sig] = now;
+    // Keep the old checkpoint until every pending notification succeeds.
+    await chrome.storage.local.set({ [MESSAGE_STATE_KEY]: { userId, checkedAt: lastCheckedAt, seen } });
+  }
+  await chrome.storage.local.set({ [MESSAGE_STATE_KEY]: { userId, checkedAt, seen } });
 }
 
 // LearningX needs the xn_api_token cookie. Read it from an open iCampus tab if
@@ -387,6 +488,9 @@ async function backgroundScan() {
     await Gcal.syncIfEnabled();
     if (expired) return;
     await updateActivity(result);
+    if (expired) return;
+    try { await updateMessageAlerts(result, canvasToken && !rejected ? canvasToken : null); }
+    catch (error) { await logScanOnce('일반 메시지 알림 실패', error); }
     if (expired) return;
     await recordScanSuccess({ usedToken: Boolean(canvasToken), rejected });
   };
@@ -693,8 +797,14 @@ chrome.runtime.onStartup.addListener(() => {
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.gcalEnabled) queueNotify(ensureScanAlarm);
+  if (area === 'local' && changes[MESSAGE_SETTING]) {
+    queueNotify(() => chrome.storage.local.remove(MESSAGE_STATE_KEY));
+  }
   if (area === 'local' && changes[NOTIFY_SETTING]) {
-    queueNotify(async () => { await ensureScanAlarm(); await ensureDailyAlarm(); await checkNotifications(); });
+    queueNotify(async () => {
+      await chrome.storage.local.remove(MESSAGE_STATE_KEY);
+      await ensureScanAlarm(); await ensureDailyAlarm(); await checkNotifications();
+    });
   }
   if (area === 'local' && changes[DAILY_TIME_SETTING]) {
     queueNotify(ensureDailyAlarm);

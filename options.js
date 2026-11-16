@@ -283,6 +283,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // hides while alerts are off, like the exam rows under exam mode.
   const activityRow = document.querySelector('#activity-notify-row');
   const activityOptions = [...document.querySelectorAll('#activity-notify [data-activity-notify]')];
+  const messageRow = document.querySelector('#message-notify-row');
+  const messageOptions = [...document.querySelectorAll('#message-notify [data-message-notify]')];
   const leadRow = document.querySelector('#lead-row');
   const leadOpen = document.querySelector('#lead-open');
   const leadEditor = document.querySelector('#lead-editor');
@@ -300,7 +302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const showNotify = enabled => {
     notifyOptions.forEach(option =>
       option.setAttribute('aria-checked', String((option.dataset.notify === 'true') === enabled)));
-    for (const row of [leadRow, summaryRow, activityRow]) row.hidden = !enabled;
+    for (const row of [leadRow, summaryRow, activityRow, messageRow]) row.hidden = !enabled;
     if (!enabled) setLeadEditor(false);
   };
   // Deadline alert moments: any of the six, saved on each tap (notify.js reads
@@ -360,9 +362,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   const showActivityNotify = enabled => activityOptions.forEach(option =>
     option.setAttribute('aria-checked', String((option.dataset.activityNotify === 'true') === enabled)));
+  const showMessageNotify = enabled => messageOptions.forEach(option =>
+    option.setAttribute('aria-checked', String((option.dataset.messageNotify === 'true') === enabled)));
   chrome.storage.local.get('notifyEnabled').then(saved => showNotify(saved.notifyEnabled !== false)).catch(logPopup('알림 설정 읽기 실패'));
   chrome.storage.local.get('activityNotifyEnabled').then(saved =>
     showActivityNotify(saved.activityNotifyEnabled !== false)).catch(logPopup('공지 알림 설정 읽기 실패'));
+  chrome.storage.local.get('messageNotifyEnabled').then(saved =>
+    showMessageNotify(saved.messageNotifyEnabled !== false)).catch(logPopup('메시지 알림 설정 읽기 실패'));
   for (const option of notifyOptions) {
     option.addEventListener('click', async () => {
       const enabled = option.dataset.notify === 'true';
@@ -376,6 +382,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const enabled = option.dataset.activityNotify === 'true';
       showActivityNotify(enabled);
       await chrome.storage.local.set({ activityNotifyEnabled: enabled });
+    });
+  }
+  for (const option of messageOptions) {
+    option.addEventListener('click', async () => {
+      const enabled = option.dataset.messageNotify === 'true';
+      showMessageNotify(enabled);
+      await chrome.storage.local.set({ messageNotifyEnabled: enabled });
     });
   }
   // Canvas personal token: the worker keeps it (secrets.js) and only ever sends
