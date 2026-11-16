@@ -41,7 +41,7 @@
 <td width="50%" valign="top"><b>설정</b><br>첫 화면에는 화면 모드, 보조 설정, 영상 저장과 알림, 구글 캘린더, 시험 모드 묶음이 있어요. 묶음마다 지금 상태가 한 줄로 보이고, 누르면 자세한 설정이 열려요.<br><br><img src="screenshots/settings-order.png" width="400" alt="설정"></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><b>강의 선택</b><br>강의를 골라 재생 목록으로 들어요. 강의 이름은 화면 예시예요.<br><br><img src="screenshots/playlist-select.png" width="400" alt="강의 선택"></td>
+<td width="50%" valign="top"><b>강의 선택</b><br>강의를 골라 재생 목록으로 들어요. 모두 보기를 누르면 마감 기한이 없는 강의도 흐린 글씨로 함께 보여요.<br><br><img src="screenshots/playlist-select.png" width="400" alt="강의 선택"></td>
 <td width="50%" valign="top"><b>재생 목록</b><br>순서를 바꾸고 일시중지할 수 있어요. 자동 재생을 시도하고 완료 화면을 확인한 뒤 다음 강의로 넘어가요.<br><br><img src="screenshots/playlist-playing.png" width="400" alt="재생 목록"></td>
 </tr>
 <tr>
@@ -49,8 +49,12 @@
 <td width="50%" valign="top"><b>화면 모드</b><br>Canvas와 LearningX를 밝은 화면과 어두운 화면 중에서 고를 수 있어요.<br><br><img src="screenshots/dark-dashboard.png" width="400" alt="화면 모드"></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><b>알림과 구글 캘린더</b><br>마감 알림 시점과 매일 요약을 고르고, 원하면 구글 캘린더를 연결해요.<br><br><img src="screenshots/alerts-calendar.png" width="420" alt="알림과 구글 캘린더"></td>
+<td width="50%" valign="top"><b>알림 설정</b><br>마감 알림 시점과 매일 요약을 고를 수 있어요.<br><br><img src="screenshots/alerts-calendar.png" width="420" alt="알림 설정"></td>
 <td width="50%" valign="top"><b>시험 모드</b><br>시험 중 다른 확장과 알림을 잠시 멈추고, 전체화면(Windows) 같은 선택 기능을 설정해요. 시험 모드가 꺼져 있어도 퀴즈 응시 화면에서는 모든 기능이 멈춰요.<br><br><img src="screenshots/exam-settings.png" width="420" alt="시험 모드"></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>구글 캘린더 설정</b><br>원하면 구글 캘린더를 연결해 즐겨찾기 과목의 마감 일정을 맞춰요.<br><br><img src="screenshots/calendar-settings.png" width="420" alt="구글 캘린더 설정"></td>
+<td width="50%"></td>
 </tr>
 </table>
 
