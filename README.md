@@ -9,7 +9,7 @@
 영문 이름: iCampus Plus (icampus-plus)
 
 [![Chrome 웹 스토어](https://img.shields.io/badge/Chrome%20%EC%9B%B9%20%EC%8A%A4%ED%86%A0%EC%96%B4-%EC%84%A4%EC%B9%98-124532?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/%EC%95%84%EC%BA%A0-%ED%94%8C%EB%9F%AC%EC%8A%A4/dfbmennlapdcfamcdocebolgclgibmmn)
-![version](https://img.shields.io/badge/version-1.8.76-124532)
+![version](https://img.shields.io/badge/version-1.8.77-124532)
 ![manifest](https://img.shields.io/badge/Manifest-V3-124532)
 ![browser](https://img.shields.io/badge/Chromium%20%EA%B8%B0%EB%B0%98-%ED%81%AC%EB%A1%AC%20%7C%20%EC%9B%A8%EC%9D%BC%20%7C%20%EB%A7%A5%C2%B7%EB%A6%AC%EB%88%85%EC%8A%A4-555555)
 
@@ -22,7 +22,7 @@
 - **할 일과 재생 목록:** 즐겨찾기 과목의 과제와 LearningX 강의를 마감 순으로 보여 줍니다. 강의를 골라 순서를 바꿀 수 있고, 재생 목록에서는 자동 재생과 다음 강의 이동을 시도합니다.
 - **과제 정리:** 안 내도 되는 과제는 행에서 숨기고, 메일처럼 아이캠퍼스 밖에서 내는 과제는 직접 추가할 수 있어요. 숨긴 과제는 알림과 캘린더에서도 빠지고, 직접 추가한 과제는 마감 알림을 받아요. 둘 다 이 브라우저에만 저장돼요.
 - **알림과 캘린더:** 퀴즈 열림, 마감, 새 공지와 성적 공개를 알려 줍니다. 원하는 경우 구글 캘린더에도 마감 일정을 맞춥니다.
-- **읽기 편한 화면:** Canvas와 LearningX의 다크 모드, 좁은 창의 영상·PDF 확대, 메시지함의 일반 메시지와 학습 알림 나눠 보기를 제공합니다.
+- **읽기 편한 화면:** Canvas와 LearningX의 다크 모드, 좁은 창의 영상·PDF 확대, 메시지함의 일반 메시지와 학습 알림 나눠 보기를 제공합니다. 교수님이나 조교님께 보내고 아직 답이 없는 메시지도 일반 메시지에 함께 보입니다.
 - **강의콘텐츠 주차:** 처음 열면 현재 남은 항목이 있는 주차를 먼저 펼치고, 없으면 가장 최근 공개된 주차를 보여 줍니다. 직접 고른 주차는 그대로 볼 수 있습니다.
 - **강의 영상:** 영상 앞의 인트로·프리로더를 건너뛰고, 학교 플레이어의 전체화면 버튼으로 좁은 창에서도 영상을 크게 볼 수 있습니다.
 - **선택 기능:** 영상 저장, 로그아웃 중 일정 알림과 시험 모드의 세부 기능을 설정에서 선택할 수 있습니다.

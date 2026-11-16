@@ -1,4 +1,4 @@
-// 옛 Canvas 메시지함의 대화를 상대 ID로 나눠 본다. 제목이나 메시지 내용은 읽지 않는다.
+// 옛 Canvas 메시지함의 대화를 상대 ID로 나눠 본다. 내가 보내기만 한 대화도 분류에 넣는다(inbox-merge.js). 제목이나 메시지 내용은 읽지 않는다.
 // Canvas 메시지 종류 선택 상자에 "일반 메시지", "학습 알림"을 더하고, 받은 편지함으로 열면 일반 메시지부터 보인다.
 // 우리 항목을 고르면 Canvas는 받은 편지함 그대로 두고 행만 숨긴다. 모두 읽음은 목록 첫 줄의 안내 줄에 둔다.
 (() => {
@@ -164,7 +164,8 @@
     return { data: JSON.parse(raw.replace(/^\s*while\s*\(\s*1\s*\)\s*;\s*/, '') || '{}'), response };
   };
 
-  const listConversations = async (scope, courseValue = '', onPage) => {
+  // keep이 있으면 그 조건에 맞는 대화만 남긴다(보낸 목록에서 아직 답이 없는 대화 고르기).
+  const listConversations = async (scope, courseValue = '', onPage, keep) => {
     const items = new Map();
     let url = new URL('/api/v1/conversations', location.origin);
     url.searchParams.set('per_page', '100');
@@ -185,6 +186,7 @@
             !['read', 'unread', 'archived'].includes(item.workflow_state)) {
           throw new Error('대화 형식 오류');
         }
+        if (keep && !keep(item)) continue;
         // 메시지 미리보기나 참여자 같은 내용은 버리고 분류에 쓰는 두 값만 남긴다(메모리, 개인 정보).
         const id = String(item.id);
         const entry = { id, bot: isBot(item), unread: item.workflow_state === 'unread' };
@@ -201,6 +203,9 @@
     return items;
   };
 
+  // 내가 보내기만 하고 답이 없는 대화. Canvas 받은 편지함에는 없고 inbox-merge.js가 목록에 넣는다. 같은 조건이어야 한다.
+  const sentOnly = item => item.last_message_at == null && item.workflow_state !== 'archived' && item.last_authored_message_at != null;
+
   // 받은 편지함일 때만 대화 정보를 받는다. 보낸 메시지, 보관 같은 Canvas 원래 보기에는 손대지 않는다.
   const refresh = async () => {
     const serial = ++run;
@@ -213,13 +218,19 @@
     loading = true;
     if (ready) applyRows();
     try {
-      const next = await listConversations('inbox', parts.course.value, page => {
+      const onPage = page => {
         if (serial !== run || exam) return;
         for (const [id, item] of page) conversations.set(id, item);
         ready = true;
         applyRows();
-      });
+      };
+      // 보낸 목록을 못 받아도 받은 편지함 분류는 그대로 쓴다. 그 대화 행은 모르는 행처럼 다룬다.
+      const [next, sent] = await Promise.all([
+        listConversations('inbox', parts.course.value, onPage),
+        listConversations('sent', parts.course.value, onPage, sentOnly).catch(() => new Map())
+      ]);
       if (serial !== run || exam) return;
+      for (const [id, item] of sent) if (!next.has(id)) next.set(id, item);
       conversations = next;
       ready = true;
       safe = true;
